@@ -1,0 +1,15 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X: 3\nT: Decorations\nM: 4/4\nL: 1/4\nK: C\n.C TD HE uF | kG MA ~B c | SC OD vE JF | RG A B c |\n",
+ "messages": [
+  "Warning: ignoring `J'",
+  "Warning: ignoring `R'"
+ ],
+ "name": "decorations-beams",
+ "options": {
+  "beams": true
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"3\"\n  footnotes = \"\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"Decorations\"\n}\n\n\"voicedefault\" = {\n\\numericTimeSignature \\time 4/4 \\key c \\major c'4 -. d'4 ^\\trill e'4 ^\\fermata \nf'4 ^\\upbow \\bar \"|\" g'4 ^\\accent a'4 ^\\tenuto b'4 ^\"~\"  c''4 \\bar \"|\" c'4 \n^\\segno d'4 ^\\coda e'4 ^\\downbow f'4 \\bar \"|\" g'4 a'4 b'4 c''4 \\bar \"|\" \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n  >>\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #'()\n    }\n  }\n  \\midi {}\n}\n",
+ "source": "probe",
+ "source_name": "decorations.abc"
+}

@@ -1,0 +1,14 @@
+{
+ "arguments": [],
+ "input_file": "03d-Rhythm-DottedDurations-Factors.xml",
+ "messages": [
+  "musicxml2ly: warning: Incomplete measure? Expected length: 31/8, seen: 1/16:"
+ ],
+ "name": "03d-Rhythm-DottedDurations-Factors",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 03d-Rhythm-DottedDurations-Factors.xml\n\\pointAndClickOff\n\n%% additional definitions required by the score:\nmeasureLength =\n#(define-music-function (length)\n   (positive-musical-length-as-number?)\n   #{\n     \\pushContextProperty Timing.measureLength\n     \\set Timing.measureLength = #length\n   #})\nmeasureLengthReset = \\popContextProperty Timing.measureLength\n\n\n\\header {\n  texidoc = \"Several durations can be written with dots. For multi-measure rests\n    it is also possible to have durations that cannot be expressed with dotted\n    notes (like 5/8).\n\n    In bar 15 there is only a 16th note and no rest for the remaining part of\n    the bar.\"\n}\n\\layout {\n  \\context {\n    \\Score\n    skipBars = ##t\n    autoBeaming = ##f\n  }\n  \\context {\n    \\Staff\n    \\override MultiMeasureRest.expand-limit = 1\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\time 1/8 c8 | % 1\n  R8 | % 2\n  \\time 2/8 c4 | % 3\n  R4 | % 4\n  \\time 3/4 c2. | % 5\n  R2. | % 6\n  \\numericTimeSignature \\time 4/4 c1 | % 7\n  R1 | % 8\n  \\time 5/16 c4 c16 | % 9\n\n  \\barNumberCheck #10\n  R16*5 | % 10\n  \\time 7/8 c2.. | % 11\n  R8*7 | % 12\n  \\time 9/8 c1 c8 | % 13\n  R8*9 | % 14\n  \\time 31/8 \\measureLength #1/16 c16 \\measureLengthReset | % 15\n  R8*31 | % 16\n  \\numericTimeSignature \\time 2/2 c1 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "03d-Rhythm-DottedDurations-Factors.xml",
+ "version_line": "\\version \"2.27.2\""
+}

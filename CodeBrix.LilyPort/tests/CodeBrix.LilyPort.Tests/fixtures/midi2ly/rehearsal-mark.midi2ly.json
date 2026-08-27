@@ -1,0 +1,9 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQACAYBNVHJrAAAAVQD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDD0JAjAD/BgFBjAD/BgFCjAD/BgFYjAD/LwBNVHJrAAAAMQD/AwVcbmV3OgCQPFqMAJA8AACQPlqMAJA+AACQQFqMAJBAAACQQVqMAJBBAAD/LwA=",
+ "name": "rehearsal-mark",
+ "options": {},
+ "output": "% Lily was here -- automatically converted by midi2ly from rehearsal-mark.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n  \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = 60\n  \\skip 1 \n  | % 2\n  \n  % [MARKER] A\n  \\skip 1 \n  | % 3\n  \n  % [MARKER] B\n  \\skip 1 \n  | % 4\n  \n  % [MARKER] X\n  \\skip 1 \n  | % 5\n  \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"\\new:\"\n  \\skip \\longa \n}\n\ntrackBchannelB = \\relative c {\n  c'1 \n  | % 2\n  d \n  | % 3\n  e \n  | % 4\n  f \n  | % 5\n  \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "rehearsal-mark.midi"
+}

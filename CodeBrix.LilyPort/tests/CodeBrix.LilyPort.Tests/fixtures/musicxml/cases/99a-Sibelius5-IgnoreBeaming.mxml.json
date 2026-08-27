@@ -1,0 +1,14 @@
+{
+ "arguments": [],
+ "input_file": "99a-Sibelius5-IgnoreBeaming.xml",
+ "messages": [
+  "musicxml2ly: warning: Encountered file created by Dolet 3.4 for Sibelius, containing wrong beaming information. All beaming information in the MusicXML file will be ignored"
+ ],
+ "name": "99a-Sibelius5-IgnoreBeaming",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 99a-Sibelius5-IgnoreBeaming.xml\n\\pointAndClickOff\n\n\\header {\n  \"id: software\" = \\markup \\column {\n    \\line { \"Sibelius 5.1\" }\n    \\line { \"Dolet 3.4 for Sibelius\" }\n  }\n  texidoc = \"Dolet 3 for Sibelius (5.1) did not print out any closing beam tags,\n    only starting and continuing beam tags. For such files, one either needs to\n    ignore all beaming information or close all beams\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n}\nPartPOneVoiceOne = \\relative e''' {\n  \\clef \"treble\" \\time 3/4 \\key c \\major e32 ( fis32 fis32 fis8 gis32 b32 ) }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "99a-Sibelius5-IgnoreBeaming.xml",
+ "version_line": "\\version \"2.27.2\""
+}

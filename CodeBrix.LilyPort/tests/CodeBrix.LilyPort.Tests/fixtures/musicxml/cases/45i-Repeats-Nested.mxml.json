@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "45i-Repeats-Nested.xml",
+ "messages": [],
+ "name": "45i-Repeats-Nested",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 45i-Repeats-Nested.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A repeat with two alternative endings. In the first one (enclosing\n    bar 2 to bar 4), there is a nested repeat enclosing bar 3. In the second one\n    (from bar 5 to bar 6), there is another nested repeat starting also at bar 5\n    but ending already at the same bar.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    doubleRepeatBarType = \":|.|:\"\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\repeat volta 2 {\n    \\clef \"treble\" \\time 4/4 \\key c \\major c1 \\alternative {\n      \\volta 1 {\n        | % 1\n        c1 \\repeat volta 2 {\n          | % 2\n          c1 }\n        | % 3\n        c1 }\n      \\volta 2 {\n        \\repeat volta 2 {\n          | % 4\n          c1 }\n        | % 5\n        c1 }\n    }\n  }\n  | % 6\n  c1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "45i-Repeats-Nested.xml",
+ "version_line": "\\version \"2.27.2\""
+}

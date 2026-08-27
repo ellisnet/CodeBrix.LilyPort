@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CodeBrix.LilyPort.Engine</AssemblyName>
+    <RootNamespace>CodeBrix.LilyPort.Engine</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <_VersionBaseYear>2026</_VersionBaseYear>
+    <_VersionYears>$([MSBuild]::Subtract($([System.DateTime]::UtcNow.Year), $(_VersionBaseYear)))</_VersionYears>
+    <_VersionDayOfYear>$([System.DateTime]::UtcNow.DayOfYear)</_VersionDayOfYear>
+    <_VersionMinuteOfDay>$([System.Convert]::ToInt32($([System.Math]::Floor($([System.DateTime]::UtcNow.TimeOfDay.TotalMinutes)))))</_VersionMinuteOfDay>
+    <BuildVersion>1.$(_VersionYears).$(_VersionDayOfYear).$(_VersionMinuteOfDay)</BuildVersion>
+    <Version>$(BuildVersion)</Version>
+    <AssemblyVersion>$(BuildVersion)</AssemblyVersion>
+    <FileVersion>$(BuildVersion)</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Scheme\**\*" />
+    <!--
+      The upstream lily/*.cc ledger. Embedded so the fence test reads the same bytes
+      the library ships, and so no test step needs the read-only ~/GitHome/lilypond
+      reference tree (standing rule 7).
+    -->
+    <EmbeddedResource Include="lily-cc-ledger.tsv" />
+  </ItemGroup>
+
+  <!--
+    The fonts ship INSIDE the assembly, exactly as the Scheme layer does.
+
+    They used to be found by probing directories beside the running assembly, and
+    that silently failed for every consumer whose output directory was not the
+    repository: the regression BatchDriver sits six levels below the repo root, one
+    past where the probe stopped, so the whole suite engraved with NO music glyphs
+    at all and nothing said so louder than a warning. Embedding removes the failure
+    mode rather than lengthening the probe.
+
+    Byte-for-byte copies (D13/D23 say these are ASSETS FOREVER — never subset,
+    convert or edit), so `LogicalName` keeps the on-disk file name intact.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\assets\fonts\otf\*.otf"
+                      LogicalName="CodeBrix.LilyPort.Engine.Fonts.otf.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\assets\fonts\svg\*.svg"
+                      LogicalName="CodeBrix.LilyPort.Engine.Fonts.svg.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\assets\fonts\text\*.otf"
+                      LogicalName="CodeBrix.LilyPort.Engine.Fonts.text.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CodeBrix.LilyPort.Flower\CodeBrix.LilyPort.Flower.csproj" />
+    <!--
+      The Scheme interpreter, consumed as its published nuget.org package.
+      Nothing in this repo may reach outside the repo with a filesystem
+      reference; package references are the only permitted external edge.
+    -->
+    <!--was previously: <ProjectReference Include="..\..\..\..\CodeBrix.LilyScheme\src\CodeBrix.LilyScheme\CodeBrix.LilyScheme.csproj" />-->
+    <PackageReference Include="CodeBrix.LilyScheme.LgplLicenseForever" Version="1.0.238.240" />
+  </ItemGroup>
+
+</Project>

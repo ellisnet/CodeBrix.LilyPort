@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "90a-Compressed-MusicXML.mxl",
+ "messages": [],
+ "name": "90a-Compressed-MusicXML",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 90a-Compressed-MusicXML.mxl\n\\pointAndClickOff\n\n\\header {\n  title = \"Compressed MusicXML file\"\n  copyright = \"Public Domain\"\n  \"id: software\" = \"Hand-crafted MusicXML file (Kate on KDE)\"\n  texidoc = \"A compressed MusicXML file, containing a simple MusicXML score and\n    the corresponding .pdf output for reference.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative cis' {\n  \\clef \"treble\" \\time 2/2 \\key a \\major cis4 cis4 cis4 cis4 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\set Staff.instrumentName = \"Voice\"\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "90a-Compressed-MusicXML.mxl",
+ "version_line": "\\version \"2.27.2\""
+}

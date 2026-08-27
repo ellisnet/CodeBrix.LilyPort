@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "42a-MultiVoice-TwoVoicesOnStaff-Lyrics.xml",
+ "messages": [],
+ "name": "42a-MultiVoice-TwoVoicesOnStaff-Lyrics",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 42a-MultiVoice-TwoVoicesOnStaff-Lyrics.xml\n\\pointAndClickOff\n\n%% additional definitions required by the score:\nD = \\tweak Stem.direction #DOWN \\etc\nU = \\tweak Stem.direction #UP \\etc\n\n\n\\header {\n  texidoc = \"Two voices share one staff. To each voice some lyrics is assigned\n    (with the lyrics of voice one positioned above the staff). In the last bar,\n    the second voice is empty, thus the full rest should be placed on the\n    staff's default position.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative e'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major \\U e2 ^> ^\\fermata \\U d4 _\\mf \\U b4 | % 1\n  a'4\\rest \\U d,4 \\U b,4. ( \\U c'8 ) | % 2\n  \\oneVoice R1 \\bar \"|.\"\n}\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  This is the lyrics of \"Voice1\"\n}\n\nPartPOneVoiceTwo = \\relative c'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major \\D c2 _> _\\fermata \\D b4 \\D g4 | % 1\n  c,4\\rest \\D b'4 \\D g,4. ( \\D a'8 ) s1 \\bar \"|.\"\n}\n\nPartPOneVoiceTwoLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  This is the lyrics of \"Voice2\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\voiceOne \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\with {\n          alignAboveContext = \"P1\"\n          } \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n        \\context Voice = \"PartPOneVoiceTwo\" {\n          \\voiceTwo \\PartPOneVoiceTwo\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceTwo\" {\n          \\PartPOneVoiceTwoLyricsOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "42a-MultiVoice-TwoVoicesOnStaff-Lyrics.xml",
+ "version_line": "\\version \"2.27.2\""
+}

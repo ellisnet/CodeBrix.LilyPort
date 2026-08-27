@@ -1,0 +1,340 @@
+================================================================================
+CodeBrix.LilyPort.Flower -- PORT COVERAGE AGAINST UPSTREAM flower/
+================================================================================
+
+Written against LilyPond v2.27.2
+(commit 2d621459bd44cb1758f822a69757242eab843060).
+
+This file records exactly what was ported, what was deliberately not ported and
+why, and where the port's behaviour differs from upstream's. It exists so that
+"milestone 4 is complete" is a checkable claim rather than an assertion.
+
+--------------------------------------------------------------------------------
+1. PORTED, WITH TESTS
+--------------------------------------------------------------------------------
+
+  Upstream                            Port                       Tests
+  ----------------------------------  -------------------------  -----
+  rational.cc + rational.hh           Rational.cs                27   (from upstream)
+  include/direction.hh                Direction.cs               12   (from upstream)
+  include/drul-array.hh               Direction.cs (DrulArray)    5
+  interval.cc + interval.hh           Interval.cs (Interval)     21   (from upstream)
+    + interval.tcc, interval-traits.hh  Interval.cs (Slice)       2
+  interval-set.cc + .hh               IntervalSet.cs              8
+  include/matrix.hh                   IntervalSet.cs (Matrix)     2
+  offset.cc + offset.hh               Offset.cs                  12
+    + include/axis.hh                 Offset.cs (Axis enum)
+  polynomial.cc + polynomial.hh       Polynomial.cs              12
+  file-name.cc + file-name.hh         FileName.cs                12
+  file-path.cc + file-path.hh         FileName.cs (FilePath)      5
+  string-convert.cc + .hh             StringConvert.cs            7
+  warn.cc + warn.hh                   Warn.cs                     6
+  include/pqueue.hh                   Warn.cs (PriorityQueue)     3
+  include/real.hh                     (no type needed -- Real is double)
+
+  139 tests, all passing. Release builds with 0 warnings.
+
+  Where upstream ships tests (test-rational.cc, test-interval.cc,
+  test-direction.cc, test-drul-array.cc), the assertions and the cases they cover
+  are TRANSLATED FROM UPSTREAM rather than invented. That is the point: it
+  verifies the port against LilyPond's own expectations, not against the porter's
+  reading of the source.
+
+  NOTE for the record: the project direction document says there are "zero unit
+  tests upstream". That is true of lily/ but NOT of flower/, which ships roughly
+  2,000 lines of them.
+
+--------------------------------------------------------------------------------
+2. DELIBERATELY NOT PORTED -- C++ CONSTRUCTS WITH NO C# ANALOGUE
+--------------------------------------------------------------------------------
+
+These files are part of flower/'s line count but consist of preprocessor macros,
+template plumbing, or standard-library shims that C# either provides natively or
+does not need. Porting them would produce nothing.
+
+  arithmetic-operator.hh   Macros generating operator+ from operator+= .
+                           C# declares operators directly.
+  compare.hh               Macros generating <, >, <=, >= from a compare()
+                           function. C# declares operators directly.
+  virtual-methods.hh       Macros for LilyPond's hand-rolled RTTI and class-name
+                           strings. C# has real reflection.
+  memory.hh                Smart-pointer helpers. C# is garbage collected.
+  std-string.hh            Includes <string> and pulls names into scope.
+  std-vector.hh            Includes <vector>, plus bounds-checked indexing under
+                           a debug flag. C# arrays and List<T> are already
+                           bounds-checked.
+  flower-proto.hh          Forward declarations. C# does not need them.
+  interval-traits.hh       Template traits supplying the empty-interval sentinels
+                           per element type. Folded into Interval and Slice as
+                           MaxSentinel / MinSentinel, because the port realises
+                           the template as two concrete types.
+  yaffut.hh                Upstream's test framework.
+  yaffut-parameters.hh     Ditto. Replaced by xUnit v3.
+  test-*.cc                Upstream's test bodies. Translated into the .Tests
+                           project rather than ported as source.
+
+--------------------------------------------------------------------------------
+3. NOT PORTED -- OUT OF SCOPE FOR A LIBRARY
+--------------------------------------------------------------------------------
+
+  getopt-long.cc/.hh       Command-line option parsing for the lilypond(1)
+                           executable. CodeBrix.LilyPort is a library, so this
+                           stays out of Flower.
+                           //was previously: "a future command-line front end would
+                           supply its own". Re-recorded 2026-08-27: that front end
+                           EXISTS -- tools/Lily.Shell -- and it does supply its own,
+                           so the sentence is now a statement of fact rather than a
+                           prediction. The disposition is unchanged.
+  international.cc/.hh     gettext _() wrappers. Localisation for this port is a
+                           CodeBrix.Platform concern, not a flower/ one.
+  libc-extension.cc/.hh    Replacements for missing libc functions (snprintf and
+                           friends) on old platforms. .NET supplies these.
+  cpu-timer.cc/.hh         Wall/CPU timing. System.Diagnostics.Stopwatch covers
+                           it; will be wired in if the engine needs timing.
+  time-tracer.cc/.hh       A tracing profiler writing Chrome trace JSON. Useful
+                           later for performance work, not needed to engrave.
+
+--------------------------------------------------------------------------------
+4. BEHAVIOURAL DIFFERENCES FROM UPSTREAM -- ALL DELIBERATE
+--------------------------------------------------------------------------------
+
+4.1  Rational: denominator stored biased by one
+     Upstream's default-constructed Rational is ZERO (sign 0, num 0, den 1). C#
+     cannot reproduce that, because default(Rational) and array allocation zero
+     the fields and bypass constructors -- which would give a zero denominator,
+     and this type reads a zero denominator as NOT-A-NUMBER. Storing the
+     denominator biased by one makes the all-zeroes pattern mean denominator 1.
+     Caught by upstream's own init_default test.
+
+4.2  Interval: bounds stored behind an "assigned" flag
+     Same class of problem. Upstream's default-constructed Interval is EMPTY
+     (left +infinity, right -infinity), which is what lets Unite and AddPoint
+     accumulate from a fresh interval. Zeroed fields would give a zero-length
+     interval AT THE ORIGIN and silently corrupt every extent computed that way.
+     A bool defaults to false, so an unassigned Interval reads back as empty.
+
+4.3  Warn.Error throws instead of exiting
+     Upstream calls exit(). A library must not terminate its host process, so
+     Error raises LilyPondErrorException and the caller decides. This is the only
+     place in flower/ where the port does not mirror upstream control flow.
+
+     EXTENDED 2026-08-18 (the warning-as-error + message-model session, GO
+     Jeremy; audit items 1.2 and 1.3):
+
+     * warning-as-error IS WIRED. warn.cc's three promotion branches
+       (programming_error :230, non_fatal_error :247, warning :260) route
+       through DeferrableError, the port of deferrable_error (:200-208), and
+       WarningAsErrorExitDeferrer (warn.hh:47-66, one upstream scope at
+       parse-scm.cc:62) is ported as an IDisposable whose Dispose performs the
+       deferred stop. exit(1) is LilyPondErrorException, as above. UNLIKE
+       upstream, the deferrer's statics RESET when the deferred stop fires --
+       upstream's process dies, this one runs the next file, and a surviving
+       flag would stop that file's run at its first deferral scope (the
+       per-file leak class). The flag itself is read LIVE from the engine's
+       option store through Warn.WarningAsErrorSource -- upstream mirrors into
+       a global from internal_set_option; the port cannot, because
+       ly:reset-options and the per-file option restore write the store
+       without passing ly:set-option, and a mirror would go stale exactly
+       there. The deferral was parked while the port reached programming
+       errors upstream does not; that residue was MEASURED ZERO on 2026-08-18
+       (the three "bounds of this piece" reports are upstream's own three,
+       graded MATCH by the diagnostics gate). Fenced by WarnTests (promotion,
+       one-fatal-line shape, expectation-beats-promotion, deferral scope,
+       source hook) and WarningAsErrorTests (the engine wiring + the
+       restore-bypass case).
+
+     * THE MESSAGE MODEL IS UPSTREAM'S OPEN-LINE MODEL. print_message
+       (warn.cc:161-177) starts a message on a new line when one is open and
+       appends NOTHING; the newline lives in the CALLER's text for the
+       warning/error/basic_progress family and is absent for message() and
+       progress_indication(). Warn previously WriteLine'd everything, which
+       rendered identically except where raw Scheme output with leading
+       newlines followed a phase marker -- scheme-engraver.ly's trace begins
+       "\n\n", and the port printed one blank line more than the oracle.
+       Message/Progress now write raw through EmitPart (Progress with
+       newline=false, warn-scheme.cc:121-122's own comment); three call sites
+       carry upstream's own suffixes ("Calculating line breaks... " and
+       "Drawing systems... " with paper-score.cc's trailing space; "MIDI
+       output to `%s'...\n" with performance.cc's embedded newline); and the
+       per-file boundary in BatchRunner closes any open line before the
+       driver's result line prints (R17's carve-out -- upstream's per-file
+       process exit did this for free).
+
+4.4  Interval.Compare throws instead of asserting
+     Upstream assert()s when neither interval contains the other. The port throws
+     InvalidOperationException, which is the same contract with a better
+     diagnostic.
+
+4.5  DrulArray with a centre direction resolves to the negative side
+     Upstream assert()s that the direction is non-zero. The C# indexer has no way
+     to signal, so it resolves rather than throwing.
+
+4.6  NaN sign: a genuine C-to-.NET hazard, NOT a port defect
+     C's NAN macro is POSITIVE-signed (signbit(NAN) == 0). .NET's double.NaN is
+     NEGATIVE-signed: its bits are 0xFFF8000000000000 and double.IsNegative
+     returns true. So Direction(NAN) is POSITIVE in C while
+     new Direction(double.NaN) is NEGATIVE here. Both implementations follow the
+     sign bit correctly; only the language's default constant differs.
+
+     This is flagged prominently because it will recur: anywhere in the engine
+     port where a NaN can reach a sign-sensitive computation, the same trap
+     applies. Verified empirically on this machine against gcc.
+
+4.7  String_convert::form_string / vform_string not ported
+     printf-style formatting wrappers. C# has interpolation and composite
+     formatting; callers use those.
+
+4.8  Windows drive-letter handling is unconditional
+     Upstream guards it with #ifdef __MINGW32__. One managed binary serves every
+     platform, so the code is always compiled. It is inert on paths with no
+     drive letter.
+
+================================================================================
+END
+================================================================================
+
+================================================================================
+ADDED -- BEZIER, AND Offset.Directed
+================================================================================
+
+  lily/bezier.cc, lily/include/bezier.hh  ->  Bezier.cs
+
+    Ported: the cubic curve itself -- CurvePoint, DirectionAtPoint, Subdivide,
+    Extract, Scale, Rotate, Translate, Reverse, ControlPointExtent.
+
+    LATER ADDITION: the previously deferred set is now ported --
+    get_other_coordinate(s) -> GetOtherCoordinate(s), solve_point ->
+    SolvePoint, solve_derivative -> SolveDerivative, minmax -> MinMax,
+    extent -> Extent, polynomial -> ToPolynomial, curve_coordinate ->
+    CurveCoordinate. The demand was Lookup::slur and Lookup::bezier_sandwich.
+
+    Upstream caches the four Bernstein basis polynomials in a file-static
+    Polynomial_cache; the port does the same in a static array, because
+    SolvePoint and SolveDerivative rebuild them on every call and the slur and
+    tie scorers call those in inner loops.
+
+    STILL not ported: assert_sanity (a debug-only check).
+
+    Placed in the Flower assembly although upstream keeps it in lily/. It
+    depends only on Offset, Interval and Warn, all of which are here, and
+    nothing in it touches grobs or Scheme. Recorded so the divergence from
+    upstream's directory layout is deliberate and visible.
+
+  flower/offset.cc offset_directed()  ->  Offset.Directed(double)
+
+    DELIBERATE NON-SIMPLIFICATION. The obvious implementation is
+    (cos t, sin t). Upstream instead folds the angle into (-180, 180] and
+    computes BOTH components from sines of angles no larger than 90 degrees.
+    That is not clumsiness: it keeps the rounding error of pi/180 from
+    accumulating, and it makes |x| and |y| come out exactly equal at odd
+    multiples of 45 degrees. The comment in the source says so, and there is a
+    test for the 45-degree property. Do not "clean this up".
+
+    One genuine translation difference: C's fmod truncates toward zero, while
+    .NET's Math.IEEERemainder rounds to nearest. The port uses the % operator,
+    which matches fmod. Using IEEERemainder because the name looks closer would
+    be wrong.
+
+
+  ADDED -- Polynomial and Offset
+
+  flower/include/polynomial.hh operator+= / operator-=  ->  Polynomial.Add / .Subtract
+
+    C# cannot define a compound-assignment operator directly, and the binary
+    operators already present build a NEW polynomial. Bezier's polynomial()
+    accumulates in place, so the mutating pair is needed as named methods.
+    Polynomial.Copy() was added alongside for the same reason.
+
+  flower/include/offset.hh dot_product / cross_product
+                                    ->  Offset.DotProduct / Offset.CrossProduct
+
+    Free functions upstream; static methods here, since C# has no free
+    functions. Behaviour identical.
+
+  flower/include/axis.hh other_axis / NO_AXES  ->  Axes.Other / Axes.Count
+
+    Placed in Offset.cs, which already claims axis.hh in its provenance line.
+
+
+================================================================================
+CORRECTED BY THE MIDI GROUP -- TWO TYPES THAT LOOKED PORTED AND WERE NOT
+================================================================================
+
+  Both were found by the MIDI subsystem's demand loop, and both had been wrong
+  since the Flower pass. Neither had a production caller until the MIDI
+  subsystem landed, which is
+  why nothing had noticed.
+
+  Rational.FromDouble
+        WAS the exact dyadic conversion, built with BigInteger. That is precisely
+        what flower/rational.cc's own comment forbids:
+
+            do not blindly substitute by libg++ code, since that uses
+            arbitrary-size integers.  The rationals would overflow too easily.
+
+        They do. A tempo ramp produced a double whose exact numerator does not fit
+        a ulong and the conversion THREW, truncating eleven MIDI files after their
+        header. Now upstream's algorithm: frexp, twenty bits of mantissa
+        (FACT = 1 << 20), normalize, shift by the exponent, normalize again.
+
+        ONE DELIBERATE DIVERGENCE: where the shift would exceed 63 bits upstream
+        shifts a uint64_t past its width, which is undefined behaviour in C++; the
+        port saturates to zero or the signed infinity instead.
+
+        Measured blast radius: the full 2,146-file sweep is unchanged and the
+        ratchet reports 0 regressions. Musical durations are dyadic and small, so
+        the lossy path is exact for all of them.
+
+  PriorityQueue (the port of include/pqueue.hh)
+        WAS a hand-written binary heap. Upstream's PQueue is built on
+        std::push_heap / std::pop_heap with a `greater' comparator, and WHICH OF
+        SEVERAL EQUAL ELEMENTS SURFACES FIRST is decided entirely by that
+        algorithm's internal element order -- two correct heaps need not agree.
+
+        Midi_walker's stop-note queue reaches exact ties routinely, because every
+        chord ends its notes on the same tick, and the order they come out in is
+        the order the note-off bytes are written to the file. The heap is now a
+        replica of libstdc++'s, the same one Objects/ConfigurationHeap.cs carries
+        for the beam and slur scorers and for the same reason.
+
+        The three existing tests still pass unchanged: they assert ordering
+        properties, which both heaps satisfy. That is worth noticing -- the tests
+        could not have caught this, and did not.
+
+  ADDED for the MIDI layer: BigEndianBytesU16/24/32 and HexToBytes, the
+  byte-returning siblings of the existing char-based helpers. std::string is a byte
+  container and System.String is not; the reasoning is in StringConvert.cs and in
+  the Engine's PORT-COVERAGE.
+
+
+PARITY 26 -- offset_directed's DEGREE CONVERSION IS GROUPED, NOT FOLDED
+------------------------------------------------------------------------------
+  Upstream writes `sin ((90 - angle) * M_PI / 180.0)'.  C evaluates that LEFT TO
+  RIGHT: ((90 - angle) * M_PI) / 180.0.  The port had folded the constant into one
+  multiplier -- `(90 - angle) * ToRadians' with `ToRadians = Math.PI / 180.0' --
+  which is algebraically the same expression and is NOT the same expression in
+  doubles.
+
+  MEASURED: the two disagree in the last bit for 1,008 of the 2,881
+  quarter-degree angles in (-360, 360), and for 208 of the 719 whole-degree ones.
+  A rotation computed one bit away from upstream's is a rotation whose every
+  transformed point is one bit away from upstream's, and a skyline built from
+  those points can keep or drop a degenerate building on the strength of it.
+
+  Now upstream's grouping, in a private SinDegrees helper so the grouping is
+  stated once and cannot drift.  Fenced by five OffsetTests cases, each with a
+  control; the grouping case asserts that the two spellings DIFFER before
+  asserting which one Directed answers, so it cannot pass with the fix reverted.
+
+  /!\ NOT THE SAME AS SvgBackend's PiOver180, which mirrors lily-library.scm's
+      own `PI-OVER-180' constant.  Upstream really does precompute that one, and
+      folding it there is the faithful choice.  Family swept; that is the only
+      other site.
+
+  /!\ ONE ANGLE PRODUCES A NEGATIVE ZERO AND IT IS FAITHFUL.  `fmod' keeps the
+      sign of its first argument, so -360 folds to -0.0, every later test is
+      false, and the angle reaches `sin (-0.0 * M_PI / 180.0)' = -0.0.  Upstream
+      takes the identical path.  Fenced BECAUSE it looks like a defect: the
+      arrangement's "avoid -0.0" comment covers the quadrant handovers, not this.
+      It moved no corpus row -- none of the corpus's rotation angles is one of the
+      208 -- and that is expected of a rule-2 fix.

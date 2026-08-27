@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "41h-TooManyParts.xml",
+ "messages": [],
+ "name": "41h-TooManyParts",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 41h-TooManyParts.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"This piece has two more <part> elements than the <part-list>\n    section contains. One can either convert all the parts present but not\n    listed in the part list, or simply not import or ignore them.\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\once \\omit Staff.TimeSignature r1 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "41h-TooManyParts.xml",
+ "version_line": "\\version \"2.27.2\""
+}

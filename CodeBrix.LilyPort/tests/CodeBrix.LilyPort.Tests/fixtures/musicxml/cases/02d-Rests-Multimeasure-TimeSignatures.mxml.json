@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "02d-Rests-Multimeasure-TimeSignatures.xml",
+ "messages": [],
+ "name": "02d-Rests-Multimeasure-TimeSignatures",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 02d-Rests-Multimeasure-TimeSignatures.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Multi-measure rests should always be converted into durations that\n    are multiples of the time signature.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n    \\override MultiMeasureRest.expand-limit = 1\n  }\n  \\context {\n    \\Score\n    skipBars = ##t\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major R1*2 | % 2\n  \\time 3/4 R2.*3 | % 5\n  \\time 2/4 R2*2 | % 7\n  \\time 4/4 R1*2 | % 9\n\n  \\barNumberCheck #10\n  c1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "02d-Rests-Multimeasure-TimeSignatures.xml",
+ "version_line": "\\version \"2.27.2\""
+}

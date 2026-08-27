@@ -1,0 +1,11 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQACAYBNVHJrAAAAcwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDGlaOjAD/UQMUbe6MAP9RAxCxKYwA/1EDCpObjAD/UQMGL9mMAP9RAwRjwowA/1EDD0JAgwD/LwBNVHJrAAAATAD/AwVcbmV3OgCQPFqMAJA8AACQPFqMAJA8AACQPFqMAJA8AACQPFqMAJA8AACQPFqMAJA8AACQPFqMAJA8AACQSFqDAJBIAAD/LwA=",
+ "name": "tempo-accel-granularity-key",
+ "options": {
+  "key": "-2:1"
+ },
+ "output": "% Lily was here -- automatically converted by midi2ly from tempo-accel-granularity.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n\n\n  \\key g \\minor\n    \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = #30000000/863047 % ≈34.7606\n  \\skip 1 \n  | % 2\n  \n  \\tempo 4 = #30000000/669431 % ≈44.8142\n  \\skip 1 \n  | % 3\n  \n  \\tempo 4 = #20000000/364643 % ≈54.8482\n  \\skip 1 \n  | % 4\n  \n  \\tempo 4 = #20000000/231049 % ≈86.5617\n  \\skip 1 \n  | % 5\n  \n  \\tempo 4 = #4000000/27031 % ≈147.978\n  \\skip 1 \n  | % 6\n  \n  \\tempo 4 = #10000000/47947 % ≈208.564\n  \\skip 1 \n  | % 7\n  \n  \\tempo 4 = 60\n  \\skip 4 \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"\\new:\"\n  \\skip 4*25 \n}\n\ntrackBchannelB = \\relative c {\n  c'1 \n  | % 2\n  c \n  | % 3\n  c \n  | % 4\n  c \n  | % 5\n  c \n  | % 6\n  c \n  | % 7\n  c'4 \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "tempo-accel-granularity.midi"
+}

@@ -1,0 +1,17 @@
+{
+ "arguments": [
+  "--cp",
+  "2"
+ ],
+ "input_file": "51a-Header-Credits.xml",
+ "messages": [
+  "musicxml2ly: warning: cannot use non-integer page number '2a'"
+ ],
+ "name": "51a-Header-Credits-credit-page-2",
+ "options": "--cp 2",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 51a-Header-Credits.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Check multiple <credit> elements with various <credit-type>\n    children (also testing the case without such a child and having two). There\n    is also a <defaults> block to properly set up (quite small) page dimensions\n    and a ‘tenth’ value, making the ‘default-x’ and ‘default-y’ attributes of\n    <credit-words> children meaningful.\n\n    The following <credit> elements are present, with the given <credit-type>\n    type.\n\n    – ‘page number’ (two <credit> elements, one at the top left for page ‘2’ and\n    another one at the top right for page ‘2a’ using attribute ‘page=\\\"2\\\"’;\n    valign: top).\n\n    – ‘rights’ (at the bottom; halign: center, justify: right, valign: bottom).\n\n    – ‘title’ (two <credit-words> elements, attributes only set for the first\n    one, almost at the top; justify: center, valign: middle, enclosure:\n    rectangle).\n\n    – No <credit-type> element (below the title; halign: center, valign:\n    middle).\n\n    – Two <credit-type> elements (types ‘foo’ and ‘bar’, at the top; justify:\n    center, valign: top, font-stype: italic).\n\n    – ‘composer’ (below the type-less element; justify: right, valign: middle).\n\n    – ‘lyricist’ (below the type-less element; valign: middle).\n\n    There are no metadata elements.\n\n    Measure 1 contains <print blank-page=\\\"1\\\"/> to make the music start on\n    page 2 (i.e., all <credit> elements in this test go to page 1).\n\n    Chances are high that an application ignores all <credit> elements, using\n    only metadata to derive titles, subtitles, and more.\"\n}\n#(set-global-staff-size 18.0675)\n\\paper {\n  paper-width = 13.65\\cm\n  paper-height = 10.48\\cm\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\once \\omit Staff.TimeSignature r1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "variant",
+ "source_name": "51a-Header-Credits.xml",
+ "version_line": "\\version \"2.27.2\""
+}

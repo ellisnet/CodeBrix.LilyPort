@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "71c-ChordsFrets.xml",
+ "messages": [],
+ "name": "71c-ChordsFrets",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 71c-ChordsFrets.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A staff with chord names and some fretboards shown. The fretboards\n    can have an arbitrary number of frets/strings, can start at an arbitrary\n    fret and can even contain fingering information.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative a' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major a4 ^\\markup { \\fret-diagram\n    #\"6-o;5-3;4-2;3-o;2-1;1-o;\" } a4 ^\\markup { \\fret-diagram\n    #\"6-o;5-3;4-5;3-4;2-5;1-2;\" } a4 ^\\markup { \\fret-diagram\n    #\"6-o;5-2;4-1;3-2;2-3;1-3;\" } a4 ^\\markup { \\fret-diagram\n    #\"h:5;6-11;5-13;4-15;3-12;2-11;1-11;\" } | % 1\n  a4 ^\\markup { \\fret-diagram #\"6-3;5-5;4-5;3-3;2-3;1-3;\" } a4 ^\\markup {\n    \\fret-diagram #\"6-o;5-o;4-1;3-3;2-3;1-3;\" } a4 ^\\markup { \\fret-diagram\n    #\"6-o;5-o;4-1;3-2;2-1;1-2;\" } a4 ^\\markup { \\fret-diagram\n    #\"f:1;w:10;h:3;10-1-2;9-3;8-x;7-1-4;6-x;5-3;4-2;3-1-5;2-o;1-o;\" } \\bar \"|.\"\n}\n\nPartPOneVoiceOneChords = \\chordmode {\n  c4 c4:maj7.11+ b4:7.5+9+ es4:2 | % 1\n  g4:m dis4:maj7 a4:dim7 c4 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\context ChordNames = \"PartPOneVoiceOneChords\" {\n      \\PartPOneVoiceOneChords\n    }\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "71c-ChordsFrets.xml",
+ "version_line": "\\version \"2.27.2\""
+}

@@ -1,0 +1,11 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQADAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDD0JApAD/LwBNVHJrAAAATACQPFqJAJA8AACQPFqDAJA8AACQPFqGAJA8AACQPFqGAJA8AACQPFqDAJA8AACQPFqDAJA8AACQPFqDAJA8AACQPFqDAJA8AAD/LwBNVHJrAAAAHwCRPFqMAJE8AACRPlqMAJE+AACRQVqMAJFBAAD/LwA=",
+ "name": "midi-polymeter-preview",
+ "options": {
+  "preview": true
+ },
+ "output": "% Lily was here -- automatically converted by midi2ly from midi-polymeter.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n  \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = 60\n  \\skip \\breve. \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \\skip \\breve. \n}\n\ntrackBchannelB = \\relative c {\n  c'2. c4 \n  | % 2\n  c2 c \n  | % 3\n  c4 c c c \n  | % 4\n  \n}\n\ntrackB = <<\n\n  \\clef bass\n  \n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n>>\n\n\ntrackCchannelA = {\n  \\skip \\breve. \n}\n\ntrackCchannelB = \\relative c {\n  c'1 \n  | % 2\n  d \n  | % 3\n  f \n  | % 4\n  \n}\n\ntrackC = <<\n  \\context Voice = voiceA \\trackCchannelA\n  \\context Voice = voiceB \\trackCchannelB\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n    \\context Staff=trackC \\trackA\n    \\context Staff=trackC \\trackC\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "midi-polymeter.midi"
+}

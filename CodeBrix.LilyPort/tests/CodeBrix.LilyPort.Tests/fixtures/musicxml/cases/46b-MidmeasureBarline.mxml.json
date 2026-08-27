@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "46b-MidmeasureBarline.xml",
+ "messages": [],
+ "name": "46b-MidmeasureBarline",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 46b-MidmeasureBarline.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Bar lines can appear at mid-measure positions (having a\n    ‘location=\\\"middle\\\"’ attribute), without using an implicit measure.\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\once \\omit Staff.TimeSignature c4 a4 \\bar \";\"\n  f4 c'4 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "46b-MidmeasureBarline.xml",
+ "version_line": "\\version \"2.27.2\""
+}

@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "21b-Chords-TwoNotes.xml",
+ "messages": [],
+ "name": "21b-Chords-TwoNotes",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 21b-Chords-TwoNotes.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Some subsequent (identical) two-note chords. In the second bar, the\n    chords are tied (top note, bottom note, both notes). In the third bar, the\n    unnatural directions of the ties are enforced with the ‘placement’ attribute\n    (between chords one and two) and the ‘orientation’ attribute (between chords\n    three and four)\"\n}\n\\layout {\n  \\context {\n    \\Score\n    tieWaitForNote = ##t\n    autoBeaming = ##f\n  }\n}\nPartPZeroVoiceOne = \\relative a' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 <a f>4 <a f>4 <a f>4 <a f>4 | % 1\n  <a ~ f>4 <a f ~>4 <a ~ f ~>4 <a f>4 <f ^~ d' _~>4 <f d'>4 <f ^~ d' _~>4 <f d'>4\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P0\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPZeroVoiceOne\" {\n          \\PartPZeroVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "21b-Chords-TwoNotes.xml",
+ "version_line": "\\version \"2.27.2\""
+}

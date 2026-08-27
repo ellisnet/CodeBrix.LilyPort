@@ -1,0 +1,12 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X: 2\nT: Broken rhythm\nM: 6/8\nL: 1/8\nK: D\nA>B c<d e>f | g2 a2 b2 | A>>B c<<d ef |\n",
+ "messages": [],
+ "name": "broken-rhythm",
+ "options": {
+  "beams": false
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"2\"\n  footnotes = \"\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"Broken rhythm\"\n}\n\n\"voicedefault\" = {\n\\time 6/8 \\key d \\major a'8. b'16 cis''16 d''8. e''8. fis''16 \\bar \"|\" g''4 \na''4 b''4 \\bar \"|\" a'8.. b'32 cis''32 d''8.. e''8 fis''8 \\bar \"|\" \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n  >>\n\n  \\layout {}\n  \\midi {}\n}\n",
+ "source": "probe",
+ "source_name": "broken-rhythm.abc"
+}

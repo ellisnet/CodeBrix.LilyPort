@@ -1,0 +1,9 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQACAYBNVHJrAAAAcwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1ED////jAD/UQP///+MAP9RA/QkAIwA/1EDAAcnjAD/UQMAAAGMAP9RAwAAAYwA/1EDAAABjAD/LwBNVHJrAAAADgD/AwVcbmV3OtQA/y8A",
+ "name": "tempo",
+ "options": {},
+ "output": "% Lily was here -- automatically converted by midi2ly from tempo.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n  \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = #4000000/1118481 % ≈3.57628\n  \\skip 1 \n  | % 2\n  \n  \\tempo 4 = #4000000/1118481 % ≈3.57628\n  \\skip 1 \n  | % 3\n  \n  \\tempo 4 = #15/4 % 3.75\n  \\skip 1 \n  | % 4\n  \n  \\tempo 4 = #60000000/1831 % ≈32769\n  \\skip 1 \n  | % 5\n  \n  \\tempo 4 = 60000000\n  \\skip 1 \n  | % 6\n  \n  \\tempo 4 = 60000000\n  \\skip 1 \n  | % 7\n  \n  \\tempo 4 = 60000000\n  \\skip 1 \n  | % 8\n  \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"\\new:\"\n  \\skip 1*7 \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n>>\n\n\n\\score {\n  <<\n    \\context Staff \\trackA\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "tempo.midi"
+}

@@ -1,0 +1,9 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQADAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAMDDAgA/1EDB6EgiHL/LwBNVHJrAAAAWQD/Aw10cmFja0I6dm9pY2VBAJBYWlKQWAAOkFZaUpBWAA6QTlqBMpBOAA6QUFqBMpBQAA6QVVpSkFUADpBTWlKQUwAOkEpagTKQSgAOkExagTKQTAAA/y8ATVRyawAAABYA/wMHdHJhY2tCOgD/WQIDAIhy/y8A",
+ "name": "quantize-duration-2",
+ "options": {},
+ "output": "% Lily was here -- automatically converted by midi2ly from quantize-duration-2.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n\n\n  \\key a \\major\n    \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 3/8\n  \n  \\tempo 4 = 120\n  \\skip 4*1138/384 \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"trackB:voiceA\"\n  \\skip 4*1138/384 \n}\n\ntrackBchannelB = {\n  \n  \\set Staff.instrumentName = \"trackB:\"\n  \n\n  \\key a \\major\n  \\skip 4*1138/384 \n}\n\ntrackBchannelC = \\relative c {\n  e'''4*82/384 r4*14/384 d4*82/384 r4*14/384 fis,4*178/384 r4*14/384 gis4*178/384 \n  r4*14/384 \n  | % 2\n  cis4*82/384 r4*14/384 b4*82/384 r4*14/384 d,4*178/384 r4*14/384 e4*178/384 \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n  \\context Voice = voiceC \\trackBchannelC\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "quantize-duration-2.midi"
+}

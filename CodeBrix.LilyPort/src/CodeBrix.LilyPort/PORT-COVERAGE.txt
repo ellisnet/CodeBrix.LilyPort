@@ -1,0 +1,522 @@
+================================================================================
+CodeBrix.LilyPort -- PORT COVERAGE FOR THE TEXT CONVERTERS
+================================================================================
+
+Written against LilyPond v2.27.2
+(commit 2d621459bd44cb1758f822a69757242eab843060).
+
+The packable facade holds the engine's public surface (BatchRunner,
+LilyPortEngraver, LilyPortPerformer, LilyPondInit, LilyPortInfo) AND the text
+converters, which are the only PORTED source in this project. Everything the
+engine, the parser, the backends and the utility layer carry is recorded in
+their own PORT-COVERAGE.txt; this file records the converters.
+
+A text converter never touches the engine. It reads text or bytes and writes
+LilyPond source, and nothing in this file can move a page of the regression
+corpus. A session that changes only these files still owes the full battery
+(the facade counts as src/), and the expected reading is that every corpus
+figure reproduces EXACTLY.
+
+--------------------------------------------------------------------------------
+1. PORTED, WITH TESTS
+--------------------------------------------------------------------------------
+
+  Upstream                          Port                            Tests
+  --------------------------------  ------------------------------  -----
+  python/convertrules.py     5,706  ConvertLy/ConvertRules.g.cs       302  (parity)
+    + scripts/convert-ly.py    412    ConvertRules.Manual.cs
+                                      ConvertRules.Support.cs
+                                      ConversionVersion.cs
+                                      DocumentConverter.cs
+                                      PythonRegex.cs
+  scripts/abc2ly.py          1,701  Importers/AbcImporter.cs           38  (parity)
+                                      AbcConverter.cs
+                                      AbcParserState.cs
+                                      AbcImportOptions.cs
+  scripts/midi2ly.py         1,312  Importers/MidiImporter.cs         173  (parity)
+    + python/midi.py           212    MidiConverter.cs
+                                      MidiMusicItems.cs
+                                      MidiFileReader.cs
+                                      MidiImportOptions.cs
+                                      MidiFraction.cs
+  (shared)                          Importers/ImportResult.cs          26  (surface)
+                                      ImportDiagnostics.cs
+                                      ImportAbortedException.cs
+
+  Phase 6 landed abc2ly and midi2ly on 2026-08-26 (P6-A). musicxml2ly is NOT
+  ported; it is P6-B, and D60 rules scripts/etf2ly.py permanently out.
+
+  ⚠ EVERY PARITY FIGURE ABOVE IS ORACLE-RECORDED. The fixtures hold what
+  UPSTREAM'S OWN script produced from each input, replayed byte for byte.
+  Nothing in this project's fixtures was ever recorded from the port's output
+  (standing rule 33). Both importer corpora matched on the FIRST run: 36 of 36
+  abc cases and 171 of 171 midi cases.
+
+--------------------------------------------------------------------------------
+2. THE MECHANISM: A MODULE OF GLOBALS IS AN INSTANCE
+--------------------------------------------------------------------------------
+
+  abc2ly and midi2ly are scripts. Each keeps its whole world at module scope --
+  abc2ly has eighteen module globals, midi2ly nine -- and relies on a run of the
+  script being a run of the process. The faithful translation of "the module" is
+  therefore "an instance", and that is what AbcConverter and MidiConverter are:
+  every field in each is one of upstream's globals, in the order the script
+  declares them, and the static entry point creates one per import.
+
+  Two consequences worth stating, because neither is upstream's:
+
+    * TWO IMPORTS AT ONCE CANNOT SEE EACH OTHER. Upstream could not have said
+      that. It also means the parity suites can run in parallel, which board
+      trap 25 says process-wide memo state would have prevented.
+    * THE DIAGNOSTIC SINK IS PER-IMPORT (ImportDiagnostics), for the same reason.
+
+  The music item classes in MidiMusicItems.cs hold a reference back to the
+  converter because they READ those globals -- clocks_per_1, the key, and above
+  all reference_note, which every note both reads and writes. midi2ly has no
+  base class for them and asks `e[1].__class__ == Note'; those class tests are
+  the mechanism (three of them decide voice layout, clefs and contexts), so they
+  are kept as type tests and MidiMusicItem exists only to give `clocks' and
+  `dump' one home.
+
+--------------------------------------------------------------------------------
+3. UPSTREAM DEFECTS FIXED (D64), AND THE THREE THAT WERE NOT DEFECTS
+--------------------------------------------------------------------------------
+
+  D64 (Jeremy, 2026-08-26) amends the faithfulness rule FOR THE TEXT CONVERTERS
+  ONLY: where upstream is broken, the port FIXES it and carries a comment at the
+  site explaining the divergence. Standing rule 2 continues to govern the ENGINE
+  unchanged, where faithfulness IS correctness -- G1 grades 2,316 pages against
+  the oracle byte for byte, so an "improvement" there is a regression by
+  definition. A converter has no such yardstick; what it has is users.
+
+  ⚠ A DEFECT IS PROVED BY MEASUREMENT, NOT BY READING. The first pass over these
+  two scripts produced a list of EIGHT defects "reproduced and marked". Three of
+  them were not defects at all, and were withdrawn only when the oracle was
+  actually asked. That is board trap 2 in its own words -- read the expectation
+  off the ORACLE first -- and it applies to a claim that something is broken just
+  as much as to a claim that something is right.
+
+  FIVE FIXED, all in abc2ly's output path. Each is written up in full, with the
+  measurement that proved it, in tools/abcprobe/DIVERGENCES.txt; each carries a
+  ⚠ DIVERGENCE FROM UPSTREAM comment at its site; and each is fenced by a probe
+  case whose frozen baseline sits beside the oracle's own output in the fixture.
+
+    abc2ly.py:1215-1219   try_parse_escape calls compute_key() with NO argument
+                          -- a TypeError, uncaught. MEASURED: a document
+                          containing `\K' produces NO OUTPUT FILE AT ALL.
+                          FIXED: the escape is consumed and ignored, which is
+                          upstream's own intended effect (it discards the result)
+                          minus the crash.
+
+    abc2ly.py:550-554     header_append's assignment sits INSIDE its own guard,
+                          so a field not already present is never created.
+                          MEASURED: two `H:' lines produce a header with no
+                          history field. FIXED: the assignment moves out of the
+                          guard, which is what the `s = ` default one line
+                          above is for.
+
+    abc2ly.py:672-682     slyrics_append's `_' arm tests `if' where the `-' arm
+                          beside it correctly writes `elif', so the spanner is
+                          appended twice. MEASURED: `w: one _ two' gives
+                          `one __ _ _ two'. FIXED: written as the if/else-if
+                          chain the `-' arm already is.
+
+    abc2ly.py:229-232     dump_voices names a NUMBERED voice `alphabet(int(k))'
+                          -- "voiceB" for `V: 1' -- while dump_score and
+                          dump_slyrics reference it as \"voice1". MEASURED: a
+                          three-voice tune gives `error: unknown command:
+                          `\voice1'' and a fatal failed-files. THE DOCUMENT DOES
+                          NOT COMPILE. FIXED: the definition is brought into line
+                          with the references. `alphabet' then has no reachable
+                          caller and is not ported.
+
+    abc2ly.py:235-239     dump_voices writes `if repeat_state[idx]:' and REPEAT
+                          is 0, which python reads as false, so a voice left
+                          inside an open `\repeat volta 2 {' never gets its
+                          closing brace and upstream's own else arm is
+                          unreachable. MEASURED: `error: syntax error, unexpected
+                          \score'. THE DOCUMENT DOES NOT COMPILE. FIXED: tested
+                          against None.
+
+  THE PROOF. Every diverging case was handed to the pinned lilypond, both sides.
+  Three of the five make LilyPond REFUSE the file and one produces no file at
+  all; the port's output compiles in every case, and the two that compiled either
+  way gained the content they were dropping.
+
+  THREE THAT WERE NOT DEFECTS -- withdrawn on measurement, recorded so the next
+  reader does not re-open them:
+
+    \"voicedefault"       A backslash before a QUOTED STRING is a legal
+                          identifier reference in LilyPond. Single-voice output
+                          engraves successfully. Only the NUMBERED case above was
+                          ever broken.
+
+    midi2ly:539,549       `for i in pitches: end_note(...)' does delete from the
+                          dictionary it walks, and python does raise for that
+                          shape. But create_track routes every channel message
+                          (0x80-0xEF) to a Channel and every meta event to the
+                          Track, so a note-on and an END_OF_TRACK are never in
+                          the same event list and `pitches' is ALWAYS EMPTY when
+                          that branch runs. MEASURED: a MIDI with a hanging note
+                          converts fine. Unreachable code, not a live defect --
+                          and left alone, because a fix to unreachable code is a
+                          divergence that buys nothing.
+
+    midi2ly:399-406       Key.dump's two arms are identical. Redundancy, not
+                          behaviour; nothing to correct.
+
+  ONE THING UPSTREAM DOES IS STILL NOT REPRODUCED, and it is not a fix either:
+  python/midi.py:171 PRINTS its remaining byte count to standard output before
+  raising, a debugging leftover. A library does not own standard output. The
+  error it raises is identical.
+
+  Indexing off the end of a string is python's IndexError, and abc2ly does it in
+  several places when a line does not end in a newline. AbcConverter's CharAt
+  raises where python raises and the import returns no text -- upstream's own
+  outcome, and NOT on the fixed list, because no measurement has yet shown a real
+  ABC file that reaches it.
+
+--------------------------------------------------------------------------------
+4. THE PUBLIC SURFACE (D58) AND WHAT IT DELIBERATELY OMITS
+--------------------------------------------------------------------------------
+
+  AbcImporter.Import(string, AbcImportOptions)
+  MidiImporter.Import(byte[], MidiImportOptions)
+  ImportResult { Text, Messages, Errors, Succeeded }
+
+  Four kinds of upstream option are ABSENT, and are not to be restored:
+
+    driver options       -o, -h, --version, -w  -- the application owns them
+    log-level options    -q, -V, -D             -- the caller filters Messages
+    implementation       --lxml                 -- musicxml2ly's, not ported
+    input kind           -z/--compressed        -- an overload, not a flag
+
+  ⚠ PROGRESS AND IDENTIFICATION OUTPUT IS NOT PRODUCED. Every write those
+  scripts make under `if not global_options.quiet' belongs to the command-line
+  driver: "abc2ly from LilyPond 2.27.2", "Parsing `...'", the "Line ..."
+  counter, "LY output to `...'". The port behaves as `abc2ly -q' always does.
+  WARNINGS AND ERRORS ARE produced, including midi2ly's excess-voices warning,
+  which upstream's --quiet would have suppressed along with the progress line --
+  read what a switch covers before excluding by its name.
+
+  ⚠ SourceName IS PORT-ONLY, on both option objects, and is NOT a widening of
+  the option surface. Upstream takes the input's file NAME from its command line
+  and puts it in output that a caller can see: abc2ly prints it in the one
+  message that names a location, and midi2ly writes it into the first line of
+  the document. A library is handed text or bytes rather than a path, so the
+  caller supplies the name those should carry. Left unset, each reads exactly as
+  upstream's does for a file whose name is empty.
+
+  Two shapes that would be easy to get wrong, and are not:
+  midi2ly's --include-header and --allow-tuplet are action='append' and are
+  therefore lists, never single strings.
+
+--------------------------------------------------------------------------------
+5. DELIBERATE DIVERGENCES
+--------------------------------------------------------------------------------
+
+  D63 (RULED 2026-08-26) -- THE FROZEN \version LINE: FOLLOW UPSTREAM.
+
+    Both importers write a version line upstream deliberately does NOT substitute:
+
+        abc2ly.py:1682   out_file.write('\version "2.24.0"\n')
+                         # Don't substitute @VERSION@.  We want this to reflect
+                         # the last version that was verified to work.
+        midi2ly.py:1130  \version "2.14.0"
+
+    D58 had said this should read LilyVersion.CompatibleWithVersion, citing rule
+    16. RULED THE OTHER WAY: rule 16 makes CompatibleWithVersion the one place
+    THE PORTED LILYPOND RELEASE is named in C#, and 2.24.0 is not that -- it is a
+    different constant meaning "the last release whose syntax this converter's
+    OUTPUT was verified against". Conflating them would make the document claim
+    to be current 2.27 syntax when it is 2.24 idiom (\times 2/3 rather than
+    \tuplet), so convert-ly would decline to modernise a file that needs it.
+
+    Each converter therefore carries its own named LastVerifiedOutputVersion
+    constant, and a parity fence asserts it is NOT CompatibleWithVersion so the
+    two cannot be conflated again. The corpora are byte-identical on this line.
+
+  THE TAGLINE IS NOT A DIVERGENCE. abc2ly's header tagline and midi2ly's
+  program name carry @TOPLEVEL_VERSION@, which IS the release being ported, and
+  the port reads CompatibleWithVersion for them. Those match the oracle exactly.
+
+  PYTHON'S LOGGING FRAMEWORK IS NOT CARRIED. Only the WORDING of lilylib's four
+  message shapes is reproduced where the scripts print through it.
+
+--------------------------------------------------------------------------------
+6. NAMING
+--------------------------------------------------------------------------------
+
+  MidiFileReader        <- python/midi.py. Named for what it does; the module's
+                           own name would have collided with the namespace and
+                           said nothing.
+  MidiFraction          <- python's fractions.Fraction, as midi2ly uses it.
+                           ⚠ Flower's own Rational is deliberately NOT used: it
+                           carries a biased-by-one denominator and an infinity,
+                           which are the engine's needs and not python's. The
+                           exactness matters -- midi2ly decides whether to write
+                           a tempo as a plain number or as a Scheme rational
+                           with a decimal comment by asking whether the value's
+                           denominator is one and whether the rounded decimal it
+                           would print is the same number, and both questions
+                           have different answers in binary floating point.
+  MidiFraction.FormatG  <- python's format(value, 'g'). .NET's own "G" format is
+                           NOT this: it switches to exponent notation on a
+                           different rule and spells the exponent differently.
+                           Fenced against fourteen values recorded from python.
+  AbcConverter,         the instance that is upstream's module (section 2).
+  MidiConverter
+  ImportAbortedException  the stop a script takes by ending the process.
+
+--------------------------------------------------------------------------------
+7. THE ORACLES
+--------------------------------------------------------------------------------
+
+  tools/abcprobe/         and tools/midi2lyprobe/ -- each has a README.txt that
+  records the corpus, the stderr handling and the regeneration command. Both run
+  the INSTALLED script from the pinned oracle, never a checkout copy, because
+  only the installed copy has had @TOPLEVEL_VERSION@ substituted.
+
+  abc2ly    upstream's eight regression files, plus ten probes written for this
+            port (D59) for what those eight never reach -- the eight convert
+            without a single warning, so every diagnostic path would otherwise
+            be untested. Each recorded with and without --beams: 36 cases.
+  midi2ly   this repository's own round trip: the ninety .midi files the pinned
+            LilyPond engraved from the MIDI regression subsuite, read back. That
+            is fifteen files wider than the corpus upstream ships for midi2ly.
+            Nine representative files are recorded again under each of the nine
+            options that changes the output: 171 cases.
+
+  Both probe tools declare a per-case timeout and NAME anything they skipped.
+
+  musicxml2ly  LilyPond's copy of the unofficial MusicXML Test Suite -- 165 .xml
+            and one .mxl -- recorded at the defaults, plus 40 further cases under
+            one option each: 206 cases over 166 inputs. The corpus is VENDORED
+            into tests/CodeBrix.LilyPort.Tests/fixtures/musicxml/inputs/ (one copy
+            each, MIT, LICENSE kept beside them) rather than inlined per case,
+            because 1.5 MB of XML repeated 206 times buys nothing.
+            tools/musicxml2lyprobe/README.txt records the rest.
+
+            ⚠ THE BOARD'S "215 files" WAS THE DIRECTORY COUNT. That directory
+            also holds 31 .itexi, 15 .lybook, a GNUmakefile, the LICENSE and a
+            .png. What the converter converts is 166.
+
+--------------------------------------------------------------------------------
+8. PHASE 6 / P6-B -- musicxml2ly, COMPLETE (2026-08-26)
+--------------------------------------------------------------------------------
+
+  IN THE BUILD, AND GRADED. The <Compile Remove> that held the part-ported files
+  out is GONE -- deleting it was the whole of what re-enabled them, as the comment
+  above it said. The importer replays the whole recorded corpus BYTE FOR BYTE:
+
+      206 MATCH / 0 ACCEPTED / 0 DIFFERS / 0 SKIPPED of 206
+
+  with no declared divergence anywhere. Standing rule 33 held throughout: every
+  fixture is the pinned 2.27.2 oracle's own output, and nothing was ever recorded
+  from this port.
+
+  DONE -- the whole of musicxml2ly and its four private modules:
+
+    Upstream                            Port
+    ----------------------------------  --------------------------------------
+    python/musicxml.py  (Xml_node and   Importers/MusicXmlNode.cs
+      its four immediate subclasses)
+    python/musicxml.py  (~95 element    Importers/MusicXmlElements.cs
+      classes)
+    python/musicxml.py  (Attributes,    Importers/MusicXmlAttributes.cs
+      Barline)
+    python/musicxml.py  (Note)          Importers/MusicXmlNote.cs
+    python/musicxml.py  (Part.interpret Importers/MusicXmlPart.cs
+      and the arpeggio and single-voice
+      passes; Musicxml_voice)
+    python/musicxml.py  (Part.extract_  Importers/MusicXmlPartVoices.cs
+      voices and its four closures)
+    python/musicxml.py  (class_dict,    Importers/MusicXmlClassMap.cs
+      get_class, the four demarshalers)
+    python/musicxml.py  (minidom_       Importers/MusicXmlReader.cs
+      demarshal_node) + musicxml2ly.py
+      (read_xml, read_musicxml)
+    python/musicxml2ly_conversion.py    Importers/MusicXmlConversion.cs
+    python/musicxml2ly_definitions.py   Importers/MusicXmlDefinitions.cs
+    python/utilities.py                 Importers/MusicXmlUtilities.cs
+    python/musicexp.py  (Output_printer Importers/LilyOutputPrinter.cs
+      and the two helpers above it)
+    python/musicexp.py  (Duration,      Importers/LilyPitch.cs
+      Pitch, the 13 note-name languages)
+    python/musicexp.py  (Base, Music,   Importers/LilyMusic.cs
+      the wrappers, the containers,
+      RepeatedMusic, Lyrics, Header)
+    python/musicexp.py  (Paper, Layout) Importers/LilyPaper.cs
+    python/musicexp.py  (color_to_ly,   Importers/LilyMarkup.cs
+      the font-size helpers, text_to_ly,
+      accidental_values_dict)
+    python/musicexp.py  (Event,         Importers/LilyEvent.cs
+      SpanEvent and the fifteen spanner
+      and direction events below them)
+    python/musicexp.py  (TextEvent,     Importers/LilyArticulation.cs
+      ArticulationEvent, OrnamentEvent
+      and everything drawn beside a note)
+    python/musicexp.py  (RhythmicEvent, Importers/LilyRhythmicEvent.cs
+      RestEvent, SkipEvent, NoteEvent,
+      HarmonicNoteEvent)
+    python/musicexp.py  (ChordEvent,    Importers/LilyChordEvent.cs
+      ArpeggioChordEvent, Partial,
+      MeasureLengthEvent, BarLine,
+      ForBarline)
+    python/musicexp.py  (KeySignature-  Importers/LilyStaffMusic.cs
+      Change, TimeSignatureChange,
+      Clef_StaffLinesEvent, TempoMark,
+      the figured-bass classes and the
+      small staff-level events)
+    python/musicexp.py  (StaffGroup,    Importers/LilyStaff.cs
+      Staff, TabStaff, DrumStaff,
+      RhythmicStaff, Score)
+    musicxml2ly.py  (the paper and      Importers/MusicXmlConverterScore.cs
+      header extraction)
+    musicxml2ly.py  (staff attributes,  Importers/MusicXmlConverterStructure.cs
+      extract_score_structure, the
+      identifier helpers)
+    musicxml2ly.py  (the <attributes>   Importers/MusicXmlConverterAttributes.cs
+      and <print> conversions)
+    musicxml2ly.py  (group_repeats,     Importers/MusicXmlConverterGrouping.cs
+      group_tuplets, group_tremolos)
+    musicxml2ly.py  (the spanner and    Importers/MusicXmlConverterNotations.cs
+      articulation builders,
+      articulations_dict)
+    musicxml2ly.py  (the <direction>    Importers/MusicXmlConverterDirections.cs
+      builders and the state machine
+      over its children)
+    musicxml2ly.py  (chord names,       Importers/MusicXmlConverterHarmony.cs
+      fretboards, figured bass, lyrics)
+    musicxml2ly.py  (LilyPondVoice-     Importers/MusicXmlVoiceBuilder.cs
+      Builder, VoiceData)
+    musicxml2ly.py  (extract_lyrics,    Importers/MusicXmlConverterVoice.cs
+      musicxml_voice_to_lily_voice)
+    musicxml2ly.py  (the document       Importers/MusicXmlConverterDocument.cs
+      assembly and convert())
+    musicxml2ly.py  (option_parser's    Importers/MusicXmlImportOptions.cs
+      surface, per D58)
+    musicxml2ly.py  (the driver)        Importers/MusicXmlImporter.cs
+    python's fractions.Fraction         Importers/PythonFraction.cs
+    python's insertion-ordered dict     Importers/PythonDictionary.cs
+
+  THE ONE ARCHITECTURAL DECISION, and it is the one section 2 above already made
+  for abc2ly and midi2ly, applied to four modules instead of one: musicxml2ly,
+  musicexp, musicxml and musicxml2ly_globvars EACH keep part of their world in
+  module globals AND READ EACH OTHER'S. So the globals live in ONE per-import
+  object, MusicXmlImportState, that all four halves of the port are handed, and
+  every tree node carries a reference to it because upstream reaches its
+  diagnostics through the `ly' module. Same two consequences as before: two
+  imports at once cannot see each other, and the diagnostic sink is per-import.
+
+  SIX PLACES WHERE C# CANNOT SAY WHAT python SAYS, each written out at its site:
+
+    * RepeatEndingMarker derives from BOTH RepeatMarker and EndingMarker. The port
+      derives from the repeat half and carries the ending half's two fields, which
+      is exactly the set upstream's constructor assigns; the lost
+      `isinstance(x, EndingMarker)' is asked as MusicXmlMarker.IsEndingMarker.
+    * Note.initialize_pitched_event REBINDS THE OBJECT'S CLASS
+      (`event.__class__ = HarmonicNoteEvent', then `event.init()'). The port
+      builds the harmonic event FROM the note event, once, and carries on filling
+      that.
+    * musicxml_voice_to_lily_voice REBINDS A CHORD'S CLASS the same way, to
+      ArpeggioChordEvent. Rebinding changes the object every existing reference
+      already points at; C# has to FIND those references, and MusicXmlConverter.
+      ReplaceChord names the three that exist -- the voice's element list, the
+      registered tuplet and tremolo events, and any grace group -- because they
+      are all handed the chord earlier in the same note's processing.
+    * max_occurs_by_child: NULL AND EMPTY ARE DIFFERENT. A class that declares no
+      such map raises AttributeError, which the demarshaller CATCHES (so the child
+      becomes an ordinary node); one that declares a map without the child raises
+      KeyError, which it does not. An empty dictionary would silently turn the
+      first case into the second.
+    * Attributes.extract_attributes_for_staff uses python's SHALLOW copy.copy, so
+      the copy SHARES `_content' and the XML attribute dictionary with the
+      original and replaces only two fields. The port shares the same two
+      references. Attributes.get_time_signature().copy() is the same move on a
+      list, and MusicXmlTimeSignature.ShallowCopy is written to keep the aliasing
+      that makes musicxml_time_to_lily's duration shift reach the cache.
+    * NEGATIVE INDICES. python's `list[-1]' is the LAST element, and group_repeats
+      RELIES ON IT: an implicit repeat start is recorded at position -1 -- a
+      position no element has -- and four of the corpus's repeat cases then read
+      `music_list[-1]'. MusicXmlConverter.PyAt and PyRemoveAt are that indexing.
+
+  AND TWO WHERE THE PORT DELIBERATELY DIFFERS:
+
+    * utilities.interpret_alter_element reads its value with python's `eval', so a
+      document's text is EXECUTED. The port parses a number. Every alteration a
+      valid MusicXML document can carry is a number and the two readings agree on
+      all of them; the difference is that the port does not hand an untrusted file
+      a way to run code inside the application that called it.
+      ⚠ ONE PLACE NEEDS THE BOX python's eval leaves, because the value is
+      PRINTED rather than computed with: `<bend-alter>' reaches `%s', where an
+      integer gives '4' and a float gives '4.0'.
+      MusicXmlUtilities.InterpretAlterElementBoxed is that reading, and it is used
+      by MusicXmlBend.BendAlter alone.
+    * split_string_and_preserve_doublequoted_substrings is written with `\S' under
+      python's (?a) flag, which narrows it to the six ASCII whitespace characters.
+      .NET's `\S' is Unicode-aware and would split on U+00A0 -- which upstream's
+      own comment says it is preserving -- so the class is spelled out. Everything
+      else in that pattern is upstream's.
+
+  NOT PORTED, DELIBERATELY: Music.lisp_expression, Music.name,
+  NestedMusic.get_properties and SequentialMusic.lisp_sub_expression -- the
+  `make-music' Scheme path. It exists in musicexp.py but NOTHING in musicxml2ly
+  reaches it; it is a leftover from a shared ancestor of these scripts. Porting it
+  would have meant carrying every class's python NAME as data, since that name is
+  what it prints, for output no input can produce. The two lisp_expression methods
+  that ARE reached, Duration's and Pitch's, are ported in full.
+
+  THREE WRITE-ONLY LOCALS ARE DROPPED, and that is not a simplification: upstream
+  assigns `is_beamed', `ignore_lyrics' and `complex'-adjacent bookkeeping in
+  musicxml_voice_to_lily_voice and never reads two of them again -- the lyrics are
+  collected by their own pass. Carrying them would have meant a C# warning for
+  every one, and the comments at the sites say what upstream writes there.
+
+  NAMING (rule 6). The two models needed telling apart in one namespace, so the
+  INPUT model is MusicXml* (upstream's musicxml.py) and the OUTPUT model is Lily*
+  (upstream's musicexp.py). The renames beyond that, each because upstream returns
+  or stores an untyped python shape that C# cannot hold in one member:
+    Attributes.get_time_signature's five readings  -> MusicXmlTimeSignature, with
+      SignatureKind naming which one it is (upstream returns 0, 'X', a flat list
+      or a list of lists, and every caller tests the shape).
+    get_clef_information's six-element list        -> MusicXmlClefInfo
+    get_key_signature's four-tuple whose first     -> MusicXmlKeyInfo, with
+      member is EITHER a pair OR a list               IsTraditional as the test
+    Barline.to_lily_object's list-of-two-lists     -> MusicXmlBarlineResult
+    articulations_dict's four entry shapes         -> MusicXmlArticulationEntry,
+      (a string, a pair of strings, a function,       with EntryKind as the
+      a class-and-name pair)                          isinstance chain
+    group_repeats' two-member marker lists         -> MusicXmlRepeatMarkerEntry,
+      (a position, a pair, or a list of pairs)        keyed by upstream's own
+                                                      first member
+    format_staff_info's nested lists               -> LilyStaffInfo, LilyVoiceInfo
+    KeySignatureChange.non_standard_alterations    -> LilyKeyAlteration, with
+      (two- or three-member lists)                    HasOctave as `len(a) == 3'
+    FretEvent.elements' mixed lists                -> LilyFretElement, whose
+      (a fret is an int OR the text 'o'/'x')          Count is python's own len
+    OrnamentEvent.type, which SHADOWS              -> LilyOrnamentEvent.
+      ArticulationEvent's string with a tuple         OrnamentType
+    BarLine.type, NotestyleEvent.duration,         -> LilyBarLine.BarType,
+      RhythmicEvent.dot                               LilyNoteStyleEvent.
+                                                      NoteDuration,
+                                                      LilyRhythmicEvent.PrintDot
+
+  ⚠ THE ELEMENT NAME IS A CLASS ATTRIBUTE UPSTREAM. A loop at the foot of
+  musicxml.py writes `cls._name = name' for every entry of class_dict, and
+  get_name is a classmethod reading it -- so a node the CONVERTER builds by hand,
+  which is how every lyric and every dynamics markup is assembled, answers its
+  element name without ever having been demarshalled. MusicXmlNode's constructor
+  looks the class up in MusicXmlClassMap for exactly that reason.
+
+  ⚠ AND THE ATTRIBUTE NAME IS THE QUALIFIED ONE. python's minidom answers
+  `attributes.items()' with the names as the document spells them, and two of the
+  names this converter reads carry a prefix: `xml:space="preserve"' decides
+  whether a text element's line breaks survive into a `\center-column', and
+  `xml:lang' is in the carry-over exclusion set. XLinq splits a prefix off into a
+  namespace, so MusicXmlReader puts it back.
+
+  THE ORACLE. tools/musicxml2lyprobe/ -- see section 7. The probe tool
+  (MusicXmlProbe) and the parity suite (MusicXmlImporterParityTests, 206 cases
+  plus four fences) grade the same corpus by two independent readings of the
+  recorded argument lists, which is what says they grade the same thing.

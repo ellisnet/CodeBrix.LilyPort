@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "22c-Noteheads-Chords.xml",
+ "messages": [],
+ "name": "22c-Noteheads-Chords",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 22c-Noteheads-Chords.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Different note styles for individual notes inside a chord, using\n    the <notehead> element.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative e'' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\key c \\major <e \\tweak style\n    #'do c \\tweak style #'slash a>4 r4 r4 r4 | % 1\n  R1 | % 2\n  <e \\tweak style #'la c \\tweak style #'harmonic-mixed a>4 r4 r4 r4 | % 3\n  R1 | % 4\n  <e \\tweak style #'xcircle c \\tweak style #'cross a>4 r4 r4 r4 | % 5\n  R1 | % 6\n  <e \\tweak style #'arrow \\tweak direction #DOWN c \\tweak style #'arrow \\tweak direction #UP a>4\n  r4 r4 r4 | % 7\n  R1 \\bar \"|.\"\n}\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  normal cross \"inverted triangle\" slashed\n}\n\nPartPOneVoiceOneLyricsTwo = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  triangle square \"circle-x\" \"arrow up\"\n}\n\nPartPOneVoiceOneLyricsThree = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  slash diamond x \"arrow down\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsTwo\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsThree\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "22c-Noteheads-Chords.xml",
+ "version_line": "\\version \"2.27.2\""
+}

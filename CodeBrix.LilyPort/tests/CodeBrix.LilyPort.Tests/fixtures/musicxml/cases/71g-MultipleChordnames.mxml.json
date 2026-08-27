@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "71g-MultipleChordnames.xml",
+ "messages": [],
+ "name": "71g-MultipleChordnames",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 71g-MultipleChordnames.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"There can be multiple subsequent harmony elements, indicating a\n    harmony change during a note\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative a' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\key c \\major a2 g2 }\n\nPartPOneVoiceOneChords = \\chordmode {\n  c2 fis2:m6 d2:m7 g2:7 }\n\n\n% The score definition\n\\score {\n  <<\n    \\context ChordNames = \"PartPOneVoiceOneChords\" {\n      \\PartPOneVoiceOneChords\n    }\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "71g-MultipleChordnames.xml",
+ "version_line": "\\version \"2.27.2\""
+}

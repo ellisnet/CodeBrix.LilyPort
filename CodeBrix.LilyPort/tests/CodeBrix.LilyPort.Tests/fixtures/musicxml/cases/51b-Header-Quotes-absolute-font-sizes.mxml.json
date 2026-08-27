@@ -1,0 +1,14 @@
+{
+ "arguments": [
+  "--afs"
+ ],
+ "input_file": "51b-Header-Quotes.xml",
+ "messages": [],
+ "name": "51b-Header-Quotes-absolute-font-sizes",
+ "options": "--afs",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 51b-Header-Quotes.xml\n\\pointAndClickOff\n\n\\header {\n  title = \"\\\"Quotes\\\" in header fields\"\n  copyright = \"Free for anyone (\\\"Public Domain\\\")\"\n  composer = \"Some \\\"Tester\\\" Name\"\n  \"id: software\" = \"\\\"Hand-crafted\\\" MusicXML file\"\n  \"id: encoding-date\" = \"2008-02-06\"\n  texidoc = \"Header fields and part names can contain double quotes (\\\"). This\n    test checks some fields (<movement-title>, <creator type=\\\"composer\\\">,\n    <rights>, <software>, <part-name>) whether they are converted or imported\n    without problems (i.e., whether they are correctly escaped when converting).\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\once \\omit Staff.TimeSignature r1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\set Staff.instrumentName = \\markup \"Staff \\\"Test\\\"\"\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "variant",
+ "source_name": "51b-Header-Quotes.xml",
+ "version_line": "\\version \"2.27.2\""
+}

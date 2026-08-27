@@ -1,0 +1,14 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X: 7\nT: Unknown mode\nM: 4/4\nL: 1/4\nK: Cwibble\nCDEF | GABc |\n",
+ "messages": [
+  "abc2ly:warning:ignoring unknown key: `Cwibble'"
+ ],
+ "name": "unknown-key",
+ "options": {
+  "beams": false
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"7\"\n  footnotes = \"\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"Unknown mode\"\n}\n\n\"voicedefault\" = {\n\\numericTimeSignature \\time 4/4 c'4 d'4 e'4 f'4 \\bar \"|\" g'4 a'4 b'4 c''4 \n\\bar \"|\" \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n  >>\n\n  \\layout {}\n  \\midi {}\n}\n",
+ "source": "probe",
+ "source_name": "unknown-key.abc"
+}

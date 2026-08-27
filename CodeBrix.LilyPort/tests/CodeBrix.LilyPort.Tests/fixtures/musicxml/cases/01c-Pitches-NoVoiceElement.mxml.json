@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "01c-Pitches-NoVoiceElement.xml",
+ "messages": [],
+ "name": "01c-Pitches-NoVoiceElement",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 01c-Pitches-NoVoiceElement.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"The <voice> element of notes is optional in MusicXML. Here, there\n    is one note with lyrics, but without a voice assigned.\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative g' {\n  \\clef \"treble\" \\once \\omit Staff.TimeSignature g1 \\bar \"|.\"\n}\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  A\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "01c-Pitches-NoVoiceElement.xml",
+ "version_line": "\\version \"2.27.2\""
+}

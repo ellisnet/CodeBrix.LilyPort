@@ -1,0 +1,9 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQACAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDD0JAmAD/LwBNVHJrAAAAFAD/AwVcbmV3OgD/WQL+AZgA/y8A",
+ "name": "spacer-no-notes",
+ "options": {},
+ "output": "% Lily was here -- automatically converted by midi2ly from spacer-no-notes.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n\n\n  \\key g \\minor\n    \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = 60\n  \\skip \\breve \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"\\new:\"\n  \n\n  \\key g \\minor\n  \\skip \\breve \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n>>\n\n\n\\score {\n  <<\n    \\context Staff \\trackA\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "spacer-no-notes.midi"
+}

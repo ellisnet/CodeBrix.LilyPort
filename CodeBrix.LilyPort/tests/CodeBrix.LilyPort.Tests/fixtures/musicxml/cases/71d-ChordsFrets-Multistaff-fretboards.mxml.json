@@ -1,0 +1,16 @@
+{
+ "arguments": [
+  "--fb"
+ ],
+ "input_file": "71d-ChordsFrets-Multistaff.xml",
+ "messages": [
+  "musicxml2ly: warning: Language does not support microtones contained in the piece"
+ ],
+ "name": "71d-ChordsFrets-Multistaff-fretboards",
+ "options": "--fb",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 71d-ChordsFrets-Multistaff.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Chords and fretboards assigned to the voices in a multi-voice,\n    multi-staff part. There should be fret diagrams above each of the two\n    staves.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative d'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major d4 d4 d4 d4 \\bar \"|.\"\n}\n\nPartPOneVoiceOneChords = \\chordmode {\n  s4 s4 es4:m9 s4 \\bar \"|.\"\n}\n\nPartPOneVoiceOneFretBoards = {\n  s4 s4 <e,\\6 d\\5 fis\\4 cis''\\3 f''\\2>4 s4 \\bar \"|.\"\n}\n\nPartPOneVoiceTwo = \\relative f' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major f4 f4 f4 f4 \\bar \"|.\"\n}\n\nPartPOneVoiceThree = \\relative d {\n  \\clef \"bass\" \\time 4/4 \\key c \\major \\change Staff=\"1\" \\change Staff=\"2\" d4\n  \\change Staff=\"1\" \\change Staff=\"2\" d4 d4 \\change Staff=\"1\" \\change Staff=\"2\"\n  d4 \\bar \"|.\"\n}\n\nPartPOneVoiceThreeChords = \\chordmode {\n  c4 d4:7 s4 c4:m7.11 \\bar \"|.\"\n}\n\nPartPOneVoiceThreeFretBoards = {\n  <e,\\6 c\\5 e\\4 g'\\3 c''\\2 e'\\1>4 <e,\\6 a\\5 d\\4 a'\\3 c''\\2 fis'\\1>4 s4 <e,\\6 c\\5\n    dis\\4 ais'\\3 c''\\2 f'\\1>4 \\bar \"|.\"\n}\n\nPartPOneVoiceFour = \\relative b, {\n  \\clef \"bass\" \\time 4/4 \\key c \\major b4 b4 b4 b4 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\context ChordNames = \"PartPOneVoiceOneChords\" {\n      \\PartPOneVoiceOneChords\n    }\n    \\context ChordNames = \"PartPOneVoiceThreeChords\" {\n      \\PartPOneVoiceThreeChords\n    }\n    \\context FretBoards = \"PartPOneVoiceOneFretBoards\" {\n      \\PartPOneVoiceOneFretBoards\n    }\n    \\context FretBoards = \"PartPOneVoiceThreeFretBoards\" {\n      \\PartPOneVoiceThreeFretBoards\n    }\n    \\new PianoStaff = \"P1\" <<\n      \\context Staff = \"1\" <<\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\voiceOne \\PartPOneVoiceOne\n        }\n        \\context Voice = \"PartPOneVoiceTwo\" {\n          \\voiceTwo \\PartPOneVoiceTwo\n        }\n      >>\n      \\context Staff = \"2\" <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceThree\" {\n          \\voiceOne \\PartPOneVoiceThree\n        }\n        \\context Voice = \"PartPOneVoiceFour\" {\n          \\voiceTwo \\PartPOneVoiceFour\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "variant",
+ "source_name": "71d-ChordsFrets-Multistaff.xml",
+ "version_line": "\\version \"2.27.2\""
+}

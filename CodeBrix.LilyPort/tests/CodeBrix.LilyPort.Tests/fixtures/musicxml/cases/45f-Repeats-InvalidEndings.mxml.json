@@ -1,0 +1,17 @@
+{
+ "arguments": [],
+ "input_file": "45f-Repeats-InvalidEndings.xml",
+ "messages": [
+  "musicxml2ly: warning: adding repeat barline to lone element <ending type=\"start\">",
+  "musicxml2ly: warning: ignoring unexpected combination <ending type=\"stop\"> with <repeat type=\"backward\">",
+  "musicxml2ly: warning: unexpected end of input",
+  "musicxml2ly: warning: ignoring unexpected element <ending type=\"stop\">"
+ ],
+ "name": "45f-Repeats-InvalidEndings",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 45f-Repeats-InvalidEndings.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A stress test with a combination of <repeat> and <ending> elements\n    that don't make sense. The displayed result depends on the sanitizing\n    possibilities of the application that handles the input.\n\n    Bar 2 starts and ends with <ending number=\\\"1, 2, 3\\\">. Bar 3 starts and\n    ends with <ending number=\\\"2\\\"> (where the right element is of type\n    'discontinue'); there is no <repeat> element between bars 2 and 3. Finally,\n    at the end of bar 4 there is a both a <repeat direction=\\\"backward\\\"> and a\n    <ending type=\\\"stop\\\"> element.\n\n    Bar 6 starts a repeat, bar 7 start and ends a prima volta bracket, but the\n    corresponding repeat bar is between bars 8 and 9, followed by a seconda\n    volta bracket starting and ending in bar 9.\n\n    Another invalid ‘pair’ is <ending type=\\\"start\\\"> at the beginning of bar 12\n    and <ending type=\\\"discontinue\\\"> at the end of bar 13.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    doubleRepeatBarType = \":|.|:\"\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\repeat volta 4 {\n    \\clef \"treble\" \\time 4/4 \\key c \\major R1 | % 1\n    \\alternative {\n      \\volta 1,2,3 {\n        R1 | % 2\n      }\n      \\volta 2 {\n        R1 | % 3\n      }\n    }\n  }\n  R1 | % 4\n  R1 | % 5\n  \\repeat volta 2 {\n    R1 | % 6\n    \\alternative {\n      \\volta 1 {\n        R1 | % 7\n        R1 | % 8\n      }\n      \\volta 2 {\n        R1 | % 9\n\n        \\barNumberCheck #10\n      }\n    }\n  }\n  R1 | % 10\n  R1 | % 11\n  R1 | % 12\n  R1 | % 13\n  \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "45f-Repeats-InvalidEndings.xml",
+ "version_line": "\\version \"2.27.2\""
+}

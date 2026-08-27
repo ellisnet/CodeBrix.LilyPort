@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "33g-Slur-ChordedNotes.xml",
+ "messages": [],
+ "name": "33g-Slur-ChordedNotes",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 33g-Slur-ChordedNotes.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Slurs on chorded notes. The upper slur connects the first and third\n    chord; for both the start and end, the <slur> element is attached not to the\n    first note of the chord but to the second one (tagged with <chord>). The\n    lower slur connects the chord on the second beat and the note on fourth beat\n    and is attached in the normal way.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative g' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major <g c g'>4 ^( <a d>4 _\\=2( <g d'>4 ) c4\n  \\=2) \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "33g-Slur-ChordedNotes.xml",
+ "version_line": "\\version \"2.27.2\""
+}

@@ -1,0 +1,9 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQACAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAoDDAgA/1EDD0JAjwD/LwBNVHJrAAAAHwD/AwVcbmV3OgCQPFqGAJA8AACQPlqJAJA+AAD/LwA=",
+ "name": "time-signature-alternating-fraction",
+ "options": {},
+ "output": "% Lily was here -- automatically converted by midi2ly from time-signature-alternating-fraction.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n  \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 10/8\n  \n  \\tempo 4 = 60\n  \\skip 4*5 \n  | % 2\n  \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"\\new:\"\n  \\skip 4*5 \n  | % 2\n  \n}\n\ntrackBchannelB = \\relative c {\n  c'2 d2. \n  | % 2\n  \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "time-signature-alternating-fraction.midi"
+}

@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "13f-KeySignatures-Visible.xml",
+ "messages": [],
+ "name": "13f-KeySignatures-Visible",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 13f-KeySignatures-Visible.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Test the ‘print-object’ attribute of key signatures. The signature\n    at the beginning of the second bar is a flat major and should be invisible;\n    the following notes d flat, e flat, a flat, and b flat shouldn't have a flat\n    accidental.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative dis' {\n  \\clef \"treble\" \\time 4/4 \\key e \\major dis1 | % 1\n  \\omit Staff.KeySignature \\omit Staff.KeyCancellation \\key as \\major des4 es4\n  as4 bes4 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "13f-KeySignatures-Visible.xml",
+ "version_line": "\\version \"2.27.2\""
+}

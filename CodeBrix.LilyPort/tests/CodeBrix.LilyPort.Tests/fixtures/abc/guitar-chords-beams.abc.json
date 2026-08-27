@@ -1,0 +1,12 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X: 5\nT: Guitar chords and words\nM: 4/4\nL: 1/4\nK: F\n\"F\"F2 \"Bb\"B,2 | \"^C7\"c2 \"_Dm\"d2 |\nw: one two- three_ four*\nW: A printed line\nW: Another printed line\n",
+ "messages": [],
+ "name": "guitar-chords-beams",
+ "options": {
+  "beams": true
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"5\"\n  footnotes = \"\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"Guitar chords and words\"\n}\n\n\"wordsdefaultV1\" = \\lyricmode {\none two -- three __ _ four _ \n}\n\n\"voicedefault\" = {\n\\numericTimeSignature \\time 4/4 \\key f \\major f'2 ^\"F\" bes2 ^\"Bb\" \\bar \"|\" c''2 \n^\"C7\" d''2 _\"Dm\" \\bar \"|\" \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n    \\addlyrics {\n      \\\"wordsdefaultV1\"\n    }\n  >>\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #'()\n    }\n  }\n  \\midi {}\n}\n\n\\markup \\column {\n  \\line { \"A printed line\" }\n  \\line { \"Another printed line\" }\n \n}\n",
+ "source": "probe",
+ "source_name": "guitar-chords.abc"
+}

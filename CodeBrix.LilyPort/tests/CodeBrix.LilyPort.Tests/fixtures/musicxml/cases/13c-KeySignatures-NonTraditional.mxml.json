@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "13c-KeySignatures-NonTraditional.xml",
+ "messages": [],
+ "name": "13c-KeySignatures-NonTraditional",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 13c-KeySignatures-NonTraditional.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Non-traditional key signatures, where each alteration is separately\n    given. The first signature is [f sharp, a flat, b flat]. The second one is\n    [c flat-flat, g sharp-sharp, d flat, b sharp, f natural], with explicitly\n    selected octaves for each alteration.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 2/4 \\set Staff.keyAlterations = #`((3 . ,SHARP) (5 .\n  ,FLAT) (6 . ,FLAT)) c2 | % 1\n  \\set Staff.keyAlterations = #`(((-2 . 0) . ,DOUBLE-FLAT) ((-1 . 4) .\n  ,DOUBLE-SHARP) ((0 . 1) . ,FLAT) ((1 . 6) . ,SHARP) ((2 . 3) . ,NATURAL)) c2\n  \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "13c-KeySignatures-NonTraditional.xml",
+ "version_line": "\\version \"2.27.2\""
+}

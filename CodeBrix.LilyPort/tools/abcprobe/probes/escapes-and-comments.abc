@@ -1,0 +1,10 @@
+X: 10
+T: Comments and inline fields
+M: 4/4
+L: 1/8
+K: C
+%%MIDI nobarlines
+CDEF GABc | % a trailing comment
+%%LY voices \bar "||"
+[K: D]
+DEFG ABcd |

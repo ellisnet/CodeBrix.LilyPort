@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "46e-PickupMeasure-SecondVoiceStartsLater.xml",
+ "messages": [],
+ "name": "46e-PickupMeasure-SecondVoiceStartsLater",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 46e-PickupMeasure-SecondVoiceStartsLater.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Using <backup> it is possible to have ‘incomplete’ measure lengths.\n    This test starts with a quarter note upbeat and a whole note for voice 1 in\n    the first measure, and voice 2 contains only a quarter note starting at the\n    second beat. The second measure contains whole notes for both voices. Note\n    that there is a discontinuity in the MusicXML timing: voice 2 ‘jumps’ from\n    the single quarter note to the whole note in the second measure.\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\partial 4 \\once \\omit Staff.TimeSignature \\oneVoice c4 c1 | % 1\n  \\voiceOne c1 }\n\nPartPOneVoiceTwo = \\relative c' {\n  \\partial 4 s2 c4 s2 | % 1\n  c1 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\voiceOne \\PartPOneVoiceOne\n        }\n        \\context Voice = \"PartPOneVoiceTwo\" {\n          \\voiceTwo \\PartPOneVoiceTwo\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "46e-PickupMeasure-SecondVoiceStartsLater.xml",
+ "version_line": "\\version \"2.27.2\""
+}

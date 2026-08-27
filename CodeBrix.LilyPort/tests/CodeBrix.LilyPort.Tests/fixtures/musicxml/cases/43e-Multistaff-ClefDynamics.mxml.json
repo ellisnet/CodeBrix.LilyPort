@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "43e-Multistaff-ClefDynamics.xml",
+ "messages": [],
+ "name": "43e-Multistaff-ClefDynamics",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 43e-Multistaff-ClefDynamics.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A piano staff with dynamics and clef changes, where each element\n    (‘ffff’, a wedge, and clef changes) applies only to one voice or one staff,\n    respectively.\n\n    The key change is given only once, not specifying a particular staff; it\n    should thus appear on both staves.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major c4 _\\ffff b4 a4 \\after 32 _\\p g4 | % 1\n  \\key d \\major a4 b4 cis4 d4 | % 2\n  \\clef \"mezzosoprano\" d4 cis4 b4 a4 | % 3\n  R1 \\bar \"|.\"\n}\n\nPartPOneVoiceTwo = \\relative a, {\n  \\clef \"bass\" \\time 4/4 \\key c \\major a4 _\\< b4 c4 \\! d4 | % 1\n  \\clef \"treble\" \\key d \\major fis'4 g4 a4 b4 | % 2\n  a4 b4 cis4 d4 | % 3\n  R1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new PianoStaff = \"P1\" <<\n      \\context Staff = \"1\" <<\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n      \\context Staff = \"2\" <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceTwo\" {\n          \\PartPOneVoiceTwo\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "43e-Multistaff-ClefDynamics.xml",
+ "version_line": "\\version \"2.27.2\""
+}

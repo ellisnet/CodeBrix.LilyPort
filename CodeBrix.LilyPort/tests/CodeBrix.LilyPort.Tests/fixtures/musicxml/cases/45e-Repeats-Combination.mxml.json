@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "45e-Repeats-Combination.xml",
+ "messages": [],
+ "name": "45e-Repeats-Combination",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 45e-Repeats-Combination.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A series of repeat elements.\n\n    The first repeat starts implicitly at the beginning, with the first\n    alternative starting and ending at bar 2, and the second ending at bar 3.\n    All four <ending> elements have ‘number=\\\"\\\"’ as an attribute. The next\n    repeat starts and ends at bar 5. Another repeat starts at bar 6 (causing a\n    back-to-back bar line between bars 5 and 6), with the first alternative\n    starting and ending at bar 7. Its second alternative (starting and ending at\n    bar 8) is the start of a repeat at the same time (causing another\n    back-to-back bar line between bars 7 and 8), ending after bar 9.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    doubleRepeatBarType = \":|.|:\"\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\repeat volta 2 {\n    \\clef \"treble\" \\time 4/4 \\key c \\major R1 | % 1\n    \\alternative {\n      \\volta 1 {\n        R1 | % 2\n      }\n      \\volta 2 {\n        R1 | % 3\n      }\n    }\n  }\n  R1 | % 4\n  \\repeat volta 2 {\n    R1 | % 5\n  }\n  \\repeat volta 2 {\n    R1 | % 6\n    \\alternative {\n      \\volta 1 {\n        R1 | % 7\n      }\n      \\volta 2 {\n        \\repeat volta 2 {\n          R1 | % 8\n          R1 | % 9\n\n          \\barNumberCheck #10\n        }\n      }\n    }\n  }\n  R1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "45e-Repeats-Combination.xml",
+ "version_line": "\\version \"2.27.2\""
+}

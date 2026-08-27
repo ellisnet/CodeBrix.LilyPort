@@ -1,0 +1,12 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X: 1\n% T: For He's a Jolly Good Fellow\nM: 6/8\nL: 1/8\nK: CMaj\n%\nz3 z2 G | \"C\"E2E EDE | F3 E2 E | \\\nw:For he's a fel-___low, for\n\"G\"D2D DCD | \"C\"E3 C2 C | \"C7\"E2E EDE | \\\nw:he's a nice__ fel-low, for he's a jol-ly good\n\"F\"F3 HA2 A | \"C\"G6 | A6 | G3 \"G\"F2 D| \"C\"C3 z3 |]\nw:fel-low, which no\\-bo\\-dy no~bo~dy * can de-ny!\n",
+ "messages": [],
+ "name": "lyrics",
+ "options": {
+  "beams": false
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"1\"\n  footnotes = \"\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n}\n\n\"wordsdefaultV1\" = \\lyricmode {\nFor he's a fel -- _ _ _ low, for \nhe's a nice __ _ _ fel -- low, for he's a jol -- ly good  \nfel -- low, which no-bo-dy no_bo_dy _ can de -- ny!  \n}\n\n\"voicedefault\" = {\n%  T: For He's a Jolly Good Fellow\n \\time 6/8 \\key c \\major r4. r4 g'8 \\bar \"|\" e'4 ^\"C\" e'8 e'8 d'8 e'8 \\bar \"|\" \nf'4. e'4 e'8 \\bar \"|\" d'4 ^\"G\" d'8 d'8 c'8 d'8 \\bar \"|\" e'4. ^\"C\" c'4 c'8 \n\\bar \"|\" e'4 ^\"C7\" e'8 e'8 d'8 e'8 \\bar \"|\" f'4. ^\"F\" a'4 ^\\fermata a'8 \n\\bar \"|\" g'2. ^\"C\" \\bar \"|\" a'2. \\bar \"|\" g'4. f'4 ^\"G\" d'8 \\bar \"|\" c'4. ^\"C\" \nr4. \\bar \"|.\" \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n    \\addlyrics {\n      \\\"wordsdefaultV1\"\n    }\n  >>\n\n  \\layout {}\n  \\midi {}\n}\n",
+ "source": "upstream",
+ "source_name": "lyrics.abc"
+}

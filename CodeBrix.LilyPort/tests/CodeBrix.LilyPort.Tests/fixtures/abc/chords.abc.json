@@ -1,0 +1,12 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X: 1\nT: Chords\nL: 1/8\nK: none\nz3([DF]-D^D) | ^DF[DF][EG]G | (3[FB][DF][B,D] E |\n",
+ "messages": [],
+ "name": "chords",
+ "options": {
+  "beams": false
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"1\"\n  footnotes = \"\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"Chords\"\n}\n\ncadenzaMeasure = {\n  \\cadenzaOff\n  \\partial 1024 s1024\n  \\cadenzaOn\n}\n\n\"voicedefault\" = {\n\\once \\omit Staff.TimeSignature\n \\cadenzaOn\n r4. < d' f' >8~( d'8 dis'8 ) \\cadenzaMeasure \\bar \"|\" dis'8 f'8 < dis' f' >8 < \ne' g' >8 g'8 \\cadenzaMeasure \\bar \"|\" \\times 2/3 { < f' b' >8 < d' f' >8 < b d' \n>8 } e'8 \\cadenzaMeasure \\bar \"|\" \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n  >>\n\n  \\layout {}\n  \\midi {}\n}\n",
+ "source": "upstream",
+ "source_name": "chords.abc"
+}

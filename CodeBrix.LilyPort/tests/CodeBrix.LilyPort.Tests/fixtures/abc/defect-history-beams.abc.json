@@ -1,0 +1,17 @@
+{
+  "divergences": [
+    "abc-header-append-drops-new-field"
+  ],
+  "frozen_version_line": "\\version \u00222.24.0\u0022",
+  "input": "X: 2\nT: History field\nH: A history line\nH: A second history line\nM: 4/4\nL: 1/4\nK: C\nCDEF |\n",
+  "messages": [],
+  "name": "defect-history-beams",
+  "options": {
+    "beams": true
+  },
+  "output": "\\version \u00222.24.0\u0022\n\n\\header {\n  crossRefNumber = \u00222\u0022\n  footnotes = \u0022\u0022\n  tagline = \u0022LilyPond 2.27.2 was here -- automatically converted from ABC\u0022\n  title = \u0022History field\u0022\n}\n\n\u0022voicedefault\u0022 = {\n\\numericTimeSignature \\time 4/4 \\key c \\major c\u00274 d\u00274 e\u00274 f\u00274 \\bar \u0022|\u0022 \n}\n\n\n\\score {\n  \u003C\u003C\n    \\context Staff = \u0022default\u0022 {\n      \\\u0022voicedefault\u0022\n    }\n  \u003E\u003E\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #\u0027()\n    }\n  }\n  \\midi {}\n}\n",
+  "port_messages": [],
+  "port_output": "\\version \u00222.24.0\u0022\n\n\\header {\n  crossRefNumber = \u00222\u0022\n  footnotes = \u0022\u0022\n  history = \u0022A history line\nA second history line\u0022\n  tagline = \u0022LilyPond 2.27.2 was here -- automatically converted from ABC\u0022\n  title = \u0022History field\u0022\n}\n\n\u0022voicedefault\u0022 = {\n\\numericTimeSignature \\time 4/4 \\key c \\major c\u00274 d\u00274 e\u00274 f\u00274 \\bar \u0022|\u0022 \n}\n\n\n\\score {\n  \u003C\u003C\n    \\context Staff = \u0022default\u0022 {\n      \\\u0022voicedefault\u0022\n    }\n  \u003E\u003E\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #\u0027()\n    }\n  }\n  \\midi {}\n}\n",
+  "source": "probe",
+  "source_name": "defect-history.abc"
+}

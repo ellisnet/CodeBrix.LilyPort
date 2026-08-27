@@ -1,0 +1,14 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQACAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDD0JAhgD/LwBNVHJrAAAAJwD/Aw10cmFja0I6dm9pY2VBMJAwWoJQkDAAAJAwWoJQkDAAMP8vAA==",
+ "name": "quantize-duration-tuplets",
+ "options": {
+  "allowTuplet": [
+   "4*2/3",
+   "2*4/3"
+  ]
+ },
+ "output": "% Lily was here -- automatically converted by midi2ly from quantize-duration.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n  \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = 60\n  \\skip 2 \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"trackB:voiceA\"\n  \\skip 2 \n}\n\ntrackBchannelB = \\relative c {\n  r32 c32*7 c \n}\n\ntrackB = <<\n\n  \\clef bass\n  \n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "quantize-duration.midi"
+}

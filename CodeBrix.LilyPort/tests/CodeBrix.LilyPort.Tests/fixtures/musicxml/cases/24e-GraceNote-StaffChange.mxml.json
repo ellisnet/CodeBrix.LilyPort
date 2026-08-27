@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "24e-GraceNote-StaffChange.xml",
+ "messages": [],
+ "name": "24e-GraceNote-StaffChange",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 24e-GraceNote-StaffChange.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Grace notes on a different staff than the actual notes.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative g'' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\key c \\major \\grace { \\change\n    Staff=\"2\" g16 } \\change Staff=\"1\" e2 \\grace { \\change Staff=\"2\" g16 [ a16 ]\n    } \\change Staff=\"1\" e2 }\n\nPartPOneVoiceTwo = \\relative c' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\key c \\major \\grace { s16 } R1\n  | % 1\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new PianoStaff = \"P1\" <<\n      \\context Staff = \"1\" <<\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n      \\context Staff = \"2\" <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceTwo\" {\n          \\PartPOneVoiceTwo\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "24e-GraceNote-StaffChange.xml",
+ "version_line": "\\version \"2.27.2\""
+}

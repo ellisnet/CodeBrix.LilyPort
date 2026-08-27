@@ -1,0 +1,12 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X:1\nT:Repeats\nM:6/8\nL:1/8\nR:jig\nK:G\nGFG BAB |1 dBA AFD :|2 dBA ABd |:\nefe edB :: gdB ABd | dBA [1 ABd :|2 dBA AFD |]\n",
+ "messages": [],
+ "name": "repeats-beams",
+ "options": {
+  "beams": true
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"1\"\n  footnotes = \"\"\n  meter = \"jig\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"Repeats\"\n}\n\n\"voicedefault\" = {\n\\repeat volta 2 {\n\\time 6/8 \\key g \\major g'8[ fis'8 g'8] b'8[ a'8 b'8] \n\n  \\alternative {\n    \\volta 1 { d''8[ b'8 a'8] a'8[ fis'8 d'8] }\n    \\volta 2 { d''8[ b'8 a'8] a'8[ b'8 d''8] } } }\n\\repeat volta 2 { e''8[ fis''8 e''8] e''8[ d''8 b'8] }\n\\repeat volta 2 { g''8[ d''8 b'8] a'8[ b'8 d''8] \\bar \"|\" d''8[ b'8 a'8] \n\n  \\alternative {\n    \\volta 1 { a'8[ b'8 d''8] }\n    \\volta 2 { d''8[ b'8 a'8] a'8[ fis'8 d'8] \\bar \"|.\" } } }\n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n  >>\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #'()\n    }\n  }\n  \\midi {}\n}\n",
+ "source": "upstream",
+ "source_name": "repeats.abc"
+}

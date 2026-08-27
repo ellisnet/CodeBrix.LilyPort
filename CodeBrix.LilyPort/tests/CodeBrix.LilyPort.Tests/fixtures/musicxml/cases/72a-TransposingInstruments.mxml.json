@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "72a-TransposingInstruments.xml",
+ "messages": [],
+ "name": "72a-TransposingInstruments",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 72a-TransposingInstruments.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Transposing instruments: Trumpet in Bb, Horn in Eb, Piano; All of\n    them show the C major scale (the trumpet with 2 sharp, the horn with 3\n    sharp).\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative d' {\n  \\clef \"treble\" \\time 4/4 \\key d \\major \\transposition bes d4 e4 fis4 g4 | % 1\n  a4 b4 cis4 d4 \\bar \"|.\"\n}\n\nPartPTwoVoiceOne = \\relative a' {\n  \\clef \"treble\" \\time 4/4 \\key a \\major \\transposition es a4 b4 cis4 d4 | % 1\n  e4 fis4 gis4 a4 \\bar \"|.\"\n}\n\nPartPThreeVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major c4 d4 e4 f4 | % 1\n  g4 a4 b4 c4 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\set Staff.instrumentName = \"Trumpet in Bb\"\n      \\set Staff.shortInstrumentName = \"Bb Tpt.\"\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n    \\new Staff = \"P2\" <<\n      \\set Staff.instrumentName = \"Horn in Eb\"\n      \\set Staff.shortInstrumentName = \"Hn.\"\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPTwoVoiceOne\" {\n          \\PartPTwoVoiceOne\n        }\n      >>\n    >>\n    \\new Staff = \"P3\" <<\n      \\set Staff.instrumentName = \"Piano\"\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPThreeVoiceOne\" {\n          \\PartPThreeVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "72a-TransposingInstruments.xml",
+ "version_line": "\\version \"2.27.2\""
+}

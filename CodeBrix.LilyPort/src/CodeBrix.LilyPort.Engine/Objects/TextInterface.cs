@@ -1,0 +1,967 @@
+/*
+  This file is part of LilyPond, the GNU music typesetter.
+
+  Copyright (C) 1998--2026 Han-Wen Nienhuys <hanwen@xs4all.nl>
+  Jan Nieuwenhuizen <janneke@gnu.org>
+
+  LilyPond is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  LilyPond is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with LilyPond.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+using System;
+using System.Collections.Generic;
+using System.Text;
+using CodeBrix.LilyPort.Engine.Bootstrap;
+using CodeBrix.LilyPort.Engine.Fonts;
+using CodeBrix.LilyPort.Engine.Layout;
+using CodeBrix.LilyPort.Flower;
+using CodeBrix.LilyScheme;
+using CodeBrix.LilyScheme.Values;
+
+namespace CodeBrix.LilyPort.Engine.Objects; //was previously: lily/text-interface.cc, lily/include/text-interface.hh;
+
+// Modified by Jeremy Ellis - 2026 - as part of the CodeBrix.LilyPort port.
+
+/// <summary>
+/// How a markup becomes a stencil.
+/// <para>
+/// A markup is either a STRING, which is set in the font the property chain selects, or
+/// a LIST whose head is a markup command procedure and whose tail is its arguments. The
+/// second case is the whole of LilyPond's markup language: every one of the two hundred
+/// odd commands in <c>scm/define-markup-commands.scm</c> is an ordinary Scheme
+/// procedure taking <c>(layout props . args)</c> and returning a stencil, and
+/// interpreting a markup is just applying it.
+/// </para>
+/// <para>
+/// The recursion is bounded. A markup command may build a new markup and interpret it
+/// again — that is how <c>\wordwrap</c> and friends work — and a command that does so
+/// without shrinking its argument never terminates. Upstream counts depth against
+/// <c>max-markup-depth</c> and reports a non-fatal error, which is reproduced here
+/// rather than left to the stack.
+/// </para>
+/// </summary>
+public static class TextInterface
+{
+    private static readonly Symbol StringTransformersSymbol = Symbol.Intern("string-transformers");
+    private static readonly Symbol FontEncodingSymbol = Symbol.Intern("font-encoding");
+    private static readonly Symbol FontFeaturesSymbol = Symbol.Intern("font-features");
+    private static readonly Symbol ReplacementAlistSymbol = Symbol.Intern("replacement-alist");
+    private static readonly Symbol MaxMarkupDepthSymbol = Symbol.Intern("max-markup-depth");
+    private static readonly Symbol TextSymbol = Symbol.Intern("text");
+    private static readonly Symbol MarkupCommandSignatureSymbol
+        = Symbol.Intern("markup-command-signature");
+    private static readonly Symbol MarkupListFunctionSymbol
+        = Symbol.Intern("markup-list-function?");
+    private static readonly Symbol MarkupListPredicateSymbol = Symbol.Intern("markup-list?");
+    private static readonly Symbol AllMusicFontEncodingsSymbol
+        = Symbol.Intern("all-music-font-encodings");
+    private static readonly Symbol MakeConcatMarkupSymbol = Symbol.Intern("make-concat-markup");
+    private static readonly Symbol GlyphStringSymbol = Symbol.Intern("glyph-string");
+    private static readonly Symbol OutputScaleSymbol = Symbol.Intern("output-scale");
+
+    // lily/include/pango-font.hh:75 — const int PANGO_RESOLUTION = 1200.
+    private const double PangoResolution = 1200.0;
+
+    // PANGO_SCALE — the Pango units a device dot is divided into.
+    private const int PangoScale = 1024;
+
+    // The em FontMetric.IndexedAdvance already hard-codes for a music font, carried over
+    // from output-svg.scm's extract-glyph. Every shipped music font is drawn on it, so
+    // the two agree; the constant is named here rather than repeated as a literal.
+    private const int MusicEm = 1000;
+
+    /// <summary>
+    /// U+0020, the stand-in for a code point the music font cannot map (D31 as amended).
+    /// </summary>
+    private const int SpaceCodePoint = 0x20;
+
+    /// <summary>
+    /// How many spaces stand in for one unmappable code point — the nearest whole number
+    /// of space advances to Pango's unknown-glyph box, measured at seven sizes.
+    /// </summary>
+    private const int SpacesPerUnmappableCodePoint = 2;
+
+    [ThreadStatic]
+    private static int _depth;
+
+    /// <summary>
+    /// Interprets a markup under a layout and a property chain.
+    /// </summary>
+    /// <param name="layout">The output definition, which carries the fonts.</param>
+    /// <param name="props">The property alist chain.</param>
+    /// <param name="markup">The markup: a string, or a command applied to arguments.</param>
+    /// <returns>The stencil.</returns>
+    public static Stencil InterpretMarkup(OutputDef layout, object props, object markup)
+    {
+        string text = SchemeStringOrNull(markup);
+        if (text != null)
+        {
+            return InterpretString(layout, props, text);
+        }
+
+        if (!IsMarkup(markup))
+        {
+            Warn.ProgrammingError(
+                "Trying to interpret a non-markup object: " + Describe(markup));
+            return Stencil.Empty;
+        }
+
+        Pair pair = (Pair)markup;
+        object function = pair.Car;
+        object arguments = pair.Cdr;
+
+        Interpreter interpreter = LilyPondScheme.Current;
+        if (interpreter == null)
+        {
+            return Stencil.Empty;
+        }
+
+        long maximum = MaxDepth();
+
+        _depth++;
+        try
+        {
+            if (_depth > maximum)
+            {
+                // Upstream names the markup command through scm_procedure_name, so the
+                // message reads "Markup: cycle-markup". Printing the procedure ITSELF
+                // gave "#<procedure ...>" — which the file's own ly:expect-warning could
+                // never match, so a file that reproduces the defect on purpose reported
+                // the expectation as unmet AND the message as unexpected.
+                Warn.NonFatalError(
+                    "Markup depth exceeds maximal value of " + maximum + "; Markup: "
+                    + ProcedureName(function));
+                return Stencil.Empty;
+            }
+
+            List<object> applied = new List<object> { layout, props };
+            applied.AddRange(Pair.ToList(arguments));
+
+            object result = interpreter.Evaluator.Apply(function, applied.ToArray());
+            if (result is Stencil stencil)
+            {
+                return stencil;
+            }
+
+            Warn.ProgrammingError("markup interpretation must yield stencil");
+            return Stencil.Empty;
+        }
+        finally
+        {
+            _depth--;
+        }
+    }
+
+    /// <summary>
+    /// Sets one string in the font the property chain selects.
+    /// <para>
+    /// Three things happen before a glyph is chosen, and the ORDER of the first two is
+    /// load bearing. Every whitespace character becomes a plain space first, because a
+    /// newline reaching the font layer breaks things further down and a string
+    /// transformer's OUTPUT has to be cleaned the same way — which is why the
+    /// substitution is redone on each recursive call rather than once at the top.
+    /// Then the <c>string-transformers</c> run, outermost first, each yielding a markup
+    /// LIST that is concatenated and re-interpreted with that transformer removed.
+    /// </para>
+    /// </summary>
+    /// <param name="layout">The output definition.</param>
+    /// <param name="props">The property alist chain.</param>
+    /// <param name="text">The string to set.</param>
+    /// <returns>The stencil.</returns>
+    public static Stencil InterpretString(OutputDef layout, object props, string text)
+    {
+        string cleaned = NormalizeWhitespace(text);
+
+        FontMetric font = FontInterface.SelectFont(layout, props);
+
+        object transformers = SchemeUtilities.ChainAssocGet(
+            StringTransformersSymbol, props, Nil.Instance);
+
+        Interpreter interpreter = LilyPondScheme.Current;
+        if (transformers is Pair && interpreter != null)
+        {
+            // Applied outermost to innermost. Quadratic in the number of transformers,
+            // and upstream says the same: there are only ever a handful.
+            List<object> list = Pair.ToList(transformers);
+            object outer = list[list.Count - 1];
+            list.RemoveAt(list.Count - 1);
+
+            object transformed = interpreter.Evaluator.Apply(
+                outer, new object[] { layout, props, new MutableString(cleaned) });
+
+            object innerProps = new Pair(
+                Pair.List(new Pair(StringTransformersSymbol, Pair.ListFrom(list))),
+                props);
+
+            return InterpretMarkup(layout, innerProps, transformed);
+        }
+
+        string features = FontFeatures(props);
+
+        // Upstream ends interpret_string with
+        //     bool is_music = scm_is_true (scm_memq (encoding, music_encodings));
+        //     return fm->text_stencil (layout, str, is_music, features_str);
+        // and the encoding it tests is read straight off PROPS. That matters: when
+        // font-name is set, select_font overwrites its OWN LOCAL copy of the encoding
+        // with latin1 and picks a text font, but the grob's font-encoding property is
+        // untouched, so a fetaText run still reaches text_stencil as a MUSIC string.
+        bool musicString = IsMusicEncoded(props);
+
+        if (!(font is TextFontMetric textFont))
+        {
+            // A music encoding reached the text interface: fetaText's digits, dynamic
+            // letters and figured-bass punctuation. Upstream sets these through Pango
+            // over the SAME font; the port composes the run itself from the font's own
+            // cmap and hmtx, and applies the font's own GSUB substitutions, which
+            // together are what Pango's shaping amounts to for these runs. This branch
+            // once answered an EMPTY stencil (the divergence was recorded in
+            // PORT-COVERAGE) — which made \number, \dynamic and every figured-bass
+            // digit silently invisible.
+            return MusicFontTextStencil(layout, font, cleaned, features);
+        }
+
+        return textFont.TextStencil(cleaned, features, musicString);
+    }
+
+    /// <summary>
+    /// Reads the <c>font-features</c> property chain and joins it for the shaper.
+    /// <para>
+    /// Upstream stores the value as a Scheme LIST and joins the entries with commas for
+    /// processing with Pango, which is the form
+    /// <c>pango_attr_font_features_new</c> takes; both of upstream's rejections are
+    /// reproduced verbatim, because a diagnostic with an upstream counterpart owes
+    /// upstream's wording (ruling R1).
+    /// </para>
+    /// </summary>
+    /// <param name="props">The property alist chain.</param>
+    /// <returns>The comma-joined feature string, empty when none is asked for.</returns>
+    private static string FontFeatures(object props)
+    {
+        object features = SchemeUtilities.ChainAssocGet(FontFeaturesSymbol, props, false);
+
+        if (!(features is Pair))
+        {
+            if (SchemeUtilities.IsSchemeTrue(features))
+            {
+                throw SchemeErrors.MiscError(
+                    "interpret_string", "Expecting a list for font-features value");
+            }
+
+            return string.Empty;
+        }
+
+        StringBuilder result = new StringBuilder();
+        for (object s = features; s is Pair pair; s = pair.Cdr)
+        {
+            if (!(pair.Car is MutableString || pair.Car is string))
+            {
+                throw SchemeErrors.MiscError(
+                    "interpret_string", "Found non-string in font-features list");
+            }
+
+            if (result.Length > 0)
+            {
+                result.Append(',');
+            }
+
+            result.Append(pair.Car.ToString());
+        }
+
+        return result.ToString();
+    }
+
+    /// <summary>
+    /// The file a music font would have been read from, as upstream's warnings name it.
+    /// </summary>
+    /// <param name="font">The font metric, possibly a scaled wrapper.</param>
+    /// <returns>The file name, or the font's own name when it is not an OTF.</returns>
+    private static string MusicFontFileName(FontMetric font)
+    {
+        FontMetric unwrapped = font;
+        while (unwrapped is ModifiedFontMetric scaled)
+        {
+            unwrapped = scaled.OriginalFont;
+        }
+
+        if (unwrapped is OpenTypeFontMetric openType)
+        {
+            string name = openType.Font.FileName;
+            return name.EndsWith(".otf", StringComparison.OrdinalIgnoreCase)
+                ? System.IO.Path.GetFileName(name)
+                : name + ".otf";
+        }
+
+        return font.FontName;
+    }
+
+    /// <summary>
+    /// Sets a string in the MUSIC font: each code point maps through the font's
+    /// character map to a named glyph, and the pen advances by the glyph's own
+    /// <c>hmtx</c> advance. A code point the font does not map draws nothing and the
+    /// run continues — the same silence the empty-stencil era produced, now confined
+    /// to genuinely unmapped characters.
+    /// <para>
+    /// The run leaves here as ONE <c>glyph-string</c> expression, which is the shape
+    /// <c>Pango_font::pango_item_string_stencil</c> produces: the font, its name, its
+    /// size, the CID flag, a list of
+    /// <c>(width (down . up) x-offset y-offset glyph-index glyph-name)</c> — one entry
+    /// per glyph of the run, in order — the file name, the face index, the original
+    /// text and the cluster map. The backend places each glyph by the CUMULATIVE
+    /// advance of the entries before it, which is what
+    /// <c>output-svg.scm</c>'s <c>next-horiz-adv</c> carries. Composing the run as a
+    /// pile of separately translated <c>named-glyph</c> stencils draws the same marks
+    /// in the same places, but it is not the same document.
+    /// </para>
+    /// <para>
+    /// DIVERGENCES from upstream's expression, recorded in PORT-COVERAGE. The size is
+    /// the metric's own scaling rather than a Pango point size (the port has no Pango
+    /// and no <c>lily-unit-length</c> in the Engine — the backend takes the drawing
+    /// scale from the FONT, exactly as it does for a <c>named-glyph</c>). The file
+    /// name, face index and cluster map are the values upstream itself writes when it
+    /// has none: the empty string, zero, and <c>#f</c> — they exist for PostScript and
+    /// PDF embedding and for PDF copy-and-paste, neither of which the SVG backend
+    /// reads. And a glyph the font can index but cannot NAME stays in the list with a
+    /// <c>#f</c> name, where upstream drops it: dropping it would drop its advance
+    /// with it and move every glyph after it.
+    /// </para>
+    /// </summary>
+    /// <param name="layout">The output definition, for the device-dot grid.</param>
+    /// <param name="font">The music font metric, possibly scaled.</param>
+    /// <param name="text">The cleaned text.</param>
+    /// <param name="features">The comma-joined <c>font-features</c> string.</param>
+    /// <returns>The composed stencil.</returns>
+    /// <remarks>
+    /// Internal rather than private so <c>UnmappableCodePointTests</c> can compose a run
+    /// without standing up a whole <c>OutputDef</c> font tree. Passing a bare layout is
+    /// deliberate there: <see cref="DeviceDot"/> answers zero for it, so advances are not
+    /// put on the device grid and the fence measures the RELATIONSHIP it is about.
+    /// </remarks>
+    internal static Stencil MusicFontTextStencil(
+        OutputDef layout, FontMetric font, string text, string features)
+    {
+        // The whole run is mapped through the cmap FIRST, because a substitution reads
+        // more than one glyph: Emmentaler's dlig feature turns a digit followed by a
+        // backslash into a single slashed figured-bass glyph, so the run cannot be
+        // composed one code point at a time.
+        List<int> glyphs = new List<int>(text.Length);
+
+        // Which positions in `glyphs' are STAND-INS rather than characters the document
+        // asked for. They are ordinary spaces to everything downstream except the run's
+        // INK, which they alone contribute to (D31 as amended).
+        HashSet<int> standInPositions = new HashSet<int>();
+        for (int i = 0; i < text.Length; i++)
+        {
+            int codePoint = char.IsHighSurrogate(text[i]) && i + 1 < text.Length
+                ? char.ConvertToUtf32(text, i)
+                : text[i];
+            if (char.IsHighSurrogate(text[i]) && i + 1 < text.Length)
+            {
+                i++;
+            }
+
+            int index = font.CharToGlyphIndex(codePoint);
+            if (index != FontMetric.GlyphIndexInvalid)
+            {
+                glyphs.Add(index);
+            }
+            else
+            {
+                // Upstream reaches the MUSIC font through Pango too, so a character the
+                // music font cannot map produces the same warning a text one does —
+                // "inf" set as a compound-meter denominator is the corpus's case, and
+                // Emmentaler has no `i'. Dropping the glyph silently is what left it
+                // unsaid. Naming the font is the point of the message, so the file name
+                // is reconstructed here rather than read from FileName, which for an
+                // embedded font is the suffix-less asset name.
+                MissingGlyphWarning.Warn(codePoint, MusicFontFileName(font));
+
+                //was previously: the glyph was dropped here and nothing took its place,
+                // so the character contributed NO ADVANCE and every glyph after it moved
+                // left by a whole character. Upstream does not lose the width: Pango
+                // marks the glyph unknown, `Pango_font::get_glyph_desc' returns #f so it
+                // is never DRAWN, but the run's extent is `string_extent' over the whole
+                // glyph string, so the box survives.
+                //
+                // D31 AS AMENDED (Jeremy, 2026-08-17) — the port stands in with TWO
+                // Emmentaler spaces. The tofu rule is for TEXT fonts, where a missing
+                // Hebrew or CJK glyph SHOULD be visible so a user says "you don't support
+                // this" — that complaint is feedback worth having. Emmentaler is the
+                // opposite case: upstream advances and draws nothing, so the port owes
+                // the advance and nothing else.
+                //
+                // WHY TWO, and it is measured rather than chosen: Pango's unknown-glyph
+                // box is a per-font, per-size constant (`i', `q' and `@' give byte-
+                // identical boxes) and the port cannot compute it — its width is
+                // `approximate_char_width', which Pango derives from a sample string in a
+                // fallback font the port does not have and does not want. Measured
+                // against the pinned oracle at seven sizes from magstep 1/4 to 16, the
+                // box is between 2.00 and 2.27 space advances, so TWO is the nearest
+                // whole number at every size and is exact at magstep 1/4. Emmentaler's
+                // space has no outline, so two of them draw nothing — which is what
+                // upstream draws.
+                //
+                // /!\ IT DOES NOT CLOSE THE ROW AND IS NOT MEANT TO. At the corpus's size
+                // two spaces recover 1.5023 of the box's 1.7072, leaving 0.2049 — better
+                // than the whole 1.7072 that was lost, and still far outside D29's
+                // (absent) position tolerance. No mix of Emmentaler's spaces can do
+                // better than about half a device dot, because each advance is rounded to
+                // one. markup-compound-meter-denominator-style is on `g1-skip-list.tsv'
+                // for exactly this residual.
+                int spaceIndex = font.CharToGlyphIndex(SpaceCodePoint);
+
+                // A music font with no space of its own can only be left as it was; the
+                // guard has no upstream counterpart because the whole branch has none.
+                if (spaceIndex != FontMetric.GlyphIndexInvalid)
+                {
+                    for (int space = 0; space < SpacesPerUnmappableCodePoint; space++)
+                    {
+                        standInPositions.Add(glyphs.Count);
+                        glyphs.Add(spaceIndex);
+                    }
+                }
+            }
+        }
+
+        // Upstream reaches this through Pango, which hands the feature string to
+        // HarfBuzz; the port applies the same features out of the font's own GSUB. This
+        // is what draws `fattened.three` where a Fingering asks for ss01 and
+        // `fixedwidth.four.alt` where a BassFigure asks for tnum and cv47.
+        int beforeSubstitution = glyphs.Count;
+        font.Substitutions?.Apply(glyphs, features);
+
+        // GSUB can merge or split glyphs, and then a recorded POSITION no longer names the
+        // glyph it was recorded for. Emmentaler substitutes nothing involving a space, so
+        // this never fires in the corpus — but a stand-in reserving a height at the wrong
+        // index would be worse than reserving none, so the claim is checked rather than
+        // assumed.
+        if (glyphs.Count != beforeSubstitution)
+        {
+            standInPositions.Clear();
+        }
+
+        Stencil result = Stencil.Empty;
+        double x = 0;
+        Interval ink = Interval.Empty;
+        List<object> descriptions = new List<object>(glyphs.Count);
+
+        // THE DEVICE-DOT GRID, which is D10 one font class over. Upstream shapes a
+        // music-font run through Pango exactly as it shapes a text one, and Pango rounds
+        // each shaped glyph's advance with PANGO_UNITS_ROUND before anything reads the
+        // run — so the logical rectangle is a sum of WHOLE dots and never of exact real
+        // advances. TextFontMetric has rounded since D10; this path summed exact reals,
+        // which is what left a music-font run's width out by up to a third of a dot.
+        double pixel = DeviceDot(layout);
+
+        // D44 — THE SAME INTEGER PIPELINE THE TEXT PATH RUNS, because upstream reaches
+        // this font through Pango too (font-select.cc's fetaText branch sets a
+        // PangoFontDescription size and calls find_pango_font, exactly as latin1 does).
+        // The scale HarfBuzz shapes at is recovered from the scale the port already
+        // measures with: the port's advance is raw * FontScaling / MusicEm and the
+        // shaped one is raw * x_scale / (MusicEm * PANGO_SCALE) * dot, so
+        // x_scale = FontScaling * PANGO_SCALE / dot, rounded the way
+        // pango_units_from_double rounds. Reconstructing it keeps this path's effective
+        // scale exactly what it already was and changes ONLY the arithmetic that lands
+        // an advance on the dot grid.
+        int xScale = pixel > 0.0
+            ? (int)Math.Floor((font.FontScaling * PangoScale / pixel) + 0.5)
+            : 0;
+        long multiplier = TextFontMetric.Multiplier(xScale, MusicEm);
+
+        // font-features reaches GPOS too, not only GSUB: a run asking for -kern is asking
+        // this table to stand down.
+        bool kerned = KerningTable.Enabled(features);
+
+        for (int i = 0; i < glyphs.Count; i++)
+        {
+            int index = glyphs[i];
+
+            // The kern belongs to the PAIR, so it rides on the first glyph of it — and
+            // it is applied AFTER substitution, because the pair it applies to is the
+            // one substitution left behind. Emmentaler kerns its digits on purpose.
+            // This sum is upstream's per-glyph WIDTH, which is Pango's own kern-adjusted
+            // advance and is what the cumulative placement accumulates.
+            double advance = font.IndexedAdvance(index);
+            if (kerned && i + 1 < glyphs.Count)
+            {
+                advance += font.IndexedKerning(index, glyphs[i + 1]);
+            }
+
+            string name = font.IndexToName(index);
+            if (name != null)
+            {
+                Stencil glyph = font.FindByName(name);
+                if (!Stencil.IsNullExpression(glyph.Expression))
+                {
+                    glyph.Translate(new Offset(x, 0));
+                    result.AddStencil(glyph);
+                }
+            }
+
+            // The glyph's INK height, which is what Pango's ink rectangle reports and
+            // what upstream puts in the description. NOT the declared box: Emmentaler
+            // declares one height for all its digits and draws them a few units apart.
+            Interval height = font.GetIndexedInkDimensions(index)[Axis.Y];
+
+            // D31 AS AMENDED — the second half. Two spaces give the unmappable code point
+            // its ADVANCE, but a space has NO INK, and a run's Y extent is the union of its
+            // glyphs' ink boxes. Upstream's box is not inkless: Pango's unknown-glyph box
+            // has an ink RECTANGLE as well as a logical width, and LilyPond takes a text
+            // stencil's Y from the ink rect while taking X from the logical one (trap 15a),
+            // so a line containing an unmappable character is as TALL upstream as any other.
+            // Left inkless, such a line measures short and everything stacked against it
+            // creeps: on markup-compound-meter-denominator-style that was a settled
+            // dy of -0.2993 across 86 marks.
+            //
+            // THE HEIGHT IS THE FONT'S OWN, from OS/2's TYPOGRAPHIC ascender and descender
+            // — for Emmentaler (800, -200), exactly one em — against the oracle's box
+            // measured at (-0.1909 .. +0.8141) em. ⚠ NOT hhea's pair and NOT usWinAscent/
+            // Descent, which for a music font are 2127/-2314, four and a half em, because
+            // its glyphs reach far past the staff.
+            //
+            // MEASURED: this takes the settled dy from -0.2993 to +0.0341, which is exactly
+            // ONE DEVICE DOT and is the quantisation floor rather than a sizing error.
+            // ⚠ AND IT IS BETTER THAN THE ORACLE'S OWN NUMBER: reserving the measured
+            // (-0.1909 .. +0.8141) instead gives 0.0441. There is nothing to gain by
+            // chasing a more exact box, which is why the font's own metric is the right
+            // source and not a recorded constant (rule 33).
+            if (standInPositions.Contains(i))
+            {
+                (int ascender, int descender) = font.TypoAscenderDescender;
+                if (ascender != descender)
+                {
+                    // Stencil units per DESIGN unit: a metric answers
+                    // raw * FontScaling / MusicEm, so one em is FontScaling itself.
+                    double perDesignUnit = font.FontScaling / MusicEm;
+                    height = new Interval(descender * perDesignUnit, ascender * perDesignUnit);
+                }
+            }
+
+            if (!height.IsEmpty)
+            {
+                ink.Unite(height);
+            }
+
+            // The kern is INSIDE the rounding, not outside it — settled by measurement
+            // for the text faces at PARITY 5 and reproduced here for the same reason:
+            // Pango rounds what the shaper produced, and the shaper had already applied
+            // the kern to the pair's first advance. ⚠ The kern is scaled SEPARATELY
+            // (GPOS's apply_value calls em_scale_x on the pair value and adds it to an
+            // already-scaled advance), so the two em_mults are not one em_mult of a sum.
+            double stepped;
+            if (pixel > 0.0)
+            {
+                long steppedUnits = TextFontMetric.EmMult(
+                    DesignUnits(font, font.IndexedAdvance(index)), multiplier);
+                if (kerned && i + 1 < glyphs.Count)
+                {
+                    steppedUnits += TextFontMetric.EmMult(
+                        DesignUnits(font, font.IndexedKerning(index, glyphs[i + 1])), multiplier);
+                }
+
+                stepped = TextFontMetric.PangoUnitsRound(steppedUnits) * pixel / PangoScale;
+            }
+            else
+            {
+                stepped = advance;
+            }
+
+            descriptions.Add(Pair.List(
+                stepped,
+                new Pair(height.Left, height.Right),
+                0.0,
+                0.0,
+                (long)index,
+                name == null ? (object)false : new MutableString(name)));
+
+            x += stepped;
+        }
+
+        // A run in which nothing drew keeps answering the empty stencil.
+        if (Stencil.IsNullExpression(result.Expression))
+        {
+            return result;
+        }
+
+        // THE RUN'S EXTENT IS UPSTREAM'S, AND IT IS NOT ONE BOX FROM ONE SOURCE.
+        // Pango_font::pango_item_string_stencil builds it as
+        //   Box (Interval (PANGO_LBEARING (logical_rect), PANGO_RBEARING (logical_rect)),
+        //        Interval (-PANGO_DESCENT (ink_rect),     PANGO_ASCENT (ink_rect)))
+        // — X from the LOGICAL rectangle, which is where the pen starts and stops, and Y
+        // from the INK rectangle, which is what the outlines actually cover. The port
+        // used the union of the DECLARED glyph boxes for both axes, so a run of digits
+        // reported the same height whichever digits it held.
+        Box box = default;
+        box.X = new Interval(0.0, x);
+        box.Y = ink;
+
+        return new Stencil(
+            box,
+            Pair.List(
+                GlyphStringSymbol,
+                font,
+                new MutableString(font.FontName),
+                font.FontScaling,
+                false,
+                Pair.ListFrom(descriptions),
+                new MutableString(string.Empty),
+                0L,
+                new MutableString(text),
+                false));
+    }
+
+    /// <summary>
+    /// Recovers a music font's own DESIGN units from a metric it has already scaled.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="FontMetric.IndexedAdvance"/> and <see cref="FontMetric.IndexedKerning"/>
+    /// both answer <c>raw * FontScaling / MusicEm</c>, so dividing back recovers the whole
+    /// <c>hmtx</c> / GPOS number HarfBuzz reads — which is what the integer pipeline needs
+    /// and what neither accessor exposes. The round-trip is exact for the values that
+    /// exist: both are whole design units to begin with.
+    /// </remarks>
+    /// <param name="font">The scaled music font.</param>
+    /// <param name="scaled">The metric, in stencil units.</param>
+    /// <returns>The metric in design units.</returns>
+    private static long DesignUnits(FontMetric font, double scaled)
+        => font.FontScaling == 0.0
+            ? 0L
+            : TextFontMetric.DesignUnits(scaled * MusicEm / font.FontScaling);
+
+    /// <summary>
+    /// One Pango device dot in output units — the grid a shaped advance lands on.
+    /// <para>
+    /// The same quantity <see cref="Fonts.TextFontMetric.DevicePixel"/> answers, computed
+    /// from the same two numbers: <c>PANGO_RESOLUTION</c> (1200, from
+    /// <c>lily/include/pango-font.hh</c>) and the TOP output definition's
+    /// <c>output-scale</c>. It is read off the top definition rather than the one in hand
+    /// because a score's layout is a scaled child and the scale is the book's.
+    /// </para>
+    /// </summary>
+    /// <param name="layout">The output definition.</param>
+    /// <returns>The dot, or zero when there is no layout to ask.</returns>
+    private static double DeviceDot(OutputDef layout)
+    {
+        if (layout == null)
+        {
+            return 0.0;
+        }
+
+        OutputDef top = layout;
+        while (top.Parent != null)
+        {
+            top = top.Parent;
+        }
+
+        double outputScale = top.GetDimension(OutputScaleSymbol);
+        if (outputScale <= 0.0)
+        {
+            outputScale = 1.0;
+        }
+
+        return Dimensions.InchToBigPoint / (PangoResolution * outputScale);
+    }
+
+    /// <summary>
+    /// Replaces every whitespace character with a space, leaving multi-byte characters
+    /// alone.
+    /// </summary>
+    /// <param name="text">The text.</param>
+    /// <returns>The cleaned text.</returns>
+    public static string NormalizeWhitespace(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text ?? string.Empty;
+        }
+
+        StringBuilder builder = null;
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+
+            // Upstream guards with `!(ch & 0x80)` so it never touches a UTF-8
+            // continuation byte. C# strings are already characters, so the equivalent
+            // guard is to leave anything outside ASCII alone.
+            if (c < 0x80 && char.IsWhiteSpace(c) && c != ' ')
+            {
+                builder ??= new StringBuilder(text);
+                builder[i] = ' ';
+            }
+        }
+
+        return builder == null ? text : builder.ToString();
+    }
+
+    /// <summary>
+    /// Interprets a grob's markup, under the grob's TEXT property chain.
+    /// </summary>
+    /// <param name="grob">The grob.</param>
+    /// <param name="markup">The markup.</param>
+    /// <returns>The stencil.</returns>
+    public static Stencil GrobInterpretMarkup(Grob grob, object markup)
+    {
+        if (grob == null)
+        {
+            throw new ArgumentNullException(nameof(grob));
+        }
+
+        return InterpretMarkup(grob.Layout, FontInterface.TextFontAlistChain(grob), markup);
+    }
+
+    /// <summary>
+    /// The <c>stencil</c> callback of the text interface: interpret the grob's
+    /// <c>text</c>.
+    /// </summary>
+    /// <param name="grob">The grob.</param>
+    /// <returns>The stencil.</returns>
+    public static Stencil Print(Grob grob)
+    {
+        object text = grob.GetProperty(TextSymbol);
+
+        // The text callback may have caused this grob to kill itself, in which case
+        // there is nothing left to draw and asking would resurrect a dead object.
+        if (!grob.IsLive)
+        {
+            return Stencil.Empty;
+        }
+
+        return GrobInterpretMarkup(grob, text);
+    }
+
+    /// <summary>
+    /// Determines whether a value is a markup: a string, or a pair whose head is a
+    /// registered markup command that is not a markup LIST command.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns><see langword="true"/> when it is a markup.</returns>
+    public static bool IsMarkup(object value)
+    {
+        if (SchemeStringOrNull(value) != null)
+        {
+            return true;
+        }
+
+        if (!(value is Pair pair))
+        {
+            return false;
+        }
+
+        // Scheme truth, not the C# boolean: a command's markup-command-signature is
+        // a LIST, and filtering it through ToBool read every non-string markup as
+        // "not a markup" — MetronomeMark and RehearsalMark texts never drew. Found
+        // by the bars/meter/keys/marks group, fixed centrally.
+        return SchemeUtilities.IsSchemeTrue(CallLily(MarkupCommandSignatureSymbol, pair.Car))
+               && !SchemeUtilities.IsSchemeTrue(CallLily(MarkupListFunctionSymbol, pair.Car));
+    }
+
+    /// <summary>Determines whether a value is a markup list.</summary>
+    /// <param name="value">The value.</param>
+    /// <returns><see langword="true"/> when it is a markup list.</returns>
+    //was previously: => SchemeUtilities.ToBool(CallLily(MarkupListPredicateSymbol, value));
+    // Upstream is `return scm_is_true (Lily::markup_list_p (x));` — the same Scheme truth
+    // the two lines above already use for is_markup. This one was missed when that pair
+    // was corrected.
+    public static bool IsMarkupList(object value)
+        => SchemeUtilities.IsSchemeTrue(CallLily(MarkupListPredicateSymbol, value));
+
+    /// <summary>
+    /// Determines whether a property chain asks for a MUSIC font, which is what decides
+    /// whether a string is set as text at all.
+    /// </summary>
+    /// <param name="props">The property alist chain.</param>
+    /// <returns><see langword="true"/> for a music encoding.</returns>
+    public static bool IsMusicEncoded(object props)
+    {
+        object encoding = SchemeUtilities.ChainAssocGet(FontEncodingSymbol, props, false);
+        object encodings = LilyPondScheme.LookupProcedure(AllMusicFontEncodingsSymbol);
+
+        object cursor = encodings;
+        while (cursor is Pair pair)
+        {
+            if (ReferenceEquals(pair.Car, encoding))
+            {
+                return true;
+            }
+
+            cursor = pair.Cdr;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Performs the <c>replacement-alist</c> substitutions on a string, returning a
+    /// <c>\concat</c> markup of the pieces.
+    /// <para>
+    /// This is <c>ly:perform-text-replacements</c>, the string transformer LilyPond
+    /// installs by default. It is what turns <c>"..."</c> into an ellipsis and
+    /// <c>"fi"</c> into a ligature when a user supplies a replacement table.
+    /// </para>
+    /// <para>
+    /// Two rules decide what it produces, and both come straight from upstream's loop.
+    /// The LONGEST matching key wins, so a table holding both <c>f</c> and <c>ffi</c>
+    /// replaces the ligature rather than the letter. And the result of a replacement is
+    /// never itself rescanned — scanning resumes AFTER the inserted text — so a table
+    /// mapping <c>a</c> to <c>aa</c> terminates instead of running forever.
+    /// </para>
+    /// </summary>
+    /// <param name="props">The property alist chain, which carries the table.</param>
+    /// <param name="input">The string to transform.</param>
+    /// <returns>The input unchanged, or a <c>\concat</c> markup of the pieces.</returns>
+    public static object PerformReplacements(object props, object input)
+    {
+        string text = SchemeStringOrNull(input);
+        object alist = SchemeUtilities.ChainAssocGet(
+            ReplacementAlistSymbol, props, Nil.Instance);
+
+        if (text == null || text.Length == 0 || !(alist is Pair))
+        {
+            return input;
+        }
+
+        // Longest key first is what makes "longest match wins" fall out of a simple
+        // ordered scan, without upstream's upper_bound trick.
+        List<(string Key, object Value)> replacements = new List<(string, object)>();
+        HashSet<string> seen = new HashSet<string>(StringComparer.Ordinal);
+        object cursor = alist;
+        while (cursor is Pair pair)
+        {
+            if (pair.Car is Pair entry)
+            {
+                string key = SchemeStringOrNull(entry.Car);
+
+                // A table with duplicate keys keeps the FIRST, as upstream's
+                // insert-if-absent does.
+                if (!string.IsNullOrEmpty(key) && seen.Add(key))
+                {
+                    replacements.Add((key, entry.Cdr));
+                }
+            }
+
+            cursor = pair.Cdr;
+        }
+
+        if (replacements.Count == 0)
+        {
+            return input;
+        }
+
+        replacements.Sort((left, right) => right.Key.Length.CompareTo(left.Key.Length));
+
+        List<object> pieces = new List<object>();
+        int start = 0;
+        int position = 0;
+        bool replaced = false;
+
+        while (position < text.Length)
+        {
+            (string Key, object Value) match = default;
+            foreach ((string Key, object Value) candidate in replacements)
+            {
+                if (string.CompareOrdinal(
+                        text, position, candidate.Key, 0, candidate.Key.Length) == 0
+                    && position + candidate.Key.Length <= text.Length)
+                {
+                    match = candidate;
+                    break;
+                }
+            }
+
+            if (match.Key == null)
+            {
+                position++;
+                continue;
+            }
+
+            pieces.Add(new MutableString(text.Substring(start, position - start)));
+            pieces.Add(match.Value);
+            position += match.Key.Length;
+            start = position;
+            replaced = true;
+        }
+
+        if (!replaced)
+        {
+            return input;
+        }
+
+        pieces.Add(new MutableString(text.Substring(start)));
+
+        object concat = LilyPondScheme.LookupProcedure(MakeConcatMarkupSymbol);
+        Interpreter interpreter = LilyPondScheme.Current;
+        if (concat == null || interpreter == null)
+        {
+            return input;
+        }
+
+        return interpreter.Evaluator.Apply(concat, new[] { Pair.ListFrom(pieces) });
+    }
+
+    /// <summary>
+    /// Returns a value's text when it is a Scheme STRING, and null otherwise.
+    /// <para>
+    /// Deliberately narrower than the general text conversion: a markup is a string or
+    /// a command list, and a symbol answering to the string test would make
+    /// <c>'foo</c> interpret as text.
+    /// </para>
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The text, or <see langword="null"/>.</returns>
+    private static string SchemeStringOrNull(object value)
+    {
+        switch (value)
+        {
+            case MutableString mutable:
+                return mutable.ToString();
+            case string text:
+                return text;
+            default:
+                return null;
+        }
+    }
+
+    private static long MaxDepth()
+    {
+        object option = LilyPondScheme.Options?.Get(MaxMarkupDepthSymbol.Name);
+        return SchemeConvert.IsNumber(option)
+            ? SchemeConvert.ToLong(option, "max-markup-depth")
+            : 1024;
+    }
+
+    private static object CallLily(Symbol name, object argument)
+    {
+        object procedure = LilyPondScheme.LookupProcedure(name);
+        Interpreter interpreter = LilyPondScheme.Current;
+        if (procedure == null || interpreter == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            return interpreter.Evaluator.Apply(procedure, new[] { argument });
+        }
+        catch (Exception exception) when (!(exception is OutOfMemoryException))
+        {
+            return false;
+        }
+    }
+
+    private static string Describe(object value) => value == null ? "#f" : value.ToString();
+
+    // scm_procedure_name: the procedure's own name, not its printed representation.
+    // Upstream passes the result through ly_symbol2string, which answers the empty
+    // string for an anonymous procedure.
+    private static string ProcedureName(object function)
+        => (function as Procedure)?.EffectiveName ?? string.Empty;
+}

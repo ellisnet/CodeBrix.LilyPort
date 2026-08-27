@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "01b-Pitches-Intervals.xml",
+ "messages": [],
+ "name": "01b-Pitches-Intervals",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 01b-Pitches-Intervals.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"All pitch intervals in ascending jump size.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\clef \"treble\" \\time 2/4 \\key c \\major c4 c4 | % 1\n  cis4 ces4 | % 2\n  des4 bis4 | % 3\n  d4 b4 | % 4\n  dis4 bes4 | % 5\n  es4 ais,4 | % 6\n  e'4 a,4 | % 7\n  eis'4 as,4 | % 8\n  fes'4 gis,4 | % 9\n\n  \\barNumberCheck #10\n  f'4 g,4 | % 10\n  fis'4 ges,4 | % 11\n  ges'4 fis,4 | % 12\n  g'4 f,4 | % 13\n  gis'4 fes,4 | % 14\n  as'4 eis,4 | % 15\n  a'4 e,4 | % 16\n  ais'4 es,4 | % 17\n  bes''4 dis,,4 | % 18\n  b''4 d,,4 | % 19\n\n  \\barNumberCheck #20\n  bis''4 des,,4 | % 20\n  ces''4 cis,,4 | % 21\n  c''4 c,,4 | % 22\n  cis''4 ces,,4 | % 23\n  des''4 bis,,4 | % 24\n  d''4 b,,4 | % 25\n  dis''4 bes,,4 | % 26\n  es''4 ais,,,4 | % 27\n  e'''4 a,,,4 | % 28\n  eis'''4 as,,,4 | % 29\n\n  \\barNumberCheck #30\n  fes'''4 gis,,,4 | % 30\n  f'''4 g,,,4 | % 31\n  fis'''4 ges,,,4 | % 32\n  ges'''4 fis,,,4 | % 33\n  g'''4 f,,,4 | % 34\n  gis'''4 fes,,,4 | % 35\n  as'''4 eis,,,4 | % 36\n  a'''4 e,,,4 | % 37\n  ais'''4 es,,,4 | % 38\n  bes''''4 dis,,,,4 | % 39\n\n  \\barNumberCheck #40\n  b''''4 d,,,,4 | % 40\n  bis''''4 des,,,,4 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "01b-Pitches-Intervals.xml",
+ "version_line": "\\version \"2.27.2\""
+}

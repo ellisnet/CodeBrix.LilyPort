@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "51d-EmptyTitle.xml",
+ "messages": [],
+ "name": "51d-EmptyTitle",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 51d-EmptyTitle.xml\n\\pointAndClickOff\n\n\\header {\n  title = \"Empty work-title, non-empty movement-title\"\n  texidoc = \"A piece with empty (but existing) <work-title> and <work-number>\n    elements. <movement-title> is non-empty but <movement-number> is empty, too.\n    It makes sense to use <movement-title> as the title in this situation.\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\once \\omit Staff.TimeSignature r1 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "51d-EmptyTitle.xml",
+ "version_line": "\\version \"2.27.2\""
+}

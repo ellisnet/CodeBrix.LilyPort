@@ -1,0 +1,17 @@
+{
+ "arguments": [],
+ "input_file": "33e-Spanners-OctaveShifts-InvalidSize.xml",
+ "messages": [
+  "musicxml2ly: warning: Invalid octave shift size found: 27. Using no shift.",
+  "musicxml2ly: warning: Invalid octave shift size found: 27. Using no shift.",
+  "musicxml2ly: warning: Invalid octave shift size found: 11. Using no shift.",
+  "musicxml2ly: warning: Invalid octave shift size found: 11. Using no shift."
+ ],
+ "name": "33e-Spanners-OctaveShifts-InvalidSize",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 33e-Spanners-OctaveShifts-InvalidSize.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Invalid <octave-shifts> values: 27 down for the second note, and\n    11 up for the third note.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative a' {\n  \\clef \"treble\" \\time 3/4 \\key c \\major a4 a'''4 \\ottava #0 c,,,,,4 \\ottava #0\n  \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "33e-Spanners-OctaveShifts-InvalidSize.xml",
+ "version_line": "\\version \"2.27.2\""
+}

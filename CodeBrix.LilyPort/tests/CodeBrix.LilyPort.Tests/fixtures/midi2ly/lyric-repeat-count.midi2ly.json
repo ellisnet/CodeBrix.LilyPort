@@ -1,0 +1,9 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQADAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDD0JA1AD/LwBNVHJrAAAAVQCQQVqGAJBBAACQQ1qGAJBDAACQRVqGAJBFAACQQ1qGAJBDAACQQVqGAJBBAACQQFqGAJBAAACQQVqMAJBBAACQQ1qYAJBDAACQQVqMAJBBAAD/LwBNVHJrAAAATAD/BQJMb4YA/wUEcmVtLoYA/wUCSXCGAP8FBHN1bS6GAP8FAkRvhgD/BQRsb3IuhgD/BQRTaXQujAD/BQFBmAD/BQRtZXQujAD/LwA=",
+ "name": "lyric-repeat-count",
+ "options": {},
+ "output": "% Lily was here -- automatically converted by midi2ly from lyric-repeat-count.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n  \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = 60\n  \\skip 1*7 \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \\skip 1*7 \n}\n\ntrackBchannelB = \\relative c {\n  f'2 g \n  | % 2\n  a g \n  | % 3\n  f e \n  | % 4\n  f1 \n  | % 5\n  g\\breve f1 \n  | % 8\n  \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n>>\n\n\ntrackCchannelA = \\lyricmode {\n  \"Lo\"2 \"rem.\" \n  | % 2\n  \"Ip\" \"sum.\" \n  | % 3\n  \"Do\" \"lor.\" \n  | % 4\n  \"Sit.\"1 \n  | % 5\n  \"A\"\\breve \"met.\"4 \" \"2. \n  | % 8\n  \n}\n\ntrackC = <<\n  \\context Lyrics = voiceA \\trackCchannelA\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n    \\context Lyrics=trackC \\trackC\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "lyric-repeat-count.midi"
+}

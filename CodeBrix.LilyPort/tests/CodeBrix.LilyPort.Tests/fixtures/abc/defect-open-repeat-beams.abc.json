@@ -1,0 +1,17 @@
+{
+  "divergences": [
+    "abc-open-repeat-unclosed"
+  ],
+  "frozen_version_line": "\\version \u00222.24.0\u0022",
+  "input": "X: 4\nT: Voice left inside a repeat\nM: 4/4\nL: 1/4\nK: C\n|: CDEF | GABc\n",
+  "messages": [],
+  "name": "defect-open-repeat-beams",
+  "options": {
+    "beams": true
+  },
+  "output": "\\version \u00222.24.0\u0022\n\n\\header {\n  crossRefNumber = \u00224\u0022\n  footnotes = \u0022\u0022\n  tagline = \u0022LilyPond 2.27.2 was here -- automatically converted from ABC\u0022\n  title = \u0022Voice left inside a repeat\u0022\n}\n\n\u0022voicedefault\u0022 = {\n\\numericTimeSignature \\time 4/4 \\key c \\major \n\\repeat volta 2 { c\u00274 d\u00274 e\u00274 f\u00274 \\bar \u0022|\u0022 g\u00274 a\u00274 b\u00274 c\u0027\u00274 \n}\n\n\n\\score {\n  \u003C\u003C\n    \\context Staff = \u0022default\u0022 {\n      \\\u0022voicedefault\u0022\n    }\n  \u003E\u003E\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #\u0027()\n    }\n  }\n  \\midi {}\n}\n",
+  "port_messages": [],
+  "port_output": "\\version \u00222.24.0\u0022\n\n\\header {\n  crossRefNumber = \u00224\u0022\n  footnotes = \u0022\u0022\n  tagline = \u0022LilyPond 2.27.2 was here -- automatically converted from ABC\u0022\n  title = \u0022Voice left inside a repeat\u0022\n}\n\n\u0022voicedefault\u0022 = {\n\\numericTimeSignature \\time 4/4 \\key c \\major \n\\repeat volta 2 { c\u00274 d\u00274 e\u00274 f\u00274 \\bar \u0022|\u0022 g\u00274 a\u00274 b\u00274 c\u0027\u00274 }\n}\n\n\n\\score {\n  \u003C\u003C\n    \\context Staff = \u0022default\u0022 {\n      \\\u0022voicedefault\u0022\n    }\n  \u003E\u003E\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #\u0027()\n    }\n  }\n  \\midi {}\n}\n",
+  "source": "probe",
+  "source_name": "defect-open-repeat.abc"
+}

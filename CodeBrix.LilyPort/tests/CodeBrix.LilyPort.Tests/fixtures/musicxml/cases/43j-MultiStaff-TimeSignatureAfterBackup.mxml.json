@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "43j-MultiStaff-TimeSignatureAfterBackup.xml",
+ "messages": [],
+ "name": "43j-MultiStaff-TimeSignatureAfterBackup",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 43j-MultiStaff-TimeSignatureAfterBackup.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A piano staff where the bass clef, the 3/4 time signature, and the\n    d-major key at the very beginning is given for both staves after a <backup>\n    element.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative d' {\n  \\clef \"bass\" \\time 3/4 \\key d \\major d2. }\n\nPartPOneVoiceTwo = \\relative b {\n  \\clef \"bass\" \\time 3/4 \\key d \\major b2. }\n\n\n% The score definition\n\\score {\n  <<\n    \\new PianoStaff = \"P1\" <<\n      \\context Staff = \"1\" <<\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n      \\context Staff = \"2\" <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceTwo\" {\n          \\PartPOneVoiceTwo\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "43j-MultiStaff-TimeSignatureAfterBackup.xml",
+ "version_line": "\\version \"2.27.2\""
+}

@@ -1,0 +1,27 @@
+{
+  "divergences": [
+    "abc-backslash-k-crash"
+  ],
+  "frozen_version_line": null,
+  "input": "X: 1\nT: Backslash K escape\nM: 4/4\nL: 1/4\nK: C\nC D \\K E F |\n",
+  "messages": [
+    "Traceback (most recent call last):",
+    "  File \u0022/home/jeremy/ClaudeHome/oracle/lilypond-2.27.2/bin/../libexec/abc2ly\u0022, line 1724, in \u003Cmodule\u003E",
+    "    parse_file(file)",
+    "    ~~~~~~~~~~^^^^^^",
+    "  File \u0022/home/jeremy/ClaudeHome/oracle/lilypond-2.27.2/bin/../libexec/abc2ly\u0022, line 1644, in parse_file",
+    "    ln = try_parse_escape(ln)",
+    "  File \u0022/home/jeremy/ClaudeHome/oracle/lilypond-2.27.2/bin/../libexec/abc2ly\u0022, line 1272, in try_parse_escape",
+    "    key_table = compute_key()",
+    "TypeError: compute_key() missing 1 required positional argument: \u0027k\u0027"
+  ],
+  "name": "defect-escape-k",
+  "options": {
+    "beams": false
+  },
+  "output": null,
+  "port_messages": [],
+  "port_output": "\\version \u00222.24.0\u0022\n\n\\header {\n  crossRefNumber = \u00221\u0022\n  footnotes = \u0022\u0022\n  tagline = \u0022LilyPond 2.27.2 was here -- automatically converted from ABC\u0022\n  title = \u0022Backslash K escape\u0022\n}\n\n\u0022voicedefault\u0022 = {\n\\numericTimeSignature \\time 4/4 \\key c \\major c\u00274 d\u00274 e\u00274 f\u00274 \\bar \u0022|\u0022 \n}\n\n\n\\score {\n  \u003C\u003C\n    \\context Staff = \u0022default\u0022 {\n      \\\u0022voicedefault\u0022\n    }\n  \u003E\u003E\n\n  \\layout {}\n  \\midi {}\n}\n",
+  "source": "probe",
+  "source_name": "defect-escape-k.abc"
+}

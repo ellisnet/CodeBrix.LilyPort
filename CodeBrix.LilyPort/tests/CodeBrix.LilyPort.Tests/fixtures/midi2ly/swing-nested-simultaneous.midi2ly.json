@@ -1,0 +1,9 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQACAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDD0JAmgD/LwBNVHJrAAAATgD/AwVcbmV3OowAkDxaggCQPlqBAJA8AACQPgAAkEBaggCQQVqBAJBAAACQQQAAkENaggCQRVqDAJBFAACQR1qBAJBDAIIAkEcAAP8vAA==",
+ "name": "swing-nested-simultaneous",
+ "options": {},
+ "output": "% Lily was here -- automatically converted by midi2ly from swing-nested-simultaneous.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n  \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = 60\n  \\skip 4*3328/384 \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"\\new:\"\n  \\skip 4*3328/384 \n}\n\ntrackBchannelB = \\relative c {\n  \\voiceTwo\n  r1 \n  | % 2\n  c'4 e g2 \n  | % 3\n  \n}\n\ntrackBchannelBvoiceB = \\relative c {\n  \\voiceOne\n  r4*1792/384 d'4*128/384 r4*256/384 f4*128/384 r4*256/384 a4 b \n  | % 3\n  \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n  \\context Voice = voiceC \\trackBchannelBvoiceB\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "swing-nested-simultaneous.midi"
+}

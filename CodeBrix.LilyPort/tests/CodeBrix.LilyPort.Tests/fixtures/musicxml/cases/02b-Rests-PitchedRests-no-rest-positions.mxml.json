@@ -1,0 +1,14 @@
+{
+ "arguments": [
+  "--nrp"
+ ],
+ "input_file": "02b-Rests-PitchedRests.xml",
+ "messages": [],
+ "name": "02b-Rests-PitchedRests-no-rest-positions",
+ "options": "--nrp",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 02b-Rests-PitchedRests.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Rests can have explicit pitches to position them vertically. In the\n    first bar, the first rest has no explicit pitch and should use the default\n    position, while the remaining rests are explicitly positioned at pitches E4,\n    F5, A3, and C6. The second bar holds a full-measure rest at pitch G4 (within\n    an alto clef).\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 5/4 \\key c \\major r4 r4 r4 r4 r4 | % 1\n  \\clef \"alto\" R4*5 | % 2\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "variant",
+ "source_name": "02b-Rests-PitchedRests.xml",
+ "version_line": "\\version \"2.27.2\""
+}

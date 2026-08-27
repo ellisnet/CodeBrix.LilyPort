@@ -1,0 +1,17 @@
+{
+  "divergences": [
+    "abc-numbered-voice-name-mismatch"
+  ],
+  "frozen_version_line": "\\version \u00222.24.0\u0022",
+  "input": "X: 6\nT: Numbered voices\nM: 2/4\nL: 1/8\nK: Bb\nV: 1\nBAGF |\nV: 2\nD2 F2 |\nV: 3\nB,2 D2 |\n",
+  "messages": [],
+  "name": "multi-voice-stave-beams",
+  "options": {
+    "beams": true
+  },
+  "output": "\\version \u00222.24.0\u0022\n\n\\header {\n  crossRefNumber = \u00226\u0022\n  footnotes = \u0022\u0022\n  tagline = \u0022LilyPond 2.27.2 was here -- automatically converted from ABC\u0022\n  title = \u0022Numbered voices\u0022\n}\n\ncadenzaMeasure = {\n  \\cadenzaOff\n  \\partial 1024 s1024\n  \\cadenzaOn\n}\n\n\u0022voiceB\u0022 = {\n\\once \\omit Staff.TimeSignature\n \\cadenzaOn\n bes\u00278[ a\u00278 g\u00278 f\u00278] \\cadenzaMeasure \\bar \u0022|\u0022 \n}\n\n\u0022voiceC\u0022 = {\n\\once \\omit Staff.TimeSignature\n \\cadenzaOn\n d\u00274 f\u00274 \\cadenzaMeasure \\bar \u0022|\u0022 \n}\n\n\u0022voiceD\u0022 = {\n\\once \\omit Staff.TimeSignature\n \\cadenzaOn\n bes4 d\u00274 \\cadenzaMeasure \\bar \u0022|\u0022 \n}\n\n\u0022voicedefault\u0022 = {\n\\time 2/4 \\key bes \\major \n}\n\n\n\\score {\n  \u003C\u003C\n    \\context Staff = \u00221\u0022 {\n      \\voicedefault\n      \\\u0022voice1\u0022\n    }    \\context Staff = \u00222\u0022 {\n      \\voicedefault\n      \\\u0022voice2\u0022\n    }    \\context Staff = \u00223\u0022 {\n      \\voicedefault\n      \\\u0022voice3\u0022\n    }\n  \u003E\u003E\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #\u0027()\n    }\n  }\n  \\midi {}\n}\n",
+  "port_messages": [],
+  "port_output": "\\version \u00222.24.0\u0022\n\n\\header {\n  crossRefNumber = \u00226\u0022\n  footnotes = \u0022\u0022\n  tagline = \u0022LilyPond 2.27.2 was here -- automatically converted from ABC\u0022\n  title = \u0022Numbered voices\u0022\n}\n\ncadenzaMeasure = {\n  \\cadenzaOff\n  \\partial 1024 s1024\n  \\cadenzaOn\n}\n\n\u0022voice1\u0022 = {\n\\once \\omit Staff.TimeSignature\n \\cadenzaOn\n bes\u00278[ a\u00278 g\u00278 f\u00278] \\cadenzaMeasure \\bar \u0022|\u0022 \n}\n\n\u0022voice2\u0022 = {\n\\once \\omit Staff.TimeSignature\n \\cadenzaOn\n d\u00274 f\u00274 \\cadenzaMeasure \\bar \u0022|\u0022 \n}\n\n\u0022voice3\u0022 = {\n\\once \\omit Staff.TimeSignature\n \\cadenzaOn\n bes4 d\u00274 \\cadenzaMeasure \\bar \u0022|\u0022 \n}\n\n\u0022voicedefault\u0022 = {\n\\time 2/4 \\key bes \\major \n}\n\n\n\\score {\n  \u003C\u003C\n    \\context Staff = \u00221\u0022 {\n      \\voicedefault\n      \\\u0022voice1\u0022\n    }    \\context Staff = \u00222\u0022 {\n      \\voicedefault\n      \\\u0022voice2\u0022\n    }    \\context Staff = \u00223\u0022 {\n      \\voicedefault\n      \\\u0022voice3\u0022\n    }\n  \u003E\u003E\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #\u0027()\n    }\n  }\n  \\midi {}\n}\n",
+  "source": "probe",
+  "source_name": "multi-voice-stave.abc"
+}

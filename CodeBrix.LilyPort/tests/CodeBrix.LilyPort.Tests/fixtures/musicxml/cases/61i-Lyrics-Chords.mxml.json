@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "61i-Lyrics-Chords.xml",
+ "messages": [],
+ "name": "61i-Lyrics-Chords",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 61i-Lyrics-Chords.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Each note of a chord can have some lyrics attached. In this test,\n    each note of the chord has lyrics of the form “Lyrics n” attached (with ‘n’\n    being 1, 2, or 3); each lyrics has a different ‘number’ attribute to\n    distinguish them. These syllables should be imported into three different\n    stanzas, and the timing should be correct.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative e'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major <e c a>4 }\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  \"Lyrics 1\"\n}\n\nPartPOneVoiceOneLyricsTwo = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  \"Lyrics 2\"\n}\n\nPartPOneVoiceOneLyricsThree = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  \"Lyrics 3\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsTwo\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsThree\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "61i-Lyrics-Chords.xml",
+ "version_line": "\\version \"2.27.2\""
+}

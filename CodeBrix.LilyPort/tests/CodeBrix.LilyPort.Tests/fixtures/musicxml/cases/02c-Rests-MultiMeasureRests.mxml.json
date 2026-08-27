@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "02c-Rests-MultiMeasureRests.xml",
+ "messages": [],
+ "name": "02c-Rests-MultiMeasureRests",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 02c-Rests-MultiMeasureRests.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Five multi-measure rests: 3 measures, 15 measures, 1 measure,\n    12 measures, and finally 3 measures with the ‘use-symbols’ attribute set.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n    \\override MultiMeasureRest.expand-limit = 1\n  }\n  \\context {\n    \\Score\n    skipBars = ##t\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major R1*3 | % 3\n  R1*15 | % 18\n  R1 | % 19\n\n  \\barNumberCheck #20\n  R1*12 | % 31\n  \\tweak expand-limit 10 R1*3 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "02c-Rests-MultiMeasureRests.xml",
+ "version_line": "\\version \"2.27.2\""
+}

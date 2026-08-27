@@ -1,0 +1,54 @@
+# CodeBrix.LilyPort -- entry-point N/A candidates (decision D25, 2026-08-05).
+#
+# G3 requires all 737 entry points implemented-or-N/A. This file is the ROLLING
+# candidates list for the N/A half: any session that meets an entry point it
+# would otherwise stub around appends a row RIGHT THEN, while it still has the
+# context to explain why -- never end-loaded onto EPG23.
+#
+# Jeremy rules on CATEGORIES, not items. Once a category is ratified (listed
+# below), filing an entry point under it is mechanical; only oddballs need a
+# ruling, batch-reviewed at GOs. Ratified categories so far:
+#   ps-backend      PS/Cairo backend only (D15)
+#   python-tools    Python tool support (D16)
+#   i18n            gettext/locale plumbing (D17)
+#   guile-internals GC/smob/Guile-init plumbing (rationale of the original
+#                   ~29 no-port rows)
+#   font-plumbing   fontconfig/Pango/FreeType discovery, replaced by the
+#                   port's font layer (D13/D23)
+#   instrumentation profiling machinery that measures LilyPond's OWN execution
+#                   rather than doing anything to the music (ratified by Jeremy
+#                   2026-08-12, for EPG23)
+# NEVER N/A: doc-introspection entry points -- they are EPG24's IMPLEMENTED
+# surface (D21/G8).
+#
+# Rules (D25): an accepted N/A binding still EXISTS and THROWS
+# "not applicable: <reason>" -- it never silently answers #f. The G3 fence
+# computes 737 = implemented + categorized-N/A and fails on any uncategorized
+# stub. N/A is reversible by demand: if the ratchet or Phase 4 reaches an N/A
+# binding, the row flips back to owed, with the demanding file recorded.
+#
+# Columns: entry-point <TAB> upstream-file <TAB> reason <TAB> proposed-category <TAB> status
+# status: candidate | accepted <category> | rejected->owed (<demanding file>)
+ly:spawn	general-scheme.cc	process spawning exists to drive the Ghostscript/PS pipeline (backend-library.scm, ps-to-png.scm); the SVG-only port never calls it (D15)	ps-backend	accepted ps-backend
+ly:shutdown-gs	general-scheme.cc	Ghostscript API instance teardown; PS pipeline only (D15)	ps-backend	accepted ps-backend
+ly:gs-api	general-scheme.cc	Ghostscript API invocation; PS pipeline only (D15)	ps-backend	accepted ps-backend
+ly:otf->cff	otf-scheme.cc	FreeType read of a font file's CFF table, answered as bytes; the port's own SfntReader/CffFont read the same structure, so this is REACHABILITY not capability -- the only caller in the tree is framework-ps.scm's ps-embed-cff and D15 replaced that backend (audited by mechanism 2026-08-27, L6)	ps-backend	accepted ps-backend
+ly:get-cff-offset	open-type-font-scheme.cc	raw fopen walk of a font file's table directory for the `CFF ' offset; the port's SfntReader already parses that directory -- N/A because the only caller in the tree is framework-ps.scm's subsetted-font embedding and D15 replaced that backend (audited by mechanism 2026-08-27, L6)	ps-backend	accepted ps-backend
+ly:has-glyph-names?	open-type-font-scheme.cc	FreeType's FT_HAS_GLYPH_NAMES flag for a font file; answerable from the port's own tables -- N/A because the only callers in the tree are framework-ps.scm, choosing name-keyed vs CID-keyed embedding, and D15 replaced that backend (audited by mechanism 2026-08-27, L6)	ps-backend	accepted ps-backend
+ly:get-font-format	open-type-font-scheme.cc	FreeType's font-format string for a font file, answered as a symbol; answerable from the port's own tables -- N/A because the only callers in the tree are framework-ps.scm, choosing an embedding path, and D15 replaced that backend (audited by mechanism 2026-08-27, L6)	ps-backend	accepted ps-backend
+ly:extract-subfont-from-collection	open-type-font-scheme.cc	copies one face out of a `ttcf' collection into a new FILE -- the one of the five with no counterpart in the port, since an SVG pipeline never writes a font file; the only caller in the tree is framework-ps.scm and D15 replaced that backend (audited by mechanism 2026-08-27, L6)	ps-backend	accepted ps-backend
+ly:system-font-load	all-font-metrics-scheme.cc	loads a font by name from the host's font configuration; D23 forbids system-font fallback outright, so there is no host lookup to make and answering #f would silently re-open the door	font-plumbing	accepted font-plumbing
+ly:cairo-output-stencil	cairo.cc	the Cairo backend writes PDF, PostScript and PNG; D15 makes SVG the port's only backend	ps-backend	accepted ps-backend
+ly:cairo-output-stencils	cairo.cc	the Cairo backend writes PDF, PostScript and PNG; D15 makes SVG the port's only backend	ps-backend	accepted ps-backend
+ly:png-dimensions	cairo.cc	reads back the size of a PNG the Ghostscript pipeline produced; that pipeline is not ported (D15)	ps-backend	accepted ps-backend
+ly:png->eps-dump	cairo.cc	wraps a PNG in an EPS for inclusion in a PostScript stream (D15)	ps-backend	accepted ps-backend
+ly:ttf->pfa	ttf.cc	converts a TrueType face to a PostScript Type 1 font for embedding (D15)	ps-backend	accepted ps-backend
+ly:ttf-ps-name	ttf.cc	reads the PostScript name a font would be embedded under (D15)	ps-backend	accepted ps-backend
+ly:pango-font-physical-fonts	pango-font-scheme.cc	lists the physical faces a Pango font resolved to; the port has no Pango layer (D13/D23). AUDITED BY MECHANISM 2026-08-27 (L6): its two call sites in the SHARED backend-library.scm (582, 612) are NOT ps-only, and what makes them unreachable is that define-fonts filters with ly:pango-font?, a constant #f here -- so this row depends on ANOTHER binding's answer and re-opens the day that one becomes real	font-plumbing	accepted font-plumbing
+ly:smob-protects	smobs.cc	lists the smobs held alive by GC protection; the port's objects are ordinary CLR references	guile-internals	accepted guile-internals
+ly:parsed-undead-list!	undead.cc	a GC-liveness test harness; there is no equivalent question to ask the CLR	guile-internals	rejected->owed (ly/declarations-init.ly:171 via session-save -> dump-zombies); IMPLEMENTED 2026-08-12 as the empty list, which is upstream's own answer for a run with no zombies
+ly:property-lookup-stats	profile.cc	reports grob property-lookup counts for -dprofile-property-accesses; the port does not instrument the property-lookup path	instrumentation	accepted instrumentation
+ly:time-tracer-set-file	time-tracer-scheme.cc	names the file the Chrome-trace timing log is written to	instrumentation	accepted instrumentation
+ly:time-tracer-restart	time-tracer-scheme.cc	restarts the Chrome-trace timing log	instrumentation	accepted instrumentation
+ly:time-tracer-stop	time-tracer-scheme.cc	stops the Chrome-trace timing log	instrumentation	accepted instrumentation
+ly:time-tracer-include-and-remove-file	time-tracer-scheme.cc	splices another trace file into this run's Chrome-trace log and deletes it	instrumentation	accepted instrumentation

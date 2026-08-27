@@ -1,0 +1,15 @@
+{
+ "arguments": [
+  "--oe",
+  "f"
+ ],
+ "input_file": "33db-Spanners-OctaveShifts-after.xml",
+ "messages": [],
+ "name": "33db-Spanners-OctaveShifts-after-ottavas-end-late",
+ "options": "--oe f",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 33db-Spanners-OctaveShifts-after.xml\n\\pointAndClickOff\n\n\\header {\n  \"id: software\" = MuseScore\n  texidoc = \"All types of octave shifts (15ma on the third eighth note, 15mb on\n    the fourth and fifth, 8va on the sixth and seventh, and 8vb on the last two\n    16th notes). This test file positions <octave-shift type=\\\"stop\\\"> after the\n    associated note, as expected in MusicXML import of MuseScore, for example.\n    Consequently, it contains ‘MuseScore’ as the <software> tag.\n\n    Note that the end of the last octave shift is anchored at the following bar\n    line.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative a' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major a8 [ c8 \\ottava #2 a''8 \\ottava #0\n  \\ottava #-2 c,,,,8 ] b8 [ \\ottava #0 \\ottava #1 a'''8 ] a8 [ \\ottava #0\n  \\ottava #-1 b,,16 c16 ] \\ottava #0 | % 1\n  c'1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "variant",
+ "source_name": "33db-Spanners-OctaveShifts-after.xml",
+ "version_line": "\\version \"2.27.2\""
+}

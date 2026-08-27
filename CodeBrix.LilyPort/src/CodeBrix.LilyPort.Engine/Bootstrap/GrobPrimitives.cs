@@ -1,0 +1,405 @@
+// Copyright (c) 2026 Jeremy Ellis and contributors
+//
+// CodeBrix.LilyPort is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+using System;
+using System.Collections.Generic;
+using CodeBrix.LilyPort.Engine.Objects;
+using CodeBrix.LilyPort.Flower;
+using CodeBrix.LilyScheme;
+using CodeBrix.LilyScheme.Values;
+
+namespace CodeBrix.LilyPort.Engine.Bootstrap;
+
+/// <summary>
+/// The grob Scheme API: how LilyPond's own Scheme reads and writes graphical objects.
+/// <para>
+/// This is the single busiest interop surface in the engine. Almost every callback in
+/// <c>scm/output-lib.scm</c> and <c>scm/define-grobs.scm</c> is a Scheme procedure
+/// whose first act is <c>(ly:grob-property grob 'something)</c>, so an unported
+/// <c>ly:grob-property</c> does not fail loudly — it hands back the inert placeholder
+/// and the failure surfaces somewhere else entirely, as a wrong-type argument to
+/// whatever was going to use the value.
+/// </para>
+/// <para>
+/// The three-argument forms take a DEFAULT, and it is returned when the property is
+/// unset — <c>'()</c> is a legitimate value, so "unset" and "set to nothing" are
+/// different answers and the default only applies to the first.
+/// </para>
+/// </summary>
+public static class GrobPrimitives
+{
+    /// <summary>Installs the grob primitives, replacing the corresponding stubs.</summary>
+    /// <param name="interpreter">The interpreter to extend.</param>
+    public static void Install(Interpreter interpreter)
+    {
+        if (interpreter == null)
+        {
+            throw new ArgumentNullException(nameof(interpreter));
+        }
+
+        InstallProperties(interpreter);
+        InstallObjects(interpreter);
+        InstallGeometry(interpreter);
+        InstallGrobArrays(interpreter);
+    }
+
+    private static void InstallProperties(Interpreter interpreter)
+    {
+        interpreter.DefinePrimitive("ly:grob-property", 2, 3, a =>
+        {
+            Grob grob = AsGrob(a[0], "ly:grob-property");
+            Symbol symbol = AsSymbol(a[1], "ly:grob-property");
+
+            object value = grob.GetProperty(symbol);
+            return value is Nil && HasDefault(a, 2) ? a[2] : value;
+        });
+
+        interpreter.DefinePrimitive("ly:grob-property-data", 2, 2, a =>
+            AsGrob(a[0], "ly:grob-property-data")
+                .GetPropertyData(AsSymbol(a[1], "ly:grob-property-data")));
+
+        interpreter.DefinePrimitive("ly:grob-set-property!", 3, 3, a =>
+        {
+            AsGrob(a[0], "ly:grob-set-property!")
+                .SetProperty(AsSymbol(a[1], "ly:grob-set-property!"), a[2]);
+            return Unspecified.Instance;
+        });
+
+        interpreter.DefinePrimitive("ly:grob-set-nested-property!", 3, 3, a =>
+        {
+            //was previously: lily/nested-property.cc (set_nested_property);
+            Grob grob = AsGrob(a[0], "ly:grob-set-nested-property!");
+            if (!(a[1] is Pair path) || !(path.Car is Symbol))
+            {
+                throw SchemeErrors.WrongType(
+                    "ly:grob-set-nested-property!", "non-empty symbol list", a[1]);
+            }
+
+            NestedProperty.SetNestedProperty(grob, path, a[2]);
+            return Unspecified.Instance;
+        });
+
+        interpreter.DefinePrimitive("ly:grob-basic-properties", 1, 1, a =>
+            AsGrob(a[0], "ly:grob-basic-properties").ImmutablePropertyAlist);
+
+        interpreter.DefinePrimitive("ly:grob-alist-chain", 1, 2, a =>
+        {
+            Grob grob = AsGrob(a[0], "ly:grob-alist-chain");
+            object defaults = HasDefault(a, 1) ? a[1] : Nil.Instance;
+            return grob.GetPropertyAlistChain(defaults);
+        });
+
+        interpreter.DefinePrimitive("ly:grob-interfaces", 1, 1, a =>
+            AsGrob(a[0], "ly:grob-interfaces").Interfaces);
+
+        interpreter.DefinePrimitive("ly:grob-original", 1, 1, a =>
+        {
+            Grob grob = AsGrob(a[0], "ly:grob-original");
+            return (object)grob.Original ?? grob;
+        });
+
+        interpreter.DefinePrimitive("ly:grob-suicide!", 1, 1, a =>
+        {
+            AsGrob(a[0], "ly:grob-suicide!").Suicide();
+            return Unspecified.Instance;
+        });
+
+        // grob-scheme.cc: chain PROC onto the FRONT of the callback already stored as
+        // property SYM, so it is called with the grob and the previous callback's
+        // result. The algorithm is grob-closure.cc's chain_callback, already carried.
+        //
+        // Upstream accepts a procedure OR an Unpure_pure_container here, and rejects
+        // anything else BY ARGUMENT POSITION — the container form is how a property
+        // carries separate ordinary and pure callbacks (trap 14), so refusing it would
+        // silently make every pure chain unreachable.
+        interpreter.DefinePrimitive("ly:grob-chain-callback", 3, 3, a =>
+        {
+            Grob grob = AsGrob(a[0], "ly:grob-chain-callback");
+            if (!SchemeUtilities.IsProcedure(a[1]) && !(a[1] is UnpurePureContainer))
+            {
+                throw SchemeErrors.WrongType(
+                    "ly:grob-chain-callback", "procedure or unpure pure container", a[1]);
+            }
+
+            GrobClosure.ChainCallback(grob, a[1], AsSymbol(a[2], "ly:grob-chain-callback"));
+            return Unspecified.Instance;
+        });
+
+        // Does A lie ABOVE B on the page? Same staff compares real Y coordinates against
+        // the common refpoint; different staves compare the staves' order in the root
+        // vertical alignment.
+        interpreter.DefinePrimitive("ly:grob-vertical<?", 2, 2, a =>
+            Grob.VerticalLess(
+                AsGrob(a[0], "ly:grob-vertical<?"),
+                AsGrob(a[1], "ly:grob-vertical<?")));
+
+        // Which staff, counting from the top of the root alignment, this grob sits on.
+        // -1 when it belongs to no vertical alignment — upstream's documented answer,
+        // and NOT an error.
+        interpreter.DefinePrimitive("ly:grob-get-vertical-axis-group-index", 1, 1, a =>
+            (long)Grob.GetVerticalAxisGroupIndex(
+                AsGrob(a[0], "ly:grob-get-vertical-axis-group-index")));
+
+        // The (leftmost . rightmost) column ranks this grob spans, as a PAIR — upstream
+        // conses the two ends of the interval rather than answering an interval object.
+        interpreter.DefinePrimitive("ly:grob-spanned-column-rank-interval", 1, 1, a =>
+        {
+            Slice ranks = AsGrob(a[0], "ly:grob-spanned-column-rank-interval")
+                .SpannedColumnRankInterval();
+            return new Pair((long)ranks.Left, (long)ranks.Right);
+        });
+
+        InstallDebugCallbacks(interpreter);
+    }
+
+    /// <summary>
+    /// The three GROB DEBUG CALLBACKS — <c>grob-property.cc</c>'s modification and
+    /// property-cache hooks, and <c>engraver.cc</c>'s creation hook.
+    /// </summary>
+    /// <param name="interpreter">The interpreter to extend.</param>
+    /// <remarks>
+    /// All three go through upstream's <c>check_debug_callback</c>, and that function is
+    /// where their real behaviour lives: it is compiled two ways. Only an
+    /// <c>--enable-checking</c> build stores the procedure; every ordinary build — which
+    /// is what the pinned oracle binary is, and what the port corresponds to — takes the
+    /// other branch, issues the warning reproduced below, and stores <c>'()</c>. The
+    /// callbacks are then never invoked, because the sites that would call them are
+    /// themselves inside <c>if constexpr (CHECKING)</c>.
+    /// <para>
+    /// So this IS the port of these entry points, not a placeholder for one: refusing the
+    /// callback with upstream's own warning is upstream's own answer. Wiring the hooks up
+    /// for real would make the port behave like a build the oracle is not, which standing
+    /// rule 2 rules out.
+    /// </para>
+    /// </remarks>
+    private static void InstallDebugCallbacks(Interpreter interpreter)
+    {
+        DebugCallback(interpreter, "ly:set-grob-modification-callback");
+        DebugCallback(interpreter, "ly:set-property-cache-callback");
+        DebugCallback(interpreter, "ly:set-grob-creation-callback");
+    }
+
+    private static void DebugCallback(Interpreter interpreter, string name)
+        => interpreter.DefinePrimitive(name, 1, 1, a =>
+        {
+            // Upstream warns unconditionally in a non-checking build — even for the
+            // (cb = #f) "unset the callback" call, which the checking build answers
+            // silently. Reproduced, including that asymmetry.
+            Warn.Warning("To use grob debug callbacks, configure with --enable-checking");
+            return Unspecified.Instance;
+        });
+
+    private static void InstallObjects(Interpreter interpreter)
+    {
+        interpreter.DefinePrimitive("ly:grob-object", 2, 3, a =>
+        {
+            Grob grob = AsGrob(a[0], "ly:grob-object");
+            object value = grob.GetObject(AsSymbol(a[1], "ly:grob-object"));
+            return value is Nil && HasDefault(a, 2) ? a[2] : value;
+        });
+
+        interpreter.DefinePrimitive("ly:grob-set-object!", 3, 3, a =>
+        {
+            AsGrob(a[0], "ly:grob-set-object!")
+                .SetObject(AsSymbol(a[1], "ly:grob-set-object!"), a[2]);
+            return Unspecified.Instance;
+        });
+
+        interpreter.DefinePrimitive("ly:grob-parent", 2, 3, a =>
+        {
+            Grob parent = AsGrob(a[0], "ly:grob-parent").GetParent(AsAxis(a[1], "ly:grob-parent"));
+            return (object)parent ?? (HasDefault(a, 2) ? a[2] : false);
+        });
+
+        interpreter.DefinePrimitive("ly:grob-set-parent!", 3, 3, a =>
+        {
+            AsGrob(a[0], "ly:grob-set-parent!").SetParent(
+                AsGrob(a[2], "ly:grob-set-parent!"),
+                AsAxis(a[1], "ly:grob-set-parent!"));
+            return Unspecified.Instance;
+        });
+
+        // grob-scheme.cc's ly:grob-system calls the VIRTUAL Grob::get_system(), which
+        // Item answers from its X parent, Paper_column from the system it was assigned
+        // and Spanner from its two bounds when both agree. It is NOT the static
+        // Grob::get_system(Grob *) helper, which walks X parents and is upstream's
+        // documented PRE-line-breaking version. This binding used to walk Y PARENTS --
+        // neither function, on neither axis -- so a spanner whose bounds knew their
+        // system still answered nothing. Upstream answers SCM_EOL, not #f, and '() is
+        // TRUE in Scheme: `(and (ly:grob-system g) ...)' therefore takes upstream's
+        // branch here for the first time.
+        interpreter.DefinePrimitive("ly:grob-system", 1, 1, a =>
+        {
+            SystemGrob system = AsGrob(a[0], "ly:grob-system").GetSystem();
+            return (object)system ?? Nil.Instance;
+        });
+
+        // item-scheme.cc, PULLED FORWARD out of the long-tail pool by the spacing demand loop: the
+        // moment a StaffSpacing grob exists, Staff_spacing::get_spacing reads the
+        // space-alist off a break-aligned grob, and several of those entries are
+        // break-alignment-list callbacks -- which ask an item which side of a break it
+        // is on. Recorded in PORT-COVERAGE; the ledger row moved with it.
+        interpreter.DefinePrimitive("ly:item-break-dir", 1, 1, a =>
+            AsGrob(a[0], "ly:item-break-dir") is Item item
+                ? (object)(long)item.BreakStatusDirection().Value
+                : false);
+    }
+
+    private static void InstallGeometry(Interpreter interpreter)
+    {
+        interpreter.DefinePrimitive("ly:grob-extent", 3, 3, a =>
+        {
+            Interval extent = AsGrob(a[0], "ly:grob-extent").Extent(
+                AsGrob(a[1], "ly:grob-extent"),
+                AsAxis(a[2], "ly:grob-extent"));
+            return new Pair(extent.Left, extent.Right);
+        });
+
+        interpreter.DefinePrimitive("ly:grob-robust-relative-extent", 3, 3, a =>
+        {
+            Interval extent = AsGrob(a[0], "ly:grob-robust-relative-extent").Extent(
+                AsGrob(a[1], "ly:grob-robust-relative-extent"),
+                AsAxis(a[2], "ly:grob-robust-relative-extent"));
+
+            // "Robust" is the whole point of the name: an empty extent becomes the
+            // degenerate (0 . 0) rather than being handed on as (+inf . -inf), which
+            // would poison every arithmetic operation downstream.
+            if (extent.IsEmpty)
+            {
+                extent = new Interval(0, 0);
+            }
+
+            return new Pair(extent.Left, extent.Right);
+        });
+
+        interpreter.DefinePrimitive("ly:grob-relative-coordinate", 3, 3, a =>
+            AsGrob(a[0], "ly:grob-relative-coordinate").RelativeCoordinate(
+                AsGrob(a[1], "ly:grob-relative-coordinate"),
+                AsAxis(a[2], "ly:grob-relative-coordinate")));
+
+        interpreter.DefinePrimitive("ly:grob-translate-axis!", 3, 3, a =>
+        {
+            AsGrob(a[0], "ly:grob-translate-axis!").TranslateAxis(
+                SchemeConvert.ToDouble(a[1], "ly:grob-translate-axis!"),
+                AsAxis(a[2], "ly:grob-translate-axis!"));
+            return Unspecified.Instance;
+        });
+
+        interpreter.DefinePrimitive("ly:grob-common-refpoint", 3, 3, a =>
+        {
+            Grob common = AsGrob(a[0], "ly:grob-common-refpoint").CommonRefpoint(
+                AsGrob(a[1], "ly:grob-common-refpoint"),
+                AsAxis(a[2], "ly:grob-common-refpoint"));
+            return (object)common ?? false;
+        });
+
+        interpreter.DefinePrimitive("ly:grob-common-refpoint-of-array", 3, 3, a =>
+        {
+            Grob start = AsGrob(a[0], "ly:grob-common-refpoint-of-array");
+            Axis axis = AsAxis(a[2], "ly:grob-common-refpoint-of-array");
+
+            List<Grob> elements = new List<Grob>();
+            if (a[1] is GrobArray array)
+            {
+                foreach (Grob grob in array)
+                {
+                    elements.Add(grob);
+                }
+            }
+
+            Grob common = AxisGroupInterface.CommonRefpointOfArray(elements, start, axis);
+            return (object)common ?? false;
+        });
+    }
+
+    private static void InstallGrobArrays(Interpreter interpreter)
+    {
+        // pointer-group-interface-scheme.cc: append a grob to another grob's SYM array,
+        // CREATING the array when the link is unset — which is the whole reason the
+        // Scheme layer has this rather than ly:grob-set-object!.
+        interpreter.DefinePrimitive("ly:pointer-group-interface::add-grob", 3, 3, a =>
+        {
+            PointerGroupInterface.AddGrob(
+                AsGrob(a[0], "ly:pointer-group-interface::add-grob"),
+                AsSymbol(a[1], "ly:pointer-group-interface::add-grob"),
+                AsGrob(a[2], "ly:pointer-group-interface::add-grob"));
+            return Unspecified.Instance;
+        });
+
+        interpreter.DefinePrimitive("ly:grob-array-length", 1, 1, a =>
+            (long)AsGrobArray(a[0], "ly:grob-array-length").Count);
+
+        interpreter.DefinePrimitive("ly:grob-array-ref", 2, 2, a =>
+            AsGrobArray(a[0], "ly:grob-array-ref")[
+                SchemeConvert.ToInt(a[1], "ly:grob-array-ref")]);
+
+        interpreter.DefinePrimitive("ly:grob-array->list", 1, 1, a =>
+        {
+            List<object> grobs = new List<object>();
+            foreach (Grob grob in AsGrobArray(a[0], "ly:grob-array->list"))
+            {
+                grobs.Add(grob);
+            }
+
+            return Pair.ListFrom(grobs);
+        });
+
+        interpreter.DefinePrimitive("ly:grob-list->grob-array", 1, 1, a =>
+        {
+            GrobArray array = new GrobArray();
+            object cursor = a[0];
+            while (cursor is Pair pair)
+            {
+                if (pair.Car is Grob grob)
+                {
+                    array.Add(grob);
+                }
+
+                cursor = pair.Cdr;
+            }
+
+            return array;
+        });
+
+        // The argument order is (PREDICATE, ARRAY), like Scheme's own `filter' and unlike
+        // every other ly:grob-array-* binding, which take the array first. This port had
+        // them the other way round originally: VoltaBracketSpanner is the
+        // first grob whose define-grobs.scm callback calls it, and it died on
+        // `wrong-type-arg ("ly:grob-array-filter" ... #<procedure grob::is-live?>)'.
+        // Nothing had reached it before, so nothing had failed.
+        interpreter.DefinePrimitive("ly:grob-array-filter", 2, 2, a =>
+        {
+            GrobArray source = AsGrobArray(a[1], "ly:grob-array-filter");
+            GrobArray result = new GrobArray { IsOrdered = source.IsOrdered };
+
+            foreach (Grob grob in source)
+            {
+                if (SchemeUtilities.IsSchemeTrue(SchemeUtilities.CallCallback(a[0], grob)))
+                {
+                    result.Add(grob);
+                }
+            }
+
+            return result;
+        });
+    }
+
+    private static bool HasDefault(object[] arguments, int index)
+        => arguments.Length > index && !(arguments[index] is DefaultArgument);
+
+    private static Axis AsAxis(object value, string procedureName)
+        => SchemeConvert.ToInt(value, procedureName) == 0 ? Axis.X : Axis.Y;
+
+    private static Symbol AsSymbol(object value, string procedureName)
+        => value as Symbol ?? throw SchemeErrors.WrongType(procedureName, "symbol", value);
+
+    private static Grob AsGrob(object value, string procedureName)
+        => value as Grob ?? throw SchemeErrors.WrongType(procedureName, "grob", value);
+
+    private static GrobArray AsGrobArray(object value, string procedureName)
+        => value as GrobArray ?? throw SchemeErrors.WrongType(procedureName, "grob array", value);
+}

@@ -1,0 +1,19 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X: 9\nT: Broken rhythm inside a chord\nM: 4/4\nL: 1/8\nK: C\n[CEG>] [DFA<] | z2 z>2 | +CEG+ +ceg+ |\n",
+ "messages": [
+  "Warning: ignoring '>' in chord",
+  "Warning: ignoring '<' in chord",
+  "chord-brokenrhythm.abc: 6: Huh?  Don't understand",
+  "[CEG>] [DFA<] | z2 z>",
+  "                     2 | +CEG+ +ceg+ |",
+  ""
+ ],
+ "name": "chord-brokenrhythm-beams",
+ "options": {
+  "beams": true
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"9\"\n  footnotes = \"\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"Broken rhythm inside a chord\"\n}\n\n\"voicedefault\" = {\n\\numericTimeSignature \\time 4/4 \\key c \\major < c' e' g' >8 < d' f' a' >8 \n\\bar \"|\" r4 r8. \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n  >>\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #'()\n    }\n  }\n  \\midi {}\n}\n",
+ "source": "probe",
+ "source_name": "chord-brokenrhythm.abc"
+}

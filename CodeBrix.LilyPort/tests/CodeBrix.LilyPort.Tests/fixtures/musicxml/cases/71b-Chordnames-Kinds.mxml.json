@@ -1,0 +1,19 @@
+{
+ "arguments": [],
+ "input_file": "71b-Chordnames-Kinds.xml",
+ "messages": [
+  "musicxml2ly: warning: Chord type 'French' is not supported.",
+  "musicxml2ly: warning: Chord type 'German' is not supported.",
+  "musicxml2ly: warning: Chord type 'Italian' is not supported.",
+  "musicxml2ly: warning: Chord type 'Neapolitan' is not supported.",
+  "musicxml2ly: warning: Chord type 'pedal' is not supported.",
+  "musicxml2ly: warning: Chord type 'Tristan' is not supported."
+ ],
+ "name": "71b-Chordnames-Kinds",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 71b-Chordnames-Kinds.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"All values of the <kind> child element of <harmony> (except\n    ‘other’).\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\clef \"treble\" \\time 4/4 c4 c4 c4 c4 | % 1\n  c4 c4 c4 c4 | % 2\n  c4 c4 c4 c4 | % 3\n  c4 c4 c4 c4 | % 4\n  c4 c4 c4 c4 | % 5\n  c4 c4 c4 c4 | % 6\n  c4 c4 c4 c4 | % 7\n  c4 c4 c4 c4 \\bar \"|.\"\n}\n\nPartPOneVoiceOneChords = \\chordmode {\n  c4:aug c4:aug7 c4:dim c4:dim7 | % 1\n  c4:7 c4:11 c4:13.11 c4:9 | % 2\n  s4 s4 c4:m7.5- s4 | % 3\n  c4 c4:maj11 c4:maj13.11 c4:maj7m | % 4\n  c4:maj9 c4:maj7 c4:6 c4:m | % 5\n  c4:m11 c4:m13 c4:m9 c4:m7 | % 6\n  c4:m6 s4 s4 s4 | % 7\n  c4:1.5 c4:sus4 c4:sus2 s4 \\bar \"|.\"\n}\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  augmented \"augmented-\" diminished \"diminished-\" dominant \"dominant-\"\n  \"dominant-\" \"dominant-\" French German \"half-\" Italian major \"major-\" \"major-\"\n  \"major-\" \"major-\" \"major-\" \"major-\" minor \"minor-\" \"minor-\" \"minor-\" \"minor-\"\n  \"minor-\" Neapolitan none pedal power \"suspended-\" \"suspended-\" Tristan\n}\n\nPartPOneVoiceOneLyricsTwo = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  \\skip1 seventh \\skip1 seventh \\skip1 \"11th\" \"13th\" ninth \\skip1 \\skip1\n  diminished \\skip1 \\skip1 \"11th\" \"13th\" minor ninth seventh sixth \\skip1 \"11th\"\n  \"13th\" ninth seventh sixth \\skip1 \\skip1 \\skip1 \\skip1 fourth second \\skip1\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\context ChordNames = \"PartPOneVoiceOneChords\" {\n      \\PartPOneVoiceOneChords\n    }\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsTwo\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "71b-Chordnames-Kinds.xml",
+ "version_line": "\\version \"2.27.2\""
+}

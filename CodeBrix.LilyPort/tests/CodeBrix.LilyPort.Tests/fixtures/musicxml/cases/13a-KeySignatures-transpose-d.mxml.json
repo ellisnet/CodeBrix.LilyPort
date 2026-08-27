@@ -1,0 +1,15 @@
+{
+ "arguments": [
+  "--transpose",
+  "d"
+ ],
+ "input_file": "13a-KeySignatures.xml",
+ "messages": [],
+ "name": "13a-KeySignatures-transpose-d",
+ "options": "--transpose d",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 13a-KeySignatures.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Various key signatures: from 11 flats to 11 sharps. Each signature\n    is shown twice, with one measure in major and the other measure in minor.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 2/4 \\key ases \\major c2 | % 1\n  \\key fes \\minor c2 | % 2\n  \\key eses \\major c2 | % 3\n  \\key ces \\minor c2 | % 4\n  \\key beses \\major c2 | % 5\n  \\key ges \\minor c2 | % 6\n  \\key fes \\major c2 | % 7\n  \\key des \\minor c2 | % 8\n  \\key ces \\major c2 | % 9\n\n  \\barNumberCheck #10\n  \\key as \\minor c2 | % 10\n  \\key ges \\major c2 | % 11\n  \\key es \\minor c2 | % 12\n  \\key des \\major c2 | % 13\n  \\key bes \\minor c2 | % 14\n  \\key as \\major c2 | % 15\n  \\key f \\minor c2 | % 16\n  \\key es \\major c2 | % 17\n  \\key c \\minor c2 | % 18\n  \\key bes \\major c2 | % 19\n\n  \\barNumberCheck #20\n  \\key g \\minor c2 | % 20\n  \\key f \\major c2 | % 21\n  \\key d \\minor c2 | % 22\n  \\key c \\major c2 | % 23\n  \\key a \\minor c2 | % 24\n  \\key g \\major c2 | % 25\n  \\key e \\minor c2 | % 26\n  \\key d \\major c2 | % 27\n  \\key b \\minor c2 | % 28\n  \\key a \\major c2 | % 29\n\n  \\barNumberCheck #30\n  \\key fis \\minor c2 | % 30\n  \\key e \\major c2 | % 31\n  \\key cis \\minor c2 | % 32\n  \\key b \\major c2 | % 33\n  \\key gis \\minor c2 | % 34\n  \\key fis \\major c2 | % 35\n  \\key dis \\minor c2 | % 36\n  \\key cis \\major c2 | % 37\n  \\key ais \\minor c2 | % 38\n  \\key gis \\major c2 | % 39\n\n  \\barNumberCheck #40\n  \\key eis \\minor c2 | % 40\n  \\key dis \\major c2 | % 41\n  \\key bis \\minor c2 | % 42\n  \\key ais \\major c2 | % 43\n  \\key fisis \\minor c2 | % 44\n  \\key eis \\major c2 | % 45\n  \\key cisis \\minor c2 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" \\transpose c d {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "variant",
+ "source_name": "13a-KeySignatures.xml",
+ "version_line": "\\version \"2.27.2\""
+}

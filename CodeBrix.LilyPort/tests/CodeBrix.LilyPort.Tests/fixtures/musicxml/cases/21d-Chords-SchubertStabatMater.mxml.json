@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "21d-Chords-SchubertStabatMater.xml",
+ "messages": [],
+ "name": "21d-Chords-SchubertStabatMater",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 21d-Chords-SchubertStabatMater.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"There are chords in the second measure, after several ornaments in\n    the first measure and a ‘p’ at the beginning of the second measure.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPZeroVoiceOne = \\relative f' {\n  \\clef \"treble\" \\time 4/4 \\key as \\major \\tweak direction #UP \\tempo \\markup\n  \\normal-text \\bold Largo \\after 16. _\\fp f1 _> ^\\fermata | % 1\n  <f as>4. _\\p <f as>8 <g bes>4 <g bes>4 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P0\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPZeroVoiceOne\" {\n          \\PartPZeroVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "21d-Chords-SchubertStabatMater.xml",
+ "version_line": "\\version \"2.27.2\""
+}

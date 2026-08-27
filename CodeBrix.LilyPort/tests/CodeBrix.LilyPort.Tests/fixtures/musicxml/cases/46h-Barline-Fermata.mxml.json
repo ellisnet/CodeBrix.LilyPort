@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "46h-Barline-Fermata.xml",
+ "messages": [],
+ "name": "46h-Barline-Fermata",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 46h-Barline-Fermata.xml\n\\pointAndClickOff\n\n%% additional definitions required by the score:\n% This `\\caesura` creates a light-light bar line where there isn't\n% already a more significant bar line, and aligns its decorations\n% (e.g., fermatas) to the bar line.\nforBarLine =\n{\n  \\once \\set Staff.caesuraType = #'((underlying-bar-line . \"||\"))\n  \\once \\set Staff.caesuraTypeTransform = ##f\n  \\caesura\n}\n\n\n\\header {\n  texidoc = \"Fermatas over bar lines using <fermata> as a child of <barline>.\n    The bar line between measure 1 and 2 has one red-colored fermata on the top,\n    the bar line between measure 2 and 3 has two fermatas, one above and one\n    below (the latter one with a ‘type=\\\"inverted\\\"’ attribute and in larger\n    size).\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative f' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major f1 \\forBarLine -\\tweak color \"#FF0000\"\n  \\fermata | % 1\n  f1 \\forBarLine \\fermata -\\tweak font-size #5.207 _\\fermata | % 2\n  f1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "46h-Barline-Fermata.xml",
+ "version_line": "\\version \"2.27.2\""
+}

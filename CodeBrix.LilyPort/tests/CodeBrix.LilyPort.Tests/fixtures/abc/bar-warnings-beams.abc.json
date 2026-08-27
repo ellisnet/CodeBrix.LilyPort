@@ -1,0 +1,17 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X: 8\nT: Repeat bar warnings\nM: 4/4\nL: 1/4\nK: C\nCDEF |2 GABc :| CDEF |1 GABc |1 cBAG :|\n",
+ "messages": [
+  "Warning: not in a repeat, ignoring `|2'",
+  "Warning: not in a repeat, ignoring `|1'",
+  "Warning: not in a repeat, ignoring `|1'",
+  "Warning: not in a repeat, ignoring `:|'"
+ ],
+ "name": "bar-warnings-beams",
+ "options": {
+  "beams": true
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"8\"\n  footnotes = \"\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"Repeat bar warnings\"\n}\n\n\"voicedefault\" = {\n\\repeat volta 2 {\n\\numericTimeSignature \\time 4/4 \\key c \\major c'4 d'4 e'4 f'4 g'4 a'4 b'4 c''4 \n} c'4 d'4 e'4 f'4 g'4 a'4 b'4 c''4 c''4 b'4 a'4 g'4 \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n  >>\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #'()\n    }\n  }\n  \\midi {}\n}\n",
+ "source": "probe",
+ "source_name": "bar-warnings.abc"
+}

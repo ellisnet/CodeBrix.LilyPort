@@ -1,0 +1,9 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQADAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDD0JAmAD/LwBNVHJrAAAAXQD/Aw10cmFja0I6dm9pY2VBAJA+WoMAkD4AAJBAWoMAkEAAAJBBWoMAkEEAAJBDWoMAkEMAAJBFWoMAkEUAAJBGWoMAkEYAAJBJWoMAkEkAAJBKWoMAkEoAAP8vAE1UcmsAAAAWAP8DB3RyYWNrQjoA/1kC/wGYAP8vAA==",
+ "name": "key-initial",
+ "options": {},
+ "output": "% Lily was here -- automatically converted by midi2ly from key-initial.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n\n\n  \\key d \\minor\n    \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = 60\n  \\skip \\breve \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"trackB:voiceA\"\n  \\skip \\breve \n}\n\ntrackBchannelB = {\n  \n  \\set Staff.instrumentName = \"trackB:\"\n  \n\n  \\key d \\minor\n  \\skip \\breve \n}\n\ntrackBchannelC = \\relative c {\n  d'4 e f g \n  | % 2\n  a bes cis d \n  | % 3\n  \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n  \\context Voice = voiceC \\trackBchannelC\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "key-initial.midi"
+}

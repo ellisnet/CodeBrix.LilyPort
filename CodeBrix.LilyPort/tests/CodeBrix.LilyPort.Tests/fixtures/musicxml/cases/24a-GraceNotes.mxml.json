@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "24a-GraceNotes.xml",
+ "messages": [],
+ "name": "24a-GraceNotes",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 24a-GraceNotes.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Different kinds of grace notes.\n\n    First measure: single 1/16 grace note, two beamed 1/16 grace notes, 1/16\n    appoggiatura, 1/8 appoggiatura.\n\n    Second measure: slashed single 1/16 grace note, two beamed 1/16 grace notes\n    (with both notes marked as slashed), 1/16 acciaccatura, 1/16 grace note\n    (without slash) right before the bar line.\n\n    Third measure: no grace note before chord, 1/4 grace note with sharp, two\n    1/4 grace notes with flats, 1/16 slashed grace note with natural before a\n    quarter rest.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative d'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major \\grace { d16 } c4 \\grace { e16 [ d16 ]\n    } c4 \\grace { d16 ( } c4 ) \\grace { d8 ( } c4 ) | % 1\n  \\slashedGrace { d16 } c4 \\slashedGrace { e16 [ d16 ] } c4 \\slashedGrace { d16\n    ( } c4 ) \\afterGrace { c4 } { e16 } | % 2\n  <f, c'>4 \\grace { dis'4 } c4 \\grace { des4 as4 } c4 \\slashedGrace { d16 } r4\n  \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "24a-GraceNotes.xml",
+ "version_line": "\\version \"2.27.2\""
+}

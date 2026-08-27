@@ -1,0 +1,15 @@
+{
+ "arguments": [],
+ "input_file": "46f-IncompleteMeasures.xml",
+ "messages": [
+  "musicxml2ly: warning: Incomplete measure? Expected length: 1, seen: 1/2:",
+  "musicxml2ly: warning: Incomplete measure? Expected length: 1, seen: 1/2:"
+ ],
+ "name": "46f-IncompleteMeasures",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 46f-IncompleteMeasures.xml\n\\pointAndClickOff\n\n%% additional definitions required by the score:\nmeasureLength =\n#(define-music-function (length)\n   (positive-musical-length-as-number?)\n   #{\n     \\pushContextProperty Timing.measureLength\n     \\set Timing.measureLength = #length\n   #})\nmeasureLengthReset = \\popContextProperty Timing.measureLength\n\n\n\\header {\n  texidoc = \"Measures can contain less notes than the time signature says. Some\n    applications use this approach for ‘frenched’ scores, i.e., for staves that\n    are present but hidden and not printed.\n\n    While doing so is valid MusicXML, having measures with lengths that differ\n    from their designated time signatures is semantically invalid. A better\n    approach is to actually use time signatures, setting their ‘print-object’\n    property to ‘no’.\n\n    Here, the first and third measure contain only two quarters instead of four.\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative a' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\measureLength #1/2 a4 a4\n  \\measureLengthReset | % 1\n  a4 a4 a4 a4 | % 2\n  \\measureLength #1/2 a4 a4 \\measureLengthReset | % 3\n  a4 a4 a4 a4 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "46f-IncompleteMeasures.xml",
+ "version_line": "\\version \"2.27.2\""
+}

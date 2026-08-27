@@ -1,0 +1,13 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [
+  "midi2ly: error: BUG: time skew"
+ ],
+ "midi_base64": "TVRoZAAAAAYAAQACAYBNVHJrAAAAZwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAwDGAgA/1EDD0JAkgD/WAQMAyQIkgD/WAQMAzAIkgD/WAQMA0gIkgD/WAQMA5AIkgD/LwBNVHJrAAACKQD/AwVcbmV3OgCQPFqBQJA8AACQPFqBQJA8AACQPFqBQJA8AACQPFqBQJA8AACQPFqBQJA8AACQPFqBQJA8AACQPFqBQJA8AACQPFqBQJA8AACQPFqBQJA8AACQPFqBQJA8AACQPFqBQJA8AACQPFqBQJA8AACQPlqBQJA+AACQPlqBQJA+AACQPlqBQJA+AACQPlqBQJA+AACQPlqBQJA+AACQPlqBQJA+AACQPlqBQJA+AACQPlqBQJA+AACQPlqBQJA+AACQPlqBQJA+AACQPlqBQJA+AACQPlqBQJA+AACQQFqBQJBAAACQQFqBQJBAAACQQFqBQJBAAACQQFqBQJBAAACQQFqBQJBAAACQQFqBQJBAAACQQFqBQJBAAACQQFqBQJBAAACQQFqBQJBAAACQQFqBQJBAAACQQFqBQJBAAACQQFqBQJBAAACQQVqBQJBBAACQQVqBQJBBAACQQVqBQJBBAACQQVqBQJBBAACQQVqBQJBBAACQQVqBQJBBAACQQVqBQJBBAACQQVqBQJBBAACQQVqBQJBBAACQQVqBQJBBAACQQVqBQJBBAACQQVqBQJBBAACQQ1qBQJBDAACQQ1qBQJBDAACQQ1qBQJBDAACQQ1qBQJBDAACQQ1qBQJBDAACQQ1qBQJBDAACQQ1qBQJBDAACQQ1qBQJBDAACQQ1qBQJBDAACQQ1qBQJBDAACQQ1qBQJBDAACQQ1qBQJBDAAD/LwA=",
+ "name": "beat-structure-by-metronome-12-8-textlyrics",
+ "options": {
+  "textLyrics": true
+ },
+ "output": "% Lily was here -- automatically converted by midi2ly from beat-structure-by-metronome-12-8.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = \\lyricmode {\n  \"creator: \" \n  \\time #'(2) 12/8\n  \n  \\tempo 4 = 60\n  \" \"1. \n  | % 2\n  \n  \\time 12/8\n  \" \"1. \n  | % 3\n  \n  \\time #'(4) 12/8\n  \" \"1. \n  | % 4\n  \n  \\time #'(6) 12/8\n  \" \"1. \n  | % 5\n  \n  \\time #'(12) 12/8\n  \"LilyPond 2.27.2               \"4 \" \"4*29 \n  | % 6\n  \n}\n\ntrackA = <<\n  \\context Lyrics = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"\\new:\"\n  \\skip 2*15 \n}\n\ntrackBchannelB = \\relative c {\n  c'8 c c c c c c c c c c c \n  | % 2\n  d d d d d d d d d d d d \n  | % 3\n  e e e e e e e e e e e e \n  | % 4\n  f f f f f f f f f f f f \n  | % 5\n  g g g g g g g g g g g g \n  | % 6\n  \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n>>\n\n\n\\score {\n  <<\n    \\context Lyrics=trackA \\trackA\n    \\context Staff=trackB \\trackB\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "beat-structure-by-metronome-12-8.midi"
+}

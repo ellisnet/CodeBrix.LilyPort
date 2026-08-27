@@ -1,0 +1,14 @@
+{
+ "arguments": [],
+ "input_file": "46j-EmptyMeasure.xml",
+ "messages": [
+  "musicxml2ly: warning: Incomplete measure? Expected length: 3/4, seen: 0:"
+ ],
+ "name": "46j-EmptyMeasure",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 46j-EmptyMeasure.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Measure two is empty; it only contains a time signature but not\n    anything else. Some applications use this approach to insert time signatures\n    for purely visual reasons, for example, displaying a final time signature at\n    the end of a line, followed by a forced line break.\n\n    While doing so is valid MusicXML, having measures with a zero length is\n    semantically questionable. In particular, if the displayed bar number is\n    derived from ‘<measure number=\\\"...\\\">’ (as it usually is), such empty\n    measures make the bar numbers being off. Additionally, it is not portable,\n    since other applications ‘rectify’ it by displaying this empty measure,\n    giving it a default length.\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative d' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 d4 e4 f4 g4 | % 1\n  \\time 3/4 s2. \\break | % 2\n  \\time 3/4 a4 a4 a4 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "46j-EmptyMeasure.xml",
+ "version_line": "\\version \"2.27.2\""
+}

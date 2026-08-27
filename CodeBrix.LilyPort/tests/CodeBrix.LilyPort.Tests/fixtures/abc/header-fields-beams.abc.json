@@ -1,0 +1,17 @@
+{
+  "divergences": [
+    "abc-header-append-drops-new-field"
+  ],
+  "frozen_version_line": "\\version \u00222.24.0\u0022",
+  "input": "X: 4\nT: Header fields\nT: Second title line\nC: A Composer\nC: Another Composer\nA: An Area\nB: A Book\nO: An Origin\nR: reel\nZ: A Transcriber\nS: A Subtitle\nN: A note\nN: Another note\nH: Some history\nM: 3/4\nQ: \u0022Allegro\u0022 1/4=132\nL: 1/8\nK: Amix\nabc def | gab c\u00272 |\n",
+  "messages": [],
+  "name": "header-fields-beams",
+  "options": {
+    "beams": true
+  },
+  "output": "\\version \u00222.24.0\u0022\n\n\\header {\n  area = \u0022An Area\u0022\n  book = \u0022A Book\u0022\n  composer = \u0022A Composer\\\\\\\\Another Composer\u0022\n  crossRefNumber = \u00224\u0022\n  footnotes = \u0022\\\\\\\\A note\\\\\\\\Another note\u0022\n  meter = \u0022reel\u0022\n  origin = \u0022An Origin\u0022\n  subtitle = \u0022A Subtitle\u0022\n  tagline = \u0022LilyPond 2.27.2 was here -- automatically converted from ABC\u0022\n  title = \u0022Header fields \u2014 Second title line\u0022\n  transcription = \u0022A Transcriber\u0022\n}\n\n\u0022voicedefault\u0022 = {\n\\time 3/4 \\tempo \u0022Allegro\u0022 4 = 132\n \\key a \\mixolydian a\u0027\u00278[ b\u0027\u00278 cis\u0027\u00278] d\u0027\u00278[ e\u0027\u00278 fis\u0027\u00278] \\bar \u0022|\u0022 g\u0027\u00278[ a\u0027\u00278 \nb\u0027\u00278] cis\u0027\u0027\u00274 \\bar \u0022|\u0022 \n}\n\n\n\\score {\n  \u003C\u003C\n    \\context Staff = \u0022default\u0022 {\n      \\\u0022voicedefault\u0022\n    }\n  \u003E\u003E\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #\u0027()\n    }\n  }\n  \\midi {}\n}\n",
+  "port_messages": [],
+  "port_output": "\\version \u00222.24.0\u0022\n\n\\header {\n  area = \u0022An Area\u0022\n  book = \u0022A Book\u0022\n  composer = \u0022A Composer\\\\\\\\Another Composer\u0022\n  crossRefNumber = \u00224\u0022\n  footnotes = \u0022\\\\\\\\A note\\\\\\\\Another note\u0022\n  history = \u0022Some history\u0022\n  meter = \u0022reel\u0022\n  origin = \u0022An Origin\u0022\n  subtitle = \u0022A Subtitle\u0022\n  tagline = \u0022LilyPond 2.27.2 was here -- automatically converted from ABC\u0022\n  title = \u0022Header fields \u2014 Second title line\u0022\n  transcription = \u0022A Transcriber\u0022\n}\n\n\u0022voicedefault\u0022 = {\n\\time 3/4 \\tempo \u0022Allegro\u0022 4 = 132\n \\key a \\mixolydian a\u0027\u00278[ b\u0027\u00278 cis\u0027\u00278] d\u0027\u00278[ e\u0027\u00278 fis\u0027\u00278] \\bar \u0022|\u0022 g\u0027\u00278[ a\u0027\u00278 \nb\u0027\u00278] cis\u0027\u0027\u00274 \\bar \u0022|\u0022 \n}\n\n\n\\score {\n  \u003C\u003C\n    \\context Staff = \u0022default\u0022 {\n      \\\u0022voicedefault\u0022\n    }\n  \u003E\u003E\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #\u0027()\n    }\n  }\n  \\midi {}\n}\n",
+  "source": "probe",
+  "source_name": "header-fields.abc"
+}

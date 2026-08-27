@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "13d-KeySignatures-Microtones.xml",
+ "messages": [],
+ "name": "13d-KeySignatures-Microtones",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 13d-KeySignatures-Microtones.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Non-traditional key signatures with microtone alterations:\n    [g flat-and-a-half, a flat, b half-flat, c natural, d half-sharp, e sharp,\n    f sharp-and-a-half].\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 2/4 \\set Staff.keyAlterations = #`((4 . ,THREE-Q-FLAT) (5\n  . ,FLAT) (6 . ,SEMI-FLAT) (0 . ,NATURAL) (1 . ,SEMI-SHARP) (2 . ,SHARP) (3 .\n  ,THREE-Q-SHARP)) c2 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "13d-KeySignatures-Microtones.xml",
+ "version_line": "\\version \"2.27.2\""
+}

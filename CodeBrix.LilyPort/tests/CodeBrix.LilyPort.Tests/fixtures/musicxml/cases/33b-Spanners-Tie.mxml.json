@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "33b-Spanners-Tie.xml",
+ "messages": [],
+ "name": "33b-Spanners-Tie",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 33b-Spanners-Tie.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Two whole notes with a tie inbetween.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    tieWaitForNote = ##t\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative f' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\key c \\major f1 ~ | % 1\n  f1 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "33b-Spanners-Tie.xml",
+ "version_line": "\\version \"2.27.2\""
+}

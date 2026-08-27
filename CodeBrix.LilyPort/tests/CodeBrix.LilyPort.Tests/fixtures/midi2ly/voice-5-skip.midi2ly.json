@@ -1,0 +1,13 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [
+  "midi2ly: warning: found more than 5 voices on a staff, expect bad output"
+ ],
+ "midi_base64": "TVRoZAAAAAYAAQAGAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDD0JAmAD/LwBNVHJrAAAAMAD/Aw10cmFja0I6dm9pY2VBAJBUWgCQUVqGAJBUAACQUQAAkFNahgCQUwCMAP8vAE1UcmsAAAA6AP8DDXRyYWNrQjp2b2ljZUIAkEhahECQSAAAkEpagUCQSgAAkExagwCQTAAAkE1agwCQTQCMAP8vAE1UcmsAAAAfAP8DDXRyYWNrQjp2b2ljZUMAkD5ajACQPgCMAP8vAE1UcmsAAAAxAP8DDXRyYWNrQjp2b2ljZUQAkDxagwCQPAAAkDxahgCQPAAAkDxagwCQPACMAP8vAE1UcmsAAAAfAP8DDXRyYWNrQjp2b2ljZUWMAJAyWowAkDIAAP8vAA==",
+ "name": "voice-5-skip",
+ "options": {
+  "skip": true
+ },
+ "output": "% Lily was here -- automatically converted by midi2ly from voice-5.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n  \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = 60\n  \\skip \\breve \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"trackB:voiceA\"\n  \\skip \\breve \n}\n\ntrackBchannelB = {\n  \n  \\set Staff.instrumentName = \"trackB:voiceE\"\n  \\skip \\breve \n}\n\ntrackBchannelC = {\n  \n  \\set Staff.instrumentName = \"trackB:voiceD\"\n  \\skip \\breve \n}\n\ntrackBchannelD = {\n  \n  \\set Staff.instrumentName = \"trackB:voiceC\"\n  \\skip \\breve \n}\n\ntrackBchannelE = {\n  \n  \\set Staff.instrumentName = \"trackB:voiceB\"\n  \\skip \\breve \n}\n\ntrackBchannelF = \\relative c {\n  \\voiceOne\n  <c''' a >2 b \n  | % 2\n  \n}\n\ntrackBchannelG = \\relative c {\n  \\voiceThree\n  c''4. d8 e4 f \n  | % 2\n  \n}\n\ntrackBchannelH = \\relative c {\n  \\voiceFour\n  d'1 \n  | % 2\n  \n}\n\ntrackBchannelI = \\relative c {\n  \\voiceTwo\n  c'4 c2 c4 \n  | % 2\n  \n}\n\ntrackBchannelJ = \\relative c {\n  s1 \n  | % 2\n  d \n  | % 3\n  \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n  \\context Voice = voiceC \\trackBchannelC\n  \\context Voice = voiceD \\trackBchannelD\n  \\context Voice = voiceE \\trackBchannelE\n  \\context Voice = voiceF \\trackBchannelF\n  \\context Voice = voiceG \\trackBchannelG\n  \\context Voice = voiceH \\trackBchannelH\n  \\context Voice = voiceI \\trackBchannelI\n  \\context Voice = voiceJ \\trackBchannelJ\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "voice-5.midi"
+}

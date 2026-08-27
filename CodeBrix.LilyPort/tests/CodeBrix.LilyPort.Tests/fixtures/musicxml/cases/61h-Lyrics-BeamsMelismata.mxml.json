@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "61h-Lyrics-BeamsMelismata.xml",
+ "messages": [],
+ "name": "61h-Lyrics-BeamsMelismata",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 61h-Lyrics-BeamsMelismata.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"In standard music notation, beaming or slurs normally indicate\n    melismata for lyrics (in MusicXML there is no such interdependency). Also\n    make sure that notes without an explicit syllable are treated as if they\n    were part of a melisma.\n\n    In all measures, the melisma starts on note 1 and ends on note 7; there are\n    lyrics on notes 1, 4, and 5, followed by an extender line from note 5 to 7.\n\n    Measure 1 has beams from notes 1 to 3 and 5 to 7.\n\n    In measure 2, there are neither beams nor slurs. ‘start’, ‘continue’, and\n    ‘stop’ types are used for <extend>, together with a red color for the\n    extender line.\n\n    Measure 3 uses slurs (and no beams) for notes 1 to 3 and 5 to 7.\n\n    Measure 4 uses a single slur (and no beams) from note 1 to 7.\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\once \\omit Staff.TimeSignature c8 [ a8 c8 ] a8 c8 [ g8 b8 ] r8 | % 1\n  c8 a8 c8 a8 c8 g8 b8 r8 | % 2\n  c8 ( a8 c8 ) a8 c8 ( g8 b8 ) r8 | % 3\n  c8 ( a8 c8 a8 c8 g8 b8 ) r8 \\bar \"|.\"\n}\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  Me -- \\skip1 \\skip1 lis -- ma __ \\skip1 \\skip1 Me -- \\skip1 \\skip1 lis -- ma\n  \\tweak color \"#FF0000\" __ \\skip1 \\skip1 Me -- \\skip1 \\skip1 lis -- ma __\n  \\skip1 \\skip1 Me -- \\skip1 \\skip1 lis -- ma __ \\skip1 \\skip1\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "61h-Lyrics-BeamsMelismata.xml",
+ "version_line": "\\version \"2.27.2\""
+}

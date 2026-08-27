@@ -1,0 +1,150 @@
+================================================================================
+CodeBrix.LilyPort -- tools/abcprobe/DIVERGENCES.txt
+================================================================================
+
+WHERE THE PORT'S abc2ly DELIBERATELY DIFFERS FROM UPSTREAM'S, AND WHY.
+
+Five entries. Each is a DEFECT IN UPSTREAM that the port repairs, and each was
+proved to be one by MEASUREMENT against the pinned LilyPond 2.27.2 -- by running
+its own abc2ly and then handing the result to its own lilypond -- rather than by
+reading the Python and forming an opinion. That distinction is not pedantry: the
+first reading of this converter produced a list of eight "defects", and three of
+them turned out not to be defects at all (see NOT DEFECTS, below).
+
+Nothing else differs. The other thirty cases in the corpus are byte-identical to
+what upstream produced.
+
+--------------------------------------------------------------------------------
+HOW THIS IS ENFORCED
+--------------------------------------------------------------------------------
+
+A fixture always keeps the ORACLE's own text in `output' (standing rule 33), so
+the before and the after both live in the file and the diff stays readable. Where
+the port deliberately differs it ALSO carries `port_output' and `port_messages' --
+a frozen, reviewed baseline -- and `divergences', the reason ids below.
+
+  * AbcProbe compares against `port_output' when it is present and `output'
+    otherwise. Either way the comparison is strict byte equality, so an
+    UNINTENDED change to a diverging case fails exactly as it would anywhere else.
+  * `AbcProbe --accept' is the ONLY thing that ever writes `port_output', and it
+    REFUSES any case not named in its DeclaredDivergences table. A fix that
+    quietly changed a case nobody reasoned about cannot be baselined away: it
+    reports DIFFERS and stays DIFFERS.
+  * AbcImporterParityTests asserts that a case carries `port_output' if and only
+    if it carries a non-empty `divergences', and that every reason id is one of
+    the five below. Adding an undocumented divergence fails the suite.
+
+--------------------------------------------------------------------------------
+THE FIVE
+--------------------------------------------------------------------------------
+
+abc-backslash-k-crash
+    UPSTREAM   scripts/abc2ly.py:1215-1219, try_parse_escape:
+                   if s[:1] == 'K':
+                       key_table = compute_key()
+               compute_key takes one argument. Calling it with none is a
+               TypeError, nothing catches it, and `key_table' is a local nothing
+               reads.
+    MEASURED   `C D \K E F |' -> abc2ly writes a traceback and NO OUTPUT FILE.
+    PORT       The whole escape is consumed and ignored -- upstream's own intended
+               effect, since the result was discarded, minus the crash.
+               ⚠ Upstream eats only the BACKSLASH and leaves the `K'. That is
+               harmless there only because it never gets past the TypeError;
+               left behind here it falls through to "Huh?  Don't understand" and
+               puts a stray K in the diagnostics. `\K' is one token, so one token
+               is consumed.
+    SHOWS IN   defect-escape-k, defect-escape-k-beams
+
+abc-header-append-drops-new-field
+    UPSTREAM   scripts/abc2ly.py:550-554, header_append: the assignment sits
+               INSIDE its own `if key in header' guard, so a field that does not
+               already exist is never created. The `s = ''' + "''" + '''` default one line
+               above only makes sense if it is USED, which is what the assignment
+               does once it is one indent further out.
+    MEASURED   Two `H:' lines -> a header with no `history' field at all.
+    PORT       The assignment moves out of the guard.
+    SHOWS IN   defect-history, defect-history-beams, header-fields,
+               header-fields-beams
+
+abc-lyric-underscore-doubled
+    UPSTREAM   scripts/abc2ly.py:672-682, slyrics_append: the `_' arm's second
+               test is `if status == TEXT' where the `-' arm sixteen lines above
+               correctly writes `elif'. After the SPACE branch has appended and
+               set SPANNER, that stray `if' falls through to its own
+               `elif status == SPANNER' and appends a SECOND spanner.
+    MEASURED   `w: one _ two' -> `one __ _ _ two', where `one __ _ two' is the
+               extender that was meant.
+    PORT       Written as the if/else-if chain the `-' arm already is.
+    SHOWS IN   defect-lyric-underscore, defect-lyric-underscore-beams
+
+abc-numbered-voice-name-mismatch
+    UPSTREAM   scripts/abc2ly.py:229-232, dump_voices names a NUMBERED voice with
+               `alphabet(int(k))', so `V: 1' is DEFINED as "voiceB" -- while
+               dump_score and dump_slyrics both REFERENCE it as \\"voice1". The two
+               halves never agree.
+    MEASURED   A three-voice tune -> `error: unknown command: `\voice1'' three
+               times, and `fatal error: failed files'. THE DOCUMENT DOES NOT
+               COMPILE.
+    PORT       The definition is brought into line with the references, which use
+               the number the user wrote. `alphabet' then has no reachable caller
+               and is not ported.
+    SHOWS IN   multi-voice-stave, multi-voice-stave-beams, voice-overlay,
+               voice-overlay-beams
+
+abc-open-repeat-unclosed
+    UPSTREAM   scripts/abc2ly.py:235-239, dump_voices writes
+               `if repeat_state[idx]:' -- and REPEAT is 0, which Python reads as
+               FALSE. A voice still inside an open `\repeat volta 2 {' therefore
+               never gets its closing brace, and the else arm upstream wrote for
+               exactly that case is unreachable.
+    MEASURED   A tune ending inside a repeat -> `error: syntax error, unexpected
+               \score'. THE DOCUMENT DOES NOT COMPILE.
+    PORT       Tested against None instead, which lets upstream's own else arm do
+               its job.
+    SHOWS IN   defect-open-repeat, defect-open-repeat-beams
+
+--------------------------------------------------------------------------------
+THE PROOF THAT EACH FIX IS A FIX
+--------------------------------------------------------------------------------
+
+Every diverging case was handed to the pinned lilypond, both sides:
+
+    case                      upstream's output      the port's output
+    ----------------------    -------------------    -----------------
+    defect-escape-k           NO OUTPUT AT ALL       compiles
+    defect-open-repeat        6 errors               compiles
+    multi-voice-stave         7 errors               compiles
+    voice-overlay             5 errors               compiles
+    defect-history            compiles, drops H:     compiles, carries it
+    defect-lyric-underscore   compiles, doubles _    compiles, correct
+    header-fields             compiles, drops H:     compiles, carries it
+
+Three of the five make LilyPond REFUSE the file and one produces no file at all.
+
+--------------------------------------------------------------------------------
+NOT DEFECTS -- read before adding a sixth entry
+--------------------------------------------------------------------------------
+
+Three things that LOOK broken in the Python and are not. Each was written up as a
+reproduced defect on a first reading, and each was withdrawn on measurement.
+
+  \"voicedefault"      A backslash before a QUOTED STRING is a legal identifier
+                      reference in LilyPond. Single-voice output engraves
+                      successfully; only the NUMBERED case above is broken.
+  midi2ly's           `for i in pitches: end_note(...)' does delete from the
+  dict mutation       dictionary it walks, and python does raise
+                      "dictionary changed size during iteration" for that shape.
+                      But create_track routes every channel message (0x80-0xEF)
+                      to a Channel and every meta event to the Track, so a
+                      note-on and an END_OF_TRACK are never in the same event
+                      list and `pitches' is always empty when that branch runs.
+                      MEASURED: a MIDI with a hanging note converts fine. It is
+                      unreachable code, not a live defect.
+  Key.dump's          scripts/midi2ly.py:399-406's two arms are identical, so
+  identical arms      there is no behaviour to correct -- only redundancy.
+
+THE LESSON, which is the one worth keeping: READ THE DEFECT OFF THE ORACLE, NOT
+OFF THE SOURCE. A branch that is obviously wrong on the page may be unreachable,
+may be legal in the target language, or may have no observable effect; and the
+cost of "fixing" one of those is a divergence that buys nothing and has to be
+maintained forever.

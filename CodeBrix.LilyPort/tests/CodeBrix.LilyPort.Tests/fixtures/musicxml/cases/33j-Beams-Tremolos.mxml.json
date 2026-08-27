@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "33j-Beams-Tremolos.xml",
+ "messages": [],
+ "name": "33j-Beams-Tremolos",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 33j-Beams-Tremolos.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Tests for double-note tremolo beams. The first bar shows a\n    half-note tremolo (one beam, two strokes) followed by a dotted quarter-note\n    tremolo with chords (three strokes). The second bar shows a half-note\n    triplet with three tremolos (no beams, three strokes) followed by three\n    beamed eighths-note chords with a tremolo (two strokes) between the second\n    and third chord.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative a' {\n  \\clef \"treble\" \\time 7/8 \\key c \\major \\once \\override Beam.gap-count = 2\n  \\repeat tremolo 8 { a32 c32 } \\once \\override Beam.gap-count = 0 \\repeat\n  tremolo 6 { <f, a>32 <c' e>32 } | % 1\n  \\tuplet 3/2 {\n    \\once \\override Beam.gap-count = 3 \\repeat tremolo 4 { a32 c32 } \\once\n    \\override Beam.gap-count = 3 \\repeat tremolo 4 { g32 d'32 } \\once \\override\n    Beam.gap-count = 3 \\repeat tremolo 4 { f,32 e'32 } }\n  <f, a>8 [ \\once \\override Beam.gap-count = 2 \\repeat tremolo 2 { <e g>32 <d'\n      f>32 } <e g>8 ] }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "33j-Beams-Tremolos.xml",
+ "version_line": "\\version \"2.27.2\""
+}

@@ -1,0 +1,716 @@
+/*
+  This file is part of LilyPond, the GNU music typesetter.
+
+  Copyright (C) 1997--2026 Han-Wen Nienhuys <hanwen@xs4all.nl>
+                           Jan Nieuwenhuizen <janneke@gnu.org>
+
+  LilyPond is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  LilyPond is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with LilyPond.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+
+namespace CodeBrix.LilyPort.Flower; //was previously: flower/warn.cc, flower/include/warn.hh;
+// Modified by Jeremy Ellis - 2026 - as part of the CodeBrix.LilyPort port:
+//   - translated from C++17 to C# targeting net10.0
+//   - the LOG_* preprocessor defines become a [Flags] enum
+//   - upstream calls exit() on a fatal error. A library must not terminate its host
+//     process, so Error throws LilyPondErrorException instead and the caller
+//     decides. This is a DELIBERATE behavioural change and the one place in flower/
+//     where the port does not mirror upstream control flow.
+
+/// <summary>Message severity levels, as bit flags so a log level is a mask.</summary>
+[Flags]
+public enum LogLevel
+{
+    /// <summary>No output at all.</summary>
+    None = 0,
+
+    /// <summary>Errors only.</summary>
+    Error = 1 << 0,
+
+    /// <summary>Warnings.</summary>
+    Warn = 1 << 1,
+
+    /// <summary>Basic progress: the input file name and whether it succeeded.</summary>
+    Basic = 1 << 2,
+
+    /// <summary>Progress reporting.</summary>
+    Progress = 1 << 3,
+
+    /// <summary>Informational messages.</summary>
+    Info = 1 << 4,
+
+    /// <summary>Debug output.</summary>
+    Debug = 1 << 8,
+
+    /// <summary>Errors only.</summary>
+    LevelError = Error,
+
+    /// <summary>Errors and warnings.</summary>
+    LevelWarn = LevelError | Warn,
+
+    /// <summary>Errors, warnings and basic progress.</summary>
+    LevelBasic = LevelWarn | Basic,
+
+    /// <summary>Everything up to progress.</summary>
+    LevelProgress = LevelBasic | Progress,
+
+    /// <summary>Everything up to informational.</summary>
+    LevelInfo = LevelProgress | Info,
+
+    /// <summary>Everything, including debug.</summary>
+    LevelDebug = LevelInfo | Debug,
+}
+
+/// <summary>
+/// Raised where upstream would call <c>exit()</c>. A library must not terminate its
+/// host process, so the decision is handed to the caller.
+/// </summary>
+public sealed class LilyPondErrorException : Exception
+{
+    /// <summary>Initializes the exception.</summary>
+    /// <param name="message">The error text.</param>
+    public LilyPondErrorException(string message)
+        : base(message)
+    {
+    }
+
+    /// <summary>Initializes the exception with a source location.</summary>
+    /// <param name="message">The error text.</param>
+    /// <param name="location">Where the error was detected.</param>
+    public LilyPondErrorException(string message, string location)
+        : base(string.IsNullOrEmpty(location) ? message : location + ": " + message)
+    {
+        Location = location;
+    }
+
+    /// <summary>Gets the source location, when one was supplied.</summary>
+    public string Location { get; }
+}
+
+/// <summary>
+/// Diagnostic output. The engine calls these constantly, and the message text is part
+/// of LilyPond's user-facing behaviour, so the prefixes are upstream's.
+/// </summary>
+public static class Warn
+{
+    private static readonly List<string> RecordedMessages = new List<string>();
+
+    private static readonly HashSet<string> LoggedDeprecations
+        = new HashSet<string>(StringComparer.Ordinal);
+
+    private static readonly List<string> ExpectedWarnings = new List<string>();
+
+    //was previously: LogLevel.LevelWarn, which is not upstream's default and silently
+    // discarded three whole severities. `flower/warn.cc:44' is `int loglevel =
+    // LOGLEVEL_INFO;', under the comment "Define the loglevel (default is INFO)", so
+    // upstream prints Info, Progress and Basic unless a command line asks otherwise.
+    // At LevelWarn the port filtered all three out, which is why `ly:message' looked
+    // unwired: `Warn.Message' was called, computed its text and threw it away
+    // (trap 1b). `Performance.WriteOutput' computes "MIDI output to `...'" 65 times
+    // across the corpus and printed it none.
+
+    /// <summary>Gets or sets the active log level mask.</summary>
+    public static LogLevel Level { get; set; } = LogLevel.LevelInfo;
+
+    /// <summary>
+    /// Gets or sets the live source of the <c>warning-as-error</c> program option.
+    /// <para>
+    /// The engine installs a read of its option store here at bootstrap — the same
+    /// idiom <c>debug-property-callbacks</c> uses — so <c>ly:reset-options</c> and the
+    /// per-file session restore keep the answer honest with no mirror to go stale.
+    /// flower stays free of any dependency on the option machinery, exactly as
+    /// upstream's <c>flower/warn.cc:45</c> global is owned here and assigned only from
+    /// <c>lily/program-option-scheme.cc:115</c>.
+    /// </para>
+    /// </summary>
+    public static Func<bool> WarningAsErrorSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether warnings are promoted to errors, which
+    /// is LilyPond's <c>-dwarning-as-error</c> (<c>flower/warn.cc:45</c>). The setter
+    /// serves flower-only tests; once <see cref="WarningAsErrorSource"/> is installed
+    /// the OPTION is the truth, and the getter honours whichever half answers true.
+    /// //was previously: an auto-property nothing in the engine ever assigned, so
+    /// `ly:set-option 'warning-as-error` was inert for the life of the port. The
+    /// deferral it was parked behind — the D2 residue of programming errors upstream
+    /// does not reach — was MEASURED at zero on 2026-08-18 (the port's three
+    /// "bounds of this piece" reports are upstream's own three, graded MATCH by the
+    /// diagnostics gate), so the revisit condition fired and the option is wired.
+    /// </summary>
+    public static bool WarningAsError
+    {
+        get => _warningAsError
+            || (WarningAsErrorSource != null && WarningAsErrorSource());
+        set => _warningAsError = value;
+    }
+
+    private static bool _warningAsError;
+
+    /// <summary>
+    /// Gets or sets the writer diagnostics go to. Wrapping it in a
+    /// <see cref="LineTrackingWriter"/> — and giving the interpreter the SAME instance as
+    /// its error port — is what lets a diagnostic start its own line after Scheme code
+    /// has left one open.
+    /// </summary>
+    public static TextWriter Output { get; set; } = new LineTrackingWriter(Console.Error);
+
+    /// <summary>
+    /// Gets or sets a value indicating whether messages are also recorded in memory.
+    /// Tests use this to assert on diagnostics without capturing console output.
+    /// </summary>
+    public static bool RecordMessages { get; set; }
+
+    /// <summary>Gets the messages recorded while <see cref="RecordMessages"/> was set.</summary>
+    public static IReadOnlyList<string> Messages => RecordedMessages;
+
+    /// <summary>
+    /// Clears the recorded messages, and with them the set of deprecation warnings already
+    /// reported.
+    /// <para>
+    /// Upstream never clears that set — it lives for the process, because a run is one
+    /// document. Here a test run is many documents in one process, and a deprecation
+    /// warning suppressed by an EARLIER test is a test that silently stops checking
+    /// anything.
+    /// </para>
+    /// </summary>
+    public static void ClearMessages()
+    {
+        RecordedMessages.Clear();
+        LoggedDeprecations.Clear();
+        ExpectedWarnings.Clear();
+    }
+
+    /// <summary>
+    /// Registers a message that this run EXPECTS, so that its output is suppressed when
+    /// it arrives and reported when it does not.
+    /// <para>
+    /// This is what a regression file asks for with <c>ly:expect-warning</c>. Upstream's
+    /// regression suite uses it to assert that a diagnostic HAPPENS without the log
+    /// filling up with deliberate warnings, so the reference log of such a file is
+    /// silent — which means a port that ignores the registration prints a warning the
+    /// oracle does not.
+    /// </para>
+    /// </summary>
+    /// <param name="message">The expected message text, already formatted.</param>
+    public static void ExpectWarning(string message) => ExpectedWarnings.Add(message);
+
+    /// <summary>
+    /// Reports any expected message that never arrived, and forgets the list.
+    /// <para>
+    /// Called once per input file, where upstream calls it — <c>lily.scm</c> runs it
+    /// between <c>lilypond-file</c> and <c>session-terminate</c>. The list is cleared
+    /// either way, so an expectation cannot leak into the next file of a batch run
+    /// (trap 16).
+    /// </para>
+    /// </summary>
+    public static void CheckExpectedWarnings()
+    {
+        if (ExpectedWarnings.Count > 0)
+        {
+            /* Some expected warning was not triggered, so print out a warning. */
+            string message = ExpectedWarnings.Count.ToString(
+                                 System.Globalization.CultureInfo.InvariantCulture)
+                             + " expected warning(s) not encountered: ";
+            for (int i = 0; i < ExpectedWarnings.Count; i++)
+            {
+                message += "\n        " + ExpectedWarnings[i];
+            }
+
+            Warning(message);
+        }
+
+        ExpectedWarnings.Clear();
+    }
+
+    /// <summary>
+    /// Determines whether a message was expected, and CONSUMES the expectation when it
+    /// was.
+    /// </summary>
+    /// <param name="message">The message about to be printed.</param>
+    /// <returns><see langword="true"/> when the message should be suppressed.</returns>
+    private static bool IsExpected(string message)
+    {
+        for (int i = 0; i < ExpectedWarnings.Count; i++)
+        {
+            // Compare the msg with the suppressed string; If the beginning matches,
+            // i.e. the msg can have additional content AFTER the full (exact)
+            // suppressed message, suppress the warning.
+            // This is needed for the Input class, where the message contains
+            // the input file contents after the real message.
+            string expected = ExpectedWarnings[i];
+            if (message.Length >= expected.Length
+                && string.CompareOrdinal(message, 0, expected, 0, expected.Length) == 0)
+            {
+                ExpectedWarnings.RemoveAt(i);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Determines whether a severity would be emitted at the current level.</summary>
+    /// <param name="severity">The severity to test.</param>
+    /// <returns><see langword="true"/> when the message would be shown.</returns>
+    public static bool IsEnabled(LogLevel severity) => (Level & severity) != 0;
+
+    /// <summary>Emits a warning.</summary>
+    /// <param name="message">The warning text.</param>
+    /// <param name="location">Where the problem was found, or <see langword="null"/>.</param>
+    public static void Warning(string message, string location = null)
+    {
+        //was previously: the WarningAsError test came first and there was no
+        // expectation test at all. Upstream asks is_expected FIRST, so a REGISTERED
+        // message stays suppressed even under warning-as-error.
+        if (IsExpected(message))
+        {
+            Emit(LogLevel.Debug, "suppressed warning: ", message, location);
+            return;
+        }
+
+        if (WarningAsError)
+        {
+            //was previously: Error(message, location);
+            // Upstream routes the promotion through deferrable_error (warn.cc:260-261),
+            // not through error/1 — the same print and the same stop when no deferral
+            // scope is open, and a COMPLETED report first when one is.
+            DeferrableError(message, location);
+            return;
+        }
+
+        Emit(LogLevel.Warn, "warning: ", message, location);
+    }
+
+    /// <summary>
+    /// Emits a deprecation warning the FIRST time each distinct message is seen, and
+    /// swallows every repeat.
+    /// <para>
+    /// The de-duplication is the whole point upstream: a deprecated construct inside a
+    /// loop or an included file would otherwise print once per use and bury everything
+    /// else. The set is keyed on the message text, exactly as upstream keys it.
+    /// </para>
+    /// </summary>
+    /// <param name="message">The warning text.</param>
+    /// <param name="location">Where the problem was found, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> when the message was emitted rather than suppressed.</returns>
+    public static bool DeprecationWarning(string message, string location = null)
+    {
+        if (!LoggedDeprecations.Add(message))
+        {
+            return false;
+        }
+
+        Warning(message, location);
+        return true;
+    }
+
+    /// <summary>
+    /// Emits an informational message — upstream <c>message()</c>
+    /// (<c>flower/warn.cc:294-300</c>).
+    /// //was previously: Emit(...), which ends every message's line. Upstream's
+    /// message() goes through print_message with newline=true and NO appended
+    /// newline: it STARTS on its own line and leaves that line OPEN, and whatever
+    /// prints next supplies the break — usually the next message's own prepend, so
+    /// the rendering is unchanged almost everywhere. The case that can tell the
+    /// difference is Scheme code writing raw text with leading newlines to the same
+    /// stream: scheme-engraver.ly's trace begins "\n\n", and closing the line here
+    /// printed one blank line more than the oracle (measured 2026-08-18). Call
+    /// sites owe upstream's own suffixes — paper-score.cc appends " " to two of its
+    /// phase markers and performance.cc puts "\n" inside its MIDI line — because
+    /// this function no longer supplies any.
+    /// </summary>
+    /// <param name="message">The message text.</param>
+    /// <param name="location">Where it applies, or <see langword="null"/>.</param>
+    public static void Message(string message, string location = null)
+        => EmitPart(LogLevel.Info, message, location, newline: true);
+
+    /// <summary>
+    /// Emits a progress indication — upstream <c>progress_indication()</c> as
+    /// <c>ly:progress</c> calls it, with <c>newline=false</c>: *"calls to
+    /// ly:progress should in general not start a new line"*
+    /// (<c>lily/warn-scheme.cc:121-122</c>), and nothing is appended either.
+    /// //was previously: Emit(...), which both started and ended a line.
+    /// </summary>
+    /// <param name="message">The message text.</param>
+    public static void Progress(string message)
+        => EmitPart(LogLevel.Progress, message, null, newline: false);
+
+    /// <summary>
+    /// Emits a success message — <c>basic_progress</c>, which upstream logs one level
+    /// above ordinary progress.
+    /// </summary>
+    /// <param name="message">The message text.</param>
+    public static void BasicProgress(string message)
+        => Emit(LogLevel.Basic, string.Empty, message, null);
+
+    /// <summary>Emits a debug message.</summary>
+    /// <param name="message">The message text.</param>
+    public static void Debug(string message)
+        => Emit(LogLevel.Debug, "debug: ", message, null);
+
+    /// <summary>
+    /// Reports an internal inconsistency. Upstream continues after printing, on the
+    /// grounds that a partly-wrong score beats no score, so this does NOT throw.
+    /// </summary>
+    /// <param name="message">The message text.</param>
+    /// <param name="location">Where the problem was found, or <see langword="null"/>.</param>
+    public static void ProgrammingError(string message, string location = null)
+    {
+        if (IsExpected(message))
+        {
+            Emit(LogLevel.Debug, "suppressed programming error: ", message, location);
+            return;
+        }
+
+        //was previously: Emit(LogLevel.Warn, "programming error: ", message, location);
+        // TWO changes, both faithfulness (rule 15). The severity is LOG_ERROR upstream,
+        // not LOG_WARN — invisible at the default log level, where both are on, and not
+        // invisible at --loglevel=ERROR. And upstream prints a SECOND line after every
+        // programming error; the port printed only the first.
+        //
+        //was previously: a note here parked the warning-as-error branch behind D2's
+        // residue of programming errors upstream does not reach. MEASURED ZERO on
+        // 2026-08-18 (the three remaining "bounds of this piece" reports are upstream's
+        // own three, graded MATCH by the diagnostics gate), so upstream's branch
+        // (flower/warn.cc:230-231) is here now.
+        if (WarningAsError)
+        {
+            DeferrableError(message, location);
+            return;
+        }
+
+        Emit(LogLevel.Error, "programming error: ", message, location);
+        Emit(LogLevel.Error, string.Empty, "continuing, cross fingers", location);
+    }
+
+    /// <summary>
+    /// Reports a fatal error. Upstream calls <c>exit()</c>; a library cannot, so this
+    /// throws <see cref="LilyPondErrorException"/> and the caller decides.
+    /// </summary>
+    /// <param name="message">The error text.</param>
+    /// <param name="location">Where the problem was found, or <see langword="null"/>.</param>
+    /// <exception cref="LilyPondErrorException">Always thrown.</exception>
+    public static void Error(string message, string location = null)
+    {
+        //was previously: Emit(LogLevel.Error, "error: ", message, location);
+        // Ruling R1, severity. flower/warn.cc has THREE prefixes and the port had two of
+        // them on the wrong functions: the FATAL error/1 prints `fatal error: ' through
+        // print_error (warn.cc:197), and it is non_fatal_error that prints `error: '
+        // (warn.cc:249). Emitting the fatal one under the non-fatal one's name made every
+        // stopped run report a severity upstream reserves for runs that continue.
+        Emit(LogLevel.Error, "fatal error: ", message, location);
+        throw new LilyPondErrorException(message, location);
+    }
+
+    // WarningAsErrorExitDeferrer's file statics (flower/warn.cc:179-180). Upstream never
+    // clears exit_deferred_ because the process is about to die; the port's process
+    // outlives the "exit", so both reset when the deferred stop fires — a flag that
+    // survived the throw would stop the NEXT file's run at its first deferral scope
+    // (the per-file leak class, trap 16).
+    private static uint _deferralEnabled;
+    private static bool _exitDeferred;
+    private static string _deferredMessage;
+    private static string _deferredLocation;
+
+    /// <summary>
+    /// Prints a promoted diagnostic as <c>fatal error:</c> and stops the run — at once
+    /// when no deferral scope is open, at scope close when one is.
+    /// <c>flower/warn.cc:200-208</c>, <c>deferrable_error</c>: with no scope it falls
+    /// through to <c>non_deferrable_error</c>, which is the port's
+    /// <see cref="Error"/> — the same <c>fatal error:</c> print and the same stop.
+    /// </summary>
+    /// <param name="message">The diagnostic text.</param>
+    /// <param name="location">Where the problem was found, or <see langword="null"/>.</param>
+    public static void DeferrableError(string message, string location = null)
+    {
+        if (_deferralEnabled == 0)
+        {
+            Error(message, location);
+        }
+
+        _exitDeferred = true;
+        _deferredMessage = message;
+        _deferredLocation = location;
+        Emit(LogLevel.Error, "fatal error: ", message, location);
+    }
+
+    /// <summary>
+    /// Defers the warning-as-error stop while in scope — upstream's
+    /// <c>WarningAsErrorExitDeferrer</c> (<c>flower/include/warn.hh:47-66</c>): when
+    /// <c>warning-as-error</c> is set it can be undesirable to stop on the FIRST
+    /// promoted diagnostic, so a scope holder lets the work in progress finish and
+    /// performs the stop when it closes. Upstream declares exactly one, inside the
+    /// embedded-Scheme error handler (<c>lily/parse-scm.cc:62</c>), so an error
+    /// report completes before the run stops; the port opens its scope at the same
+    /// site.
+    /// </summary>
+    public sealed class WarningAsErrorExitDeferrer : IDisposable
+    {
+        /// <summary>Opens the scope — the constructor, <c>warn.cc:182-185</c>.</summary>
+        public WarningAsErrorExitDeferrer()
+        {
+            _deferralEnabled++;
+        }
+
+        /// <summary>
+        /// Closes the scope and performs a recorded deferred stop — the destructor,
+        /// <c>warn.cc:187-192</c>, whose <c>exit (1)</c> is the port's
+        /// <see cref="LilyPondErrorException"/>. The message was already printed when
+        /// the stop was deferred, exactly as upstream prints before deferring, so the
+        /// throw carries the text without re-emitting it.
+        /// </summary>
+        public void Dispose()
+        {
+            bool stop = _exitDeferred;
+            string message = _deferredMessage;
+            string location = _deferredLocation;
+            _exitDeferred = false;
+            _deferredMessage = null;
+            _deferredLocation = null;
+            if (_deferralEnabled > 0)
+            {
+                _deferralEnabled--;
+            }
+
+            if (stop)
+            {
+                throw new LilyPondErrorException(
+                    message ?? "warning treated as error", location);
+            }
+        }
+    }
+
+    /// <summary>Emits a non-fatal error, without throwing.</summary>
+    /// <param name="message">The error text.</param>
+    /// <param name="location">Where the problem was found, or <see langword="null"/>.</param>
+    public static void NonFatalError(string message, string location = null)
+    {
+        if (IsExpected(message))
+        {
+            Emit(LogLevel.Debug, "suppressed error: ", message, location);
+            return;
+        }
+
+        // Upstream's warning-as-error branch, flower/warn.cc:247-248.
+        if (WarningAsError)
+        {
+            DeferrableError(message, location);
+            return;
+        }
+
+        Emit(LogLevel.Error, "error: ", message, location);
+    }
+
+    /// <summary>
+    /// The open-line half of upstream's <c>print_message</c>
+    /// (<c>flower/warn.cc:161-177</c>): starts on a new line when asked and the
+    /// current line is open, writes the text EXACTLY as given — no prefix, no
+    /// appended newline — and leaves the line state to the text's own last
+    /// character, which the <see cref="LineTrackingWriter"/> tracks. The
+    /// closed-line family (warnings, errors, basic progress) stays on
+    /// <see cref="Emit"/>, whose upstream call sites append their own newline.
+    /// </summary>
+    /// <param name="severity">The log level.</param>
+    /// <param name="message">The text, exactly as it should reach the stream.</param>
+    /// <param name="location">Where it applies, or <see langword="null"/>.</param>
+    /// <param name="newline">Whether the text must start on a fresh line.</param>
+    private static void EmitPart(
+        LogLevel severity, string message, string location, bool newline)
+    {
+        string text = string.IsNullOrEmpty(location)
+            ? message
+            : location + ": " + message;
+
+        if (RecordMessages)
+        {
+            RecordedMessages.Add(text);
+        }
+
+        if (IsEnabled(severity))
+        {
+            if (newline && Output is LineTrackingWriter tracker)
+            {
+                tracker.EndOpenLine();
+            }
+
+            Output?.Write(text);
+        }
+    }
+
+    private static void Emit(LogLevel severity, string prefix, string message, string location)
+    {
+        string text = string.IsNullOrEmpty(location)
+            ? prefix + message
+            : location + ": " + prefix + message;
+
+        if (RecordMessages)
+        {
+            RecordedMessages.Add(text);
+        }
+
+        if (IsEnabled(severity))
+        {
+            // A diagnostic always starts its own line. Upstream never has to arrange
+            // that, because the only thing it writes without a trailing newline is the
+            // graphviz digraph and the process exits next; here the same stream carries
+            // 2,146 files' output and a `}' glued to the front of a warning is a warning
+            // the diagnostics comparator cannot parse (R17, LineTrackingWriter).
+            if (Output is LineTrackingWriter tracker)
+            {
+                tracker.EndOpenLine();
+            }
+
+            Output?.WriteLine(text);
+        }
+    }
+}
+
+/// <summary>
+/// Upstream's <c>PQueue</c>: a priority queue over an in-situ heap, smallest first.
+/// </summary>
+/// <remarks>
+/// <para>
+/// THE HEAP ALGORITHM IS libstdc++'s, DELIBERATELY, AND IT IS NOT AN OPTIMISATION.
+/// Upstream builds this on <c>std::push_heap</c> and <c>std::pop_heap</c> with a
+/// <c>greater</c> comparator, and which of several EQUAL elements surfaces first is
+/// decided entirely by that algorithm's internal element order — two correct heaps need
+/// not agree. <c>Midi_walker</c>'s stop-note queue reaches exact ties routinely (every
+/// chord ends its notes at the same tick), and the order they come out in is the order
+/// the note-off bytes are written to the file. A merely-correct binary heap, which is
+/// what once stood here, produces a different MIDI file for the same music.
+/// </para>
+/// <para>
+/// Upstream's comparator is <c>compare (a, b) &gt; 0</c>, and <c>push_heap</c> with a
+/// comparator maintains a MAX-heap with respect to it — so the top is the element
+/// nothing is greater than, i.e. the smallest. That is why <see cref="Front"/> answers
+/// the minimum.
+/// </para>
+/// <para>
+/// Indexing into the heap is upstream's own affordance, kept with its warning: changing
+/// an element's PRIORITY through the indexer breaks the invariant. Midi_walker uses it
+/// only to set a flag that is not part of the key.
+/// </para>
+/// </remarks>
+/// <typeparam name="T">The element type.</typeparam>
+public sealed class PriorityQueue<T>
+{
+    private readonly List<T> _heap = new List<T>();
+    private readonly IComparer<T> _comparer;
+
+    /// <summary>Initializes a queue using the default comparer.</summary>
+    public PriorityQueue()
+        : this(Comparer<T>.Default)
+    {
+    }
+
+    /// <summary>Initializes a queue with an explicit comparer.</summary>
+    /// <param name="comparer">The ordering to use; smallest comes out first.</param>
+    public PriorityQueue(IComparer<T> comparer)
+    {
+        _comparer = comparer ?? Comparer<T>.Default;
+    }
+
+    /// <summary>Gets the number of queued elements.</summary>
+    public int Count => _heap.Count;
+
+    /// <summary>Gets the element at a heap index, without reordering.</summary>
+    /// <param name="index">The heap index.</param>
+    /// <returns>The element.</returns>
+    public T this[int index] => _heap[index];
+
+    /// <summary>Gets the smallest element without removing it.</summary>
+    /// <returns>The front element.</returns>
+    public T Front() => _heap[0];
+
+    /// <summary>Inserts an element.</summary>
+    /// <param name="value">The element to add.</param>
+    public void Insert(T value)
+    {
+        _heap.Add(value);
+        PushHeap(_heap.Count - 1, 0, value);
+    }
+
+    /// <summary>Removes and returns the smallest element.</summary>
+    /// <returns>The former front element.</returns>
+    /// <remarks>
+    /// Upstream's <c>get()</c>: <c>pop_heap</c> moves the top to the END of the range,
+    /// and the value taken is the one now at the back.
+    /// </remarks>
+    public T DeleteMinimum()
+    {
+        PopHeap();
+        T minimum = _heap[_heap.Count - 1];
+        _heap.RemoveAt(_heap.Count - 1);
+        return minimum;
+    }
+
+    /// <summary>Removes the smallest element — upstream's <c>delmin</c>.</summary>
+    public void DeleteMinimumOnly() => DeleteMinimum();
+
+    /// <summary>libstdc++'s <c>greater</c>: upstream's <c>compare (a, b) &gt; 0</c>.</summary>
+    private bool Greater(T a, T b) => _comparer.Compare(a, b) > 0;
+
+    /// <summary>libstdc++'s <c>__push_heap</c>.</summary>
+    private void PushHeap(int holeIndex, int topIndex, T value)
+    {
+        int parent = (holeIndex - 1) / 2;
+        while (holeIndex > topIndex && Greater(_heap[parent], value))
+        {
+            _heap[holeIndex] = _heap[parent];
+            holeIndex = parent;
+            parent = (holeIndex - 1) / 2;
+        }
+
+        _heap[holeIndex] = value;
+    }
+
+    /// <summary>libstdc++'s <c>pop_heap</c>: swap the top out to the end and re-sift.</summary>
+    private void PopHeap()
+    {
+        int len = _heap.Count - 1;
+        T value = _heap[len];
+        _heap[len] = _heap[0];
+        AdjustHeap(0, len, value);
+    }
+
+    /// <summary>libstdc++'s <c>__adjust_heap</c>.</summary>
+    private void AdjustHeap(int holeIndex, int len, T value)
+    {
+        int topIndex = holeIndex;
+        int secondChild = holeIndex;
+        while (secondChild < (len - 1) / 2)
+        {
+            secondChild = 2 * (secondChild + 1);
+            if (Greater(_heap[secondChild], _heap[secondChild - 1]))
+            {
+                secondChild--;
+            }
+
+            _heap[holeIndex] = _heap[secondChild];
+            holeIndex = secondChild;
+        }
+
+        if ((len & 1) == 0 && secondChild == (len - 2) / 2)
+        {
+            secondChild = 2 * (secondChild + 1);
+            _heap[holeIndex] = _heap[secondChild - 1];
+            holeIndex = secondChild - 1;
+        }
+
+        PushHeap(holeIndex, topIndex, value);
+    }
+}

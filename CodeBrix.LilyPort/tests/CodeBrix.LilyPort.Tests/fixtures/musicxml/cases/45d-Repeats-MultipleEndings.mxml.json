@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "45d-Repeats-MultipleEndings.xml",
+ "messages": [],
+ "name": "45d-Repeats-MultipleEndings",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 45d-Repeats-MultipleEndings.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Multiple alternative endings. The first alternative starts and ends\n    at bar 2; the second continues until bar 5, the third, fifth, and seventh\n    until bar 9, the fourth and sixth until bar 10, and the eighth is\n    discontinued after one bar.\n\n    In this test, the <ending> elements don't contain text except the one in\n    bar 10, which holds ‘Foo’.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    doubleRepeatBarType = \":|.|:\"\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\repeat volta 8 {\n    \\clef \"treble\" \\time 4/4 \\key c \\major R1 | % 1\n    \\alternative {\n      \\volta 1 {\n        R1 | % 2\n      }\n      \\volta 2 {\n        R1 | % 3\n        R1 | % 4\n        R1 | % 5\n      }\n      \\volta 3,5,7 {\n        R1 | % 6\n        R1 | % 7\n        R1 | % 8\n        R1 | % 9\n\n        \\barNumberCheck #10\n      }\n      \\volta 4,6 {\n        \\once \\override Score.VoltaBracket.text = \\markup Foo R1 | % 10\n      }\n      \\volta 8 {\n        R1 | % 11\n      }\n    }\n  }\n  R1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "45d-Repeats-MultipleEndings.xml",
+ "version_line": "\\version \"2.27.2\""
+}

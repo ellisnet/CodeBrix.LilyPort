@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "24d-AfterGrace.xml",
+ "messages": [],
+ "name": "24d-AfterGrace",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 24d-AfterGrace.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Some grace notes and after-graces indicated by\n    ‘steal-time-previous’ (for the first grace note) and ‘steal-time-following’\n    (for the second one). The remaining grace notes have no such attribute.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative e'' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\key c \\major \\afterGrace { e2\n    } { g16 } \\afterGrace { \\grace { a16 a16 } e2 } { g16 [ a16 ] } }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "24d-AfterGrace.xml",
+ "version_line": "\\version \"2.27.2\""
+}

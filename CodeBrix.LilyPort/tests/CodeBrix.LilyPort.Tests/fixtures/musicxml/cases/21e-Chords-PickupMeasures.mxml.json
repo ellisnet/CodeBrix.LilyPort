@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "21e-Chords-PickupMeasures.xml",
+ "messages": [],
+ "name": "21e-Chords-PickupMeasures",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 21e-Chords-PickupMeasures.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A test for proper chord detection after a pickup measure (i.e., the\n    first beat of measure 1 is not aligned with a multiple of the time\n    signature).\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPTwoVoiceOne = \\relative c'' {\n  \\partial 4 \\once \\omit Staff.TimeSignature c4 <c a f>4 <c a>4 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P2\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPTwoVoiceOne\" {\n          \\PartPTwoVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "21e-Chords-PickupMeasures.xml",
+ "version_line": "\\version \"2.27.2\""
+}

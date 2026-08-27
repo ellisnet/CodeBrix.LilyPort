@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "61k-Lyrics-SpannersExtenders.xml",
+ "messages": [],
+ "name": "61k-Lyrics-SpannersExtenders",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 61k-Lyrics-SpannersExtenders.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Lyrics spanners: continued syllables and extenders, possibly\n    spanning multiple notes.\n\n    In the following, measure-beat values are shown with the assigned MusicXML\n    elements. Beat 4 in measure 3 is a rest.\n\n    1/1: Single syllable ‘AAA’ (left-justified), extend.\n\n    1/3: Start syllable ‘bbb’.\n\n    2/2: End syllable ‘CCC’ (right-justified), extend.\n\n    3/1: Single syllable ‘eee’ (left-justified), extend.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major c4 c4 c4 c4 | % 1\n  c4 c4 c4 c4 | % 2\n  c4 c4 c4 r4 \\bar \"|.\"\n}\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  AAA __ \\skip1 bbb -- \\skip1 \\skip1 CCC __ \\skip1 \\skip1 eee __ \\skip1 \\skip1\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "61k-Lyrics-SpannersExtenders.xml",
+ "version_line": "\\version \"2.27.2\""
+}

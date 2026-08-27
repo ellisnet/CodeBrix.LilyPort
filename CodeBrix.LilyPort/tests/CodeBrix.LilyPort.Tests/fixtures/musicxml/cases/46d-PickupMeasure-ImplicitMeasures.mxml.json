@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "46d-PickupMeasure-ImplicitMeasures.xml",
+ "messages": [],
+ "name": "46d-PickupMeasure-ImplicitMeasures",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 46d-PickupMeasure-ImplicitMeasures.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A combination of unusual measures.\n\n    At the beginning there is a 3/8 pickup measure (measure 0). Measure 1\n    consists of an incomplete measure with two quarters, followed by an\n    invisible bar line and another pickup measure with two quarters to complete\n    it. Measure 2 is also incomplete, holding only three quarters.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative e' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major \\partial 4. e4 e8 f4 g4 \\bar \"\"\n  a4 b4 | % 1\n  c4 d4 r4 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "46d-PickupMeasure-ImplicitMeasures.xml",
+ "version_line": "\\version \"2.27.2\""
+}

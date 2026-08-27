@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- Lily.Shell's own terminal control graduated into the CodeBrix.Platform
+       family as the TerminalView add-in (namespace
+       CodeBrix.Platform.UI.TerminalView); this project is now a pass-through
+       that flows the package to the app and the tests. The add-in carries
+       CodeBrix.Terminal, TextLayout, the core framework, SkiaSharp, and the
+       Roboto Mono font as its own dependencies. -->
+  <ItemGroup>
+    <PackageReference Include="CodeBrix.Platform.TerminalView.ApacheLicenseForever" Version="1.0.231.233" />
+  </ItemGroup>
+</Project>

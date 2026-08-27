@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "33h-Spanners-Glissando.xml",
+ "messages": [],
+ "name": "33h-Spanners-Glissando",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 33h-Spanners-Glissando.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"All different types of glissando defined in MusicXML. The first two\n    and a half measures contain <glissando> elements with various ‘line-type’\n    attributes, the rest contains <slide> elements (also with various\n    ‘line-type’ attributes).\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative g' {\n  \\clef \"treble\" \\key c \\major \\once \\omit Staff.TimeSignature \\once \\override\n  Glissando.style = #'trill g4 \\glissando f'4 g,4 \\glissando f'4 | % 1\n  \\once \\override Glissando.style = #'dashed-line g,4 \\glissando f'4 \\once\n  \\override Glissando.style = #'dotted-line g,4 \\glissando f'4 | % 2\n  \\once \\override Glissando.style = #'trill g,4 \\glissando f'4 g,4 \\glissando f'4\n  | % 3\n  g,4 \\glissando f'4 \\once \\override Glissando.style = #'dashed-line g,4\n  \\glissando f'4 | % 4\n  \\once \\override Glissando.style = #'dotted-line g,4 \\glissando f'4 \\once\n  \\override Glissando.style = #'trill g,4 \\glissando f'4 \\bar \"|.\"\n}\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  default glissando solid \"(+text)\" dashed \\skip1 dotted \\skip1 wavy \\skip1\n  default slide solid \"(+text)\" dashed \\skip1 dotted \\skip1 wavy \\skip1\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "33h-Spanners-Glissando.xml",
+ "version_line": "\\version \"2.27.2\""
+}

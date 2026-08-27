@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "46a-Barlines.xml",
+ "messages": [],
+ "name": "46a-Barlines",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 46a-Barlines.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Different types of (non-repeat) bar lines: default (no setting),\n    regular, dotted, dashed, heavy, light-light, light-heavy, heavy-light,\n    heavy-heavy, tick, short, none.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major R1 | % 1\n  R1 \\bar \"|\" % 2\n  R1 \\bar \";\" % 3\n  R1 \\bar \"!\" % 4\n  R1 \\bar \".\" % 5\n  R1 \\bar \"||\" % 6\n  R1 \\bar \"|.\" % 7\n  R1 \\bar \".|\" % 8\n  R1 \\bar \"..\" % 9\n\n  \\barNumberCheck #10\n  R1 \\bar \"'\" % 10\n  R1 \\bar \",\" % 11\n  R1 \\bar \"\" % 12\n  R1 | % 13\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "46a-Barlines.xml",
+ "version_line": "\\version \"2.27.2\""
+}

@@ -1,0 +1,11 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQAEAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAYDJAgA/1EDD0JAkED/LwBNVHJrAAAAVgD/Aw86dW5pcXVlQ29udGV4dDAAkEpagwCQSgAAkEdagUCQRwAAkEhagwCQSAAAkEVagUCQRQAAkEpagwCQSgAAkEdagUCQRwAAkENagwCQQwAA/y8ATVRyawAAAAsA/1kCAQCQQP8vAE1UcmsAAABBAP8FBUdpcmxzgwD/BQNhbmSBQP8FBGJveXODAP8FBGNvbWWBQP8FA291dIMA/wUCdG+BQP8FBXBsYXksgwD/LwA=",
+ "name": "lyrics-addlyrics-key",
+ "options": {
+  "key": "-2:1"
+ },
+ "output": "% Lily was here -- automatically converted by midi2ly from lyrics-addlyrics.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n\n\n  \\key g \\minor\n    \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 6/8\n  \n  \\tempo 4 = 60\n  \\skip 8*11 \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \":uniqueContext0\"\n  \\skip 8*11 \n}\n\ntrackBchannelB = \\relative c {\n  d''4 b8 c4 a8 \n  | % 2\n  d4 b8 g4 \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n>>\n\n\ntrackCchannelA = {\n  \n\n  \\key g \\minor\n  \\skip 8*11 \n}\n\ntrackC = <<\n  \\context Voice = voiceA \\trackCchannelA\n>>\n\n\ntrackDchannelA = \\lyricmode {\n  \"Girls\" \"and\"8 \"boys\"4 \"come\"8 \n  | % 2\n  \"out\"4 \"to\"8 \"play,\"4 \n}\n\ntrackD = <<\n  \\context Lyrics = voiceA \\trackDchannelA\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n    \\context Lyrics=trackD \\trackD\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "lyrics-addlyrics.midi"
+}

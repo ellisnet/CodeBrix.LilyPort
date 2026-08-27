@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "24f-GraceNote-Slur.xml",
+ "messages": [],
+ "name": "24f-GraceNote-Slur",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 24f-GraceNote-Slur.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A grace note with a slur to the actual note. The <grace> element\n    has no ‘slash’ attribute; since MusicXML does not provide a default value it\n    is up to the application to interpret the grace note as an acciaccatura\n    (with slash) or an appoggiatura (without slash).\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative e'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major | % 24\n  e2 \\grace { g16 ( } e2 ) }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "24f-GraceNote-Slur.xml",
+ "version_line": "\\version \"2.27.2\""
+}

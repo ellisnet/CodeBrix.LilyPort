@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "52a-PageLayout.xml",
+ "messages": [],
+ "name": "52a-PageLayout",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 52a-PageLayout.xml\n\\pointAndClickOff\n\n\\header {\n  title = \\markup \\normal-text \\normalsize \\fontsize #4.295 \\bold\n  \"Layout options\"\n  \"movement-title\" = \"Layout options\"\n  texidoc = \"Several page layout settings: paper size (16cm×9cm), page margins\n    (left / right = 3cm / 2cm, top / bottom = 0.5cm / 0.7cm), system margins\n    (left / right = 1.5cm / 2cm), distances (top-system / system-system = 4cm /\n    3cm), and different fonts.\n\n    There is a line break before bar 3 and a page break before bar 5.\n\n    Finally, we also test four CSS font sizes for <words> elements in bars 2\n    and 3.\n\n    The page number on the first page is set to 8 (and to 12 on the second\n    page).\"\n}\n#(set-global-staff-size 10.727542559055118)\n\\paper {\n  first-page-number = 8\n  print-first-page-number = ##t\n  paper-width = 16.0\\cm\n  paper-height = 9.0\\cm\n  top-margin = 0.5\\cm\n  bottom-margin = 0.7\\cm\n  left-margin = 1.5\\cm\n  right-margin = 2.0\\cm\n  system-system-spacing.basic-distance = 35.83\n  top-system-spacing.basic-distance = 44.44\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major \\pageBreak R1 | % 1\n  <>^\\markup \\fontsize #4.4 \"‘small’ size\" <>_\\markup \\fontsize #6.4\n  \"‘large’ size\" R1 | % 2\n  \\break <>^\\markup \\fontsize #2.4 \"‘xx-small’ size\" <>_\\markup \\fontsize #8.4\n  \"‘xx-large’ size\" R1 | % 3\n  R1 | % 4\n  \\pageBreak R1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "52a-PageLayout.xml",
+ "version_line": "\\version \"2.27.2\""
+}

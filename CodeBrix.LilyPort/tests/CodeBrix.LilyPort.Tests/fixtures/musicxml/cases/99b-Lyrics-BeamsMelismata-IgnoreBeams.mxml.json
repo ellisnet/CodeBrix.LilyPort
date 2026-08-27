@@ -1,0 +1,14 @@
+{
+ "arguments": [],
+ "input_file": "99b-Lyrics-BeamsMelismata-IgnoreBeams.xml",
+ "messages": [
+  "musicxml2ly: warning: Encountered file created by Dolet 3.4 for Sibelius, containing wrong beaming information. All beaming information in the MusicXML file will be ignored"
+ ],
+ "name": "99b-Lyrics-BeamsMelismata-IgnoreBeams",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 99b-Lyrics-BeamsMelismata-IgnoreBeams.xml\n\\pointAndClickOff\n\n\\header {\n  \"id: software\" = \\markup \\column {\n    \\line { \"Sibelius 5.1\" }\n    \\line { \"Dolet 3.4 for Sibelius\" }\n  }\n  texidoc = \"If we properly ignore all beaming information from the Dolet 3 for\n    Sibelius export file, make sure that the lyrics syllables are still assigned\n    to the correct notes.\"\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\once \\omit Staff.TimeSignature c8 a8 c8 a8 c8 g8 b8 r8 | % 1\n  c8 a8 c8 a8 c8 g8 b8 r8 | % 2\n  c8 ( a8 c8 ) a8 c8 ( g8 b8 ) r8 | % 3\n  c8 ( a8 c8 a8 c8 g8 b8 ) r8 \\bar \"|.\"\n}\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  Me -- \\skip1 \\skip1 lis -- ma __ \\skip1 \\skip1 Me -- \\skip1 \\skip1 lis -- ma\n  __ \\skip1 \\skip1 Me -- \\skip1 \\skip1 lis -- ma __ \\skip1 \\skip1 Me -- \\skip1\n  \\skip1 lis -- ma __ \\skip1 \\skip1\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "99b-Lyrics-BeamsMelismata-IgnoreBeams.xml",
+ "version_line": "\\version \"2.27.2\""
+}

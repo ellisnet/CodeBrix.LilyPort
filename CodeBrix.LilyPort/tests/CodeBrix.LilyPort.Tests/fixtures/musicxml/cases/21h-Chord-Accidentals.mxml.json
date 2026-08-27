@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "21h-Chord-Accidentals.xml",
+ "messages": [],
+ "name": "21h-Chord-Accidentals",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 21h-Chord-Accidentals.xml\n\\pointAndClickOff\n\n%% additional definitions required by the score:\n#(define make-bracketed\n   (grob-transformer\n    'stencil\n    (lambda (grob orig)\n      (let* ((paren-stil (grob-interpret-markup\n                          grob\n                          (markup #:musicglyph \"accidentals.leftparen\")))\n             (ext (ly:stencil-extent paren-stil Y))\n             (stil (ly:accidental-interface::print grob))\n             (thick (ly:output-def-lookup (ly:grob-layout grob)\n                                          'line-thickness 0.1))\n             (padding thick)\n             (protrusion (* 2.5 thick))\n             (lb (ly:bracket Y ext thick protrusion))\n             (rb (ly:bracket Y ext thick (- protrusion))))\n        (set! stil (ly:stencil-combine-at-edge stil X 1 rb padding))\n        (set! stil (ly:stencil-combine-at-edge stil X -1 lb padding))\n        stil))))\n\nbracketAcc =\n  \\tweak AccidentalCautionary.parenthesized ##f\n  \\tweak AccidentalCautionary.stencil #make-bracketed \\etc\n\n\n\\header {\n  texidoc = \"A chord with normal, cautionary, and editorial accidentals (from\n    bottom to top).\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPZeroVoiceOne = \\relative des' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 <des fis? \\bracketAcc a?>4 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P0\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPZeroVoiceOne\" {\n          \\PartPZeroVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "21h-Chord-Accidentals.xml",
+ "version_line": "\\version \"2.27.2\""
+}

@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "51c-MultipleMetadata.xml",
+ "messages": [],
+ "name": "51c-MultipleMetadata",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 51c-MultipleMetadata.xml\n\\pointAndClickOff\n\n\\header {\n  copyright = \\markup \\column {\n    \\line { \"Copyright © XXXX by Y. ZZZZ.\" }\n    \\line { \"Released to the public domain.\" }\n  }\n  composer = \\markup \\column {\n    \\line { \"Joe User\" }\n    \\line { \"A. U. Thor\" }\n  }\n  \"id: software\" = \\markup \\column {\n    \\line { \"\\Hand-crafted\\ MusicXML file\" }\n    \\line { \"Very, very hand-crafted\" }\n  }\n  \"id: encoding-date\" = \\markup \\column {\n    \\line { \"2008-02-06\" }\n    \\line { \"2025-07-26\" }\n  }\n  texidoc = \"Some metadata elements can occur multiple times. This test file\n    contains the elements <creator> (type ‘composer’), <rights>, <software>, and\n    <encoding-date> twice.\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\once \\omit Staff.TimeSignature r1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "51c-MultipleMetadata.xml",
+ "version_line": "\\version \"2.27.2\""
+}

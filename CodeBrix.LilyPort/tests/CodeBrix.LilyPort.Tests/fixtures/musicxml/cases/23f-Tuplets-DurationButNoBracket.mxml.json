@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "23f-Tuplets-DurationButNoBracket.xml",
+ "messages": [],
+ "name": "23f-Tuplets-DurationButNoBracket",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 23f-Tuplets-DurationButNoBracket.xml\n\\pointAndClickOff\n\n\\header {\n  \"id: software\" = \"/usr/bin/vi\"\n  \"id: encoding-date\" = \"2007-02-02\"\n  texidoc = \"Tuplets without brackets, using only <time-modification>. The upper\n    staff contains two quarters followed by a quarter triplet. The lower staff\n    holds two eighths, an eighths triplet, four 16th notes, and a 16th\n    sextuplet.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative f' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\key c \\major f4 g4 a4*2/3 b4*2/3\n  c4*2/3 }\n\nPartPOneVoiceTwo = \\relative a, {\n  \\clef \"bass\" \\numericTimeSignature \\time 4/4 \\key c \\major a8 [ b8 ] c8*2/3 [\n  d8*2/3 e8*2/3 ] a,16 [ b16 c16 d16 ] e16*2/3 [ f16*2/3 g16*2/3 a16*2/3 b16*2/3\n  c16*2/3 ] }\n\n\n% The score definition\n\\score {\n  <<\n    \\new PianoStaff = \"P1\" <<\n      \\context Staff = \"1\" <<\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n      \\context Staff = \"2\" <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceTwo\" {\n          \\PartPOneVoiceTwo\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "23f-Tuplets-DurationButNoBracket.xml",
+ "version_line": "\\version \"2.27.2\""
+}

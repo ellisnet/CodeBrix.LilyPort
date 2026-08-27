@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "32c-MultipleNotationChildren.xml",
+ "messages": [],
+ "name": "32c-MultipleNotationChildren",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 32c-MultipleNotationChildren.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"It should not make any difference whether two articulations are\n    given inside two different <notations> elements, inside two different\n    <articulations> children of the same <notations> element, or inside the same\n    <articulations> element. Thus, all three notes should have a staccato and an\n    accent.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative a' {\n  \\clef \"treble\" \\time 3/4 \\key c \\major a4 ^. ^> a4 ^. ^> a4 ^. ^> }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "32c-MultipleNotationChildren.xml",
+ "version_line": "\\version \"2.27.2\""
+}

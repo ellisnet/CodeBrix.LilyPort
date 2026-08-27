@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "24b-ChordAsGraceNote.xml",
+ "messages": [],
+ "name": "24b-ChordAsGraceNote",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 24b-ChordAsGraceNote.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Chords as grace notes. The last (unslashed and beamed) grace group\n    consists of two chords with one tie between the two grace chords and another\n    tie between the last grace chord and the main chord.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    tieWaitForNote = ##t\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major c4 \\slashedGrace { <d f>8 } c4\n  \\slashedGrace { <b d>8 } <a c>4 \\grace { <b d ~>16 [ <g ~ d'>16 ] } <g c>4\n  \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "24b-ChordAsGraceNote.xml",
+ "version_line": "\\version \"2.27.2\""
+}

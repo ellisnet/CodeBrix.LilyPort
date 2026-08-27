@@ -1,0 +1,9 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQADAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDD0JAgwD/LwBNVHJrAAAAGwD/Awp0cmVibGU6b25lAJBOWoMAkE4AAP8vAE1UcmsAAAAZAP8DCGJhc3M6dHdvAJE2WoMAkTYAAP8vAA==",
+ "name": "key-option-all-staves",
+ "options": {},
+ "output": "% Lily was here -- automatically converted by midi2ly from key-option-all-staves.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n  \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = 60\n  \\skip 4 \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"treble:one\"\n  \\skip 4 \n}\n\ntrackBchannelB = \\relative c {\n  fis''4 \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n>>\n\n\ntrackCchannelA = {\n  \n  \\set Staff.instrumentName = \"bass:two\"\n  \\skip 4 \n}\n\ntrackCchannelB = \\relative c {\n  fis \n}\n\ntrackC = <<\n\n  \\clef bass\n  \n  \\context Voice = voiceA \\trackCchannelA\n  \\context Voice = voiceB \\trackCchannelB\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n    \\context Staff=trackC \\trackA\n    \\context Staff=trackC \\trackC\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "key-option-all-staves.midi"
+}

@@ -1,0 +1,14 @@
+{
+ "arguments": [],
+ "input_file": "33i-Ties-NotEnded.xml",
+ "messages": [
+  "musicxml2ly: warning: Encountered unterminated slur:"
+ ],
+ "name": "33i-Ties-NotEnded",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 33i-Ties-NotEnded.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Several ties that have their end tag missing. The end position of\n    the tie starting at position A is at position C. The tie starting at\n    position C has no end tag at all. The tie starting at position D is ended at\n    position E.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    tieWaitForNote = ##t\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major c1 ~ | % 1\n  c1 | % 2\n  c1 ~ | % 3\n  c1 ~ | % 4\n  c1 \\bar \"|.\"\n}\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  A B C D E\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "33i-Ties-NotEnded.xml",
+ "version_line": "\\version \"2.27.2\""
+}

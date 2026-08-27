@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "32b-Articulations-Texts.xml",
+ "messages": [],
+ "name": "32b-Articulations-Texts",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 32b-Articulations-Texts.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Text markup with different CSS font sizes, weights, horizontal\n    positions (using ‘default-x’), and vertical positions (using ‘default-y’),\n    seven in total. The four markups below the staff are positioned immediately\n    before <measure> elements; they should be thus associated with the following\n    bar line. One markup is also drawn in red.\n\n    A trailing up-arrow indicates a ‘placement=\\\"above\\\"’ attribute, a\n    down-arrow means ‘placement=\\\"below\\\"’.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative f' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\key c \\major f1 ^\\markup\n  \"(0,15) normal, medium ↑\" <>_\\markup \\bold \"(-50,-100) bold, medium ↓\" | % 1\n  g1 ^\\markup \\large \"(50,35) normal, large ↑\" <>_\\markup \\large \\bold\n  \"(0,-120) bold, large ↓\" | % 2\n  <> ^\\markup \\small \"(0,55) normal, small ↑\" R1 | % 2\n  <>_\\markup \\small \\bold \"(50,-140) bold, small ↓\" <>_\\markup \\small\n  \\with-color \"#FF0000\" \"(100,-160) normal, small, red ↓\" }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "32b-Articulations-Texts.xml",
+ "version_line": "\\version \"2.27.2\""
+}

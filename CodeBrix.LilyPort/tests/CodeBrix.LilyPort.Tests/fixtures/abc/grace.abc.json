@@ -1,0 +1,12 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X:1\nT:abc2ly grace note bug\nS:(missing square bracket, duration of grace notes)\nM:C\nL:1/8\nK:E Dorian\n{ga}gdgb {a}g>d g<a|\n",
+ "messages": [],
+ "name": "grace",
+ "options": {
+  "beams": false
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"1\"\n  footnotes = \"\"\n  subtitle = \"(missing square bracket, duration of grace notes)\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"abc2ly grace note bug\"\n}\n\n\"voicedefault\" = {\n\\time 4/4 \\key e \\dorian \\grace { g''8 a''8 } g''8 d''8 g''8 b''8 \\grace { a''8 \n} g''8. d''16 g''16 a''8. \\bar \"|\" \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n  >>\n\n  \\layout {}\n  \\midi {}\n}\n",
+ "source": "upstream",
+ "source_name": "grace.abc"
+}

@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "23d-Tuplets-Nested.xml",
+ "messages": [],
+ "name": "23d-Tuplets-Nested",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 23d-Tuplets-Nested.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Tuplets can be nested. The first bar contains a 5:2 tuplet (with\n    16th notes) in the middle of a 3:2 tuple (with eighth notes). The second bar\n    has a 5:2 tuplet at the beginning and at the end (with the tuplet number\n    forced below) of a 3:2 tuple (with the bracket forced above). The third bar\n    changes the <divisions> value and contains a triplet with eighths on the\n    last beat of another triplet with quarter notes.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative b' {\n  \\clef \"treble\" \\time 2/4 \\key c \\major \\tuplet 3/2 {\n    b8 [ b8 ] \\tuplet 5/4 {\n      b16 [ b16 b16 b16 b16 ] }\n    b8 [ b8 ] }\n  | % 1\n  \\tweak TupletBracket.direction #UP \\tuplet 3/2 {\n    \\tweak TupletBracket.direction #DOWN \\tuplet 5/4 {\n      b16 [ b16 b16 b16 b16 ] }\n    b8 [ b8 ] \\tweak TupletBracket.direction #DOWN \\tuplet 5/4 {\n      b16 [ b16 b16 b16 b16 ] }\n  }\n  | % 2\n  \\tuplet 3/2 {\n    b4 c,4 \\tweak TupletBracket.stencil ##f \\tweak TupletNumber.text\n    #(tuplet-number::non-default-tuplet-denominator-text 3) \\tuplet 9/4 {\n      g8*3/2 [ g8*3/2 g8*3/2 ] }\n  }\n  \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "23d-Tuplets-Nested.xml",
+ "version_line": "\\version \"2.27.2\""
+}

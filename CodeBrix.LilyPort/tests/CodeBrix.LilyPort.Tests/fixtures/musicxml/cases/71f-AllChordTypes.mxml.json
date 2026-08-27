@@ -1,0 +1,20 @@
+{
+ "arguments": [],
+ "input_file": "71f-AllChordTypes.xml",
+ "messages": [
+  "musicxml2ly: warning: rests with lyrics are not supported yet",
+  "musicxml2ly: warning: Chord type 'Neapolitan' is not supported.",
+  "musicxml2ly: warning: Chord type 'Italian' is not supported.",
+  "musicxml2ly: warning: Chord type 'French' is not supported.",
+  "musicxml2ly: warning: Chord type 'German' is not supported.",
+  "musicxml2ly: warning: Chord type 'pedal' is not supported.",
+  "musicxml2ly: warning: Chord type 'Tristan' is not supported."
+ ],
+ "name": "71f-AllChordTypes",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 71f-AllChordTypes.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"All chord types defined in MusicXML. The staff will only contain\n    one c’ note (NO chord) for all of them, but the chord names should be\n    properly printed.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major c4 c4 c4 c4 | % 1\n  c4 c4 c4 c4 | % 2\n  c4 c4 c4 c4 | % 3\n  c4 c4 c4 c4 | % 4\n  c4 c4 c4 c4 | % 5\n  c4 c4 c4 c4 | % 6\n  c4 c4 c4 c4 | % 7\n  c4 c4 c4 c4 | % 8\n  c2 c8 c8 r4 | % 9\n\n  \\barNumberCheck #10\n  c4 c4 \\bar \"|.\"\n}\n\nPartPOneVoiceOneChords = \\chordmode {\n  c4 c4:m c4:aug c4:dim | % 1\n  c4:7 c4:maj7 c4:m7 c4:dim7 | % 2\n  c4:aug7 c4:m7.5- c4:maj7m c4:6 | % 3\n  c4:m6 c4:9 c4:maj9 c4:m9 | % 4\n  c4:11 c4:maj11 c4:m11 c4:13.11 | % 5\n  c4:maj13.11 c4:m13 c4:sus2 c4:sus4 | % 6\n  s4 s4 s4 s4 | % 7\n  s4 c4:1.5 s4 c4:1 | % 8\n  fis2 feses8/+c gis8/+dis c4 | % 9\n\n  \\barNumberCheck #10\n  c4:5-^3 c4:6-^1 \\bar \"|.\"\n}\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  major minor augmented diminished dominant \"major-seventh\" \"minor-seventh\"\n  \"diminished-seventh\" \"augmented-seventh\" \"half-diminished\" \"major-minor\"\n  \"major-sixth\" \"minor-sixth\" \"dominant-ninth\" \"major-ninth\" \"minor-ninth\"\n  \"dominant-11th\" \"major-11th\" \"minor-11th\" \"dominant-13th\" \"major-13th\"\n  \"minor-13th\" \"suspended-second\" \"suspended-fourth\" Neapolitan Italians French\n  German pedal power Tristan other Inversion \"Fbb/C\" \"G#/D#\" \"C-3+5b\" \"C-1+6b\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\context ChordNames = \"PartPOneVoiceOneChords\" {\n      \\PartPOneVoiceOneChords\n    }\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "71f-AllChordTypes.xml",
+ "version_line": "\\version \"2.27.2\""
+}

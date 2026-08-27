@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "11f-TimeSignatures-SymbolMeaning.xml",
+ "messages": [],
+ "name": "11f-TimeSignatures-SymbolMeaning",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 11f-TimeSignatures-SymbolMeaning.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Semantically invalid use cases for the ‘symbol’ attribute of\n    <time>. The actual display is application-dependent.\n\n    This test shows a 3/8 time signature with ‘symbol=\\\"cut\\\"’ and a complex\n    1/8+2/4 time signature with ‘symbol=\\\"single-number\\\"’.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative b' {\n  \\clef \"treble\" \\time 3/8 \\key c \\major b4. | % 2\n  \\once \\override Staff.TimeSignature.style = #'single-number \\time #'((1 . 8) (2 . 4))\n  b8 b2 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "11f-TimeSignatures-SymbolMeaning.xml",
+ "version_line": "\\version \"2.27.2\""
+}

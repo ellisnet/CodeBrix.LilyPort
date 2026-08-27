@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "31b-Directions-Order.xml",
+ "messages": [],
+ "name": "31b-Directions-Order",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 31b-Directions-Order.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Using <offset> it is possible to make successive <direction>\n    elements look like being concatenated. However, it is a bad idea in general\n    to do that because it makes the rendering dependent on a program's score\n    formatting.\n\n    In the first bar, the first <direction> element contains a tempo mark and is\n    directly followed by another <direction> element containing a metronome mark\n    that is moved to the right by a positive <offset> element.\n\n    In the second bar, the first <direction> element holds the start of a\n    diminuendo wedge; it is directly followed by another <direction> element\n    containing a dynamics mark. Since the wedge has an <offset> element with a\n    positive value while the dynamics has no such element at all, the dynamics\n    precedes the wedge.\n\n    The wedge ends at or right before the final bar line (i.e., the <direction>\n    element ending the wedge comes after the last <note> element).\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major \\tweak direction #UP \\tempo \\markup\n  \\normal-text \\concat { \\bold Lento \" \" \\normal-text \\smaller { ( \\char ##x200A\n      \\fontsize #-2 \\rhythm { 4 } \\char ##x2009 = \\char ##x2009 56 ) } } c1 | % 1\n  c1 _\\f _\\> <>\\! \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "31b-Directions-Order.xml",
+ "version_line": "\\version \"2.27.2\""
+}

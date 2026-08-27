@@ -1,0 +1,12 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X:1\nT:Church mode (E Dorian)\nM:C\nL:1/8\nK:E Dorian bass\nE<BB>A B>AB<d|F<DA>D B>DA>F|e>ce<g e>Be<g|\n",
+ "messages": [],
+ "name": "kirchentonarten",
+ "options": {
+  "beams": false
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"1\"\n  footnotes = \"\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"Church mode (E Dorian)\"\n}\n\n\"voicedefault\" = {\n\\time 4/4 \\key e \\dorian \\clef \"bass\"\n e'16 b'8. b'8. a'16 b'8. a'16 b'16 d''8. \\bar \"|\" fis'16 d'8. a'8. d'16 b'8. \nd'16 a'8. fis'16 \\bar \"|\" e''8. cis''16 e''16 g''8. e''8. b'16 e''16 g''8. \n\\bar \"|\" \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n  >>\n\n  \\layout {}\n  \\midi {}\n}\n",
+ "source": "upstream",
+ "source_name": "kirchentonarten.abc"
+}

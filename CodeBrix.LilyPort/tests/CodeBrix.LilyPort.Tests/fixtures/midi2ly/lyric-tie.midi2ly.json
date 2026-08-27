@@ -1,0 +1,9 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQADAYBNVHJrAAAAQwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDD0JAmAD/LwBNVHJrAAAAKQD/Aw86dW5pcXVlQ29udGV4dDAAkDxajACQPAAAkDxajACQPAAA/y8ATVRyawAAABwA/wUFYeKAv2GMAP8FCWHigL9h4oC/YYwA/y8A",
+ "name": "lyric-tie",
+ "options": {},
+ "output": "% Lily was here -- automatically converted by midi2ly from lyric-tie.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n  \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = 60\n  \\skip \\breve \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \":uniqueContext0\"\n  \\skip \\breve \n}\n\ntrackBchannelB = \\relative c {\n  c'1 \n  | % 2\n  c \n  | % 3\n  \n}\n\ntrackB = <<\n\n  \\clef bass\n  \n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n>>\n\n\ntrackCchannelA = \\lyricmode {\n  \"a~~~a\" \n  | % 2\n  \"a~~~a~~~a\"4 \" \"2. \n  | % 3\n  \n}\n\ntrackC = <<\n  \\context Lyrics = voiceA \\trackCchannelA\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n    \\context Lyrics=trackC \\trackC\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "lyric-tie.midi"
+}

@@ -1,0 +1,14 @@
+{
+ "arguments": [],
+ "input_file": "33c-Spanners-Slurs.xml",
+ "messages": [
+  "musicxml2ly: warning: Ignoring cross-voice slur:"
+ ],
+ "name": "33c-Spanners-Slurs",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 33c-Spanners-Slurs.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A note can be the end of one slur and the start of a new slur.\n    Also, in MusicXML, nested slurs are possible like in the second measure\n    where one slur goes over all four notes, and another slur goes from the\n    second to the third note.\n\n    The third bar demonstrates a cross-voice slur starting at the first beat in\n    the lower voice and ending on the third beat in the upper voice.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative g' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major \\oneVoice g4 ^( c4 ) ^( a4 ) _( g4 ) | % 1\n  g4 ^( c4 ^\\=2( a4 \\=2) g4 ) | % 2\n  \\voiceOne r2 a4 g4 \\bar \"|.\"\n}\n\nPartPOneVoiceTwo = \\relative g' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major s1*2 | % 2\n  g4 c4 r2 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\voiceOne \\PartPOneVoiceOne\n        }\n        \\context Voice = \"PartPOneVoiceTwo\" {\n          \\voiceTwo \\PartPOneVoiceTwo\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "33c-Spanners-Slurs.xml",
+ "version_line": "\\version \"2.27.2\""
+}

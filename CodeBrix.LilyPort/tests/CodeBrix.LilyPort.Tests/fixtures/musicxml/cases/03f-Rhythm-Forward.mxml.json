@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "03f-Rhythm-Forward.xml",
+ "messages": [],
+ "name": "03f-Rhythm-Forward",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 03f-Rhythm-Forward.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A voice with three <forward> elements in the first measure, putting\n    a quarter note on the second beat, a 16th note on the fourth beat, then\n    filling up the measure to have the correct length. There are no visible\n    rests.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major s4 c4 s4 c16 s8. | % 1\n  c4 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "03f-Rhythm-Forward.xml",
+ "version_line": "\\version \"2.27.2\""
+}

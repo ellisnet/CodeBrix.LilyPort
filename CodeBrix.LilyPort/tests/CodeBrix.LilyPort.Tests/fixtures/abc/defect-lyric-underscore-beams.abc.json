@@ -1,0 +1,17 @@
+{
+  "divergences": [
+    "abc-lyric-underscore-doubled"
+  ],
+  "frozen_version_line": "\\version \u00222.24.0\u0022",
+  "input": "X: 3\nT: Lyric underscore extender\nM: 4/4\nL: 1/4\nK: C\nC D E F | G A B c |\nw: one _ two _ three four _ five\n",
+  "messages": [],
+  "name": "defect-lyric-underscore-beams",
+  "options": {
+    "beams": true
+  },
+  "output": "\\version \u00222.24.0\u0022\n\n\\header {\n  crossRefNumber = \u00223\u0022\n  footnotes = \u0022\u0022\n  tagline = \u0022LilyPond 2.27.2 was here -- automatically converted from ABC\u0022\n  title = \u0022Lyric underscore extender\u0022\n}\n\n\u0022wordsdefaultV1\u0022 = \\lyricmode {\none __ _ _ two __ _ _ three four __ _ _ five \n}\n\n\u0022voicedefault\u0022 = {\n\\numericTimeSignature \\time 4/4 \\key c \\major c\u00274 d\u00274 e\u00274 f\u00274 \\bar \u0022|\u0022 g\u00274 a\u00274 \nb\u00274 c\u0027\u00274 \\bar \u0022|\u0022 \n}\n\n\n\\score {\n  \u003C\u003C\n    \\context Staff = \u0022default\u0022 {\n      \\\u0022voicedefault\u0022\n    }\n    \\addlyrics {\n      \\\u0022wordsdefaultV1\u0022\n    }\n  \u003E\u003E\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #\u0027()\n    }\n  }\n  \\midi {}\n}\n",
+  "port_messages": [],
+  "port_output": "\\version \u00222.24.0\u0022\n\n\\header {\n  crossRefNumber = \u00223\u0022\n  footnotes = \u0022\u0022\n  tagline = \u0022LilyPond 2.27.2 was here -- automatically converted from ABC\u0022\n  title = \u0022Lyric underscore extender\u0022\n}\n\n\u0022wordsdefaultV1\u0022 = \\lyricmode {\none __ _ two __ _ three four __ _ five \n}\n\n\u0022voicedefault\u0022 = {\n\\numericTimeSignature \\time 4/4 \\key c \\major c\u00274 d\u00274 e\u00274 f\u00274 \\bar \u0022|\u0022 g\u00274 a\u00274 \nb\u00274 c\u0027\u00274 \\bar \u0022|\u0022 \n}\n\n\n\\score {\n  \u003C\u003C\n    \\context Staff = \u0022default\u0022 {\n      \\\u0022voicedefault\u0022\n    }\n    \\addlyrics {\n      \\\u0022wordsdefaultV1\u0022\n    }\n  \u003E\u003E\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #\u0027()\n    }\n  }\n  \\midi {}\n}\n",
+  "source": "probe",
+  "source_name": "defect-lyric-underscore.abc"
+}

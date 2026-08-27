@@ -1,0 +1,107 @@
+PARITY 19 -- working notes (probe dir)
+================================================================================
+
+CYCLE 1 -- `ly:stencil-empty?' ACCEPTED ITS AXIS ARGUMENT AND DISCARDED IT
+--------------------------------------------------------------------------------
+Found from `markup-conditionals-single-page' (-2.0659 on all ten music marks,
+header markup byte-identical and unmoved).
+
+  Bindings/RegistryPrimitives.cs:206 read
+      DefinePrimitive("ly:stencil-empty?", 1, 2, a => !(a[0] is Stencil s) || s.IsEmpty)
+  -- declared arity 1..2, ignored argument 2.  Upstream (stencil-scheme.cc)
+  answers `s->is_empty (from_scm<Axis> (axis))' when the argument is supplied.
+  `Stencil::is_empty (Axis)' HAD been ported faithfully, as Stencil.IsEmptyOn,
+  and this -- its only Scheme consumer -- never called it.  Trap 17a's shape,
+  and PARITY 17's `IsMusicEncoded'-with-zero-callers again.
+
+EIGHT vendored call sites pass an axis, and none of their rules had ever run:
+  lily/stencil.scm:164-165   stack-lines: a Y-empty, X-non-empty line is
+                             promoted to Y=(0 . 0) so it "registers as a line
+                             of its own"
+  lily/titling.scm:87-88     marked-up-headfoot: the same rule for headers,
+                             footers and titles
+  lily/stencil.scm:662-663   box-stencil's h-space?/v-space?: whether a box
+                             around a pure spacer keeps the raw extents
+  lily/define-markup-commands.scm:1448-1449  \with-dimension-arrows
+  lily/define-markup-commands.scm:2106       fill-line/justify spread
+
+MEASURED on the failing file: the score title is `\column { \if
+\should-print-all-headers { \bookTitleMarkup \hspace #1 } \fill-line { piece
+opus } }'.  With print-all-headers on, its first line is X=[0,1] (the \hspace)
+and Y-EMPTY.  stack-lines should promote that to Y=(0 . 0); the port left it
+Y-empty, so `Paper_book::get_score_title' skipped `align_to (Y_AXIS, UP)', the
+title prob reached `Page_layout_problem::append_prob' with an empty Y interval,
+`minimum_distance = iv[UP] - bottom_skyline_.max_height ()' was -inf, and the
+header height never constrained the first spring.
+
+  BEFORE  spring[0] ideal=4 min=0        (music at 4+5 = 9.0 below top margin)
+  AFTER   spring[0] ideal=4 min=6.0659   (= header height 5.0659 + padding 1)
+  ORACLE  music at 11.0649 below top margin; 6.0659 + 5 = 11.0659.  Fits.
+
+
+RE-ATTRIBUTION -- TWO OF THE FOUR "SUB-0.03 HORIZONTAL" ROWS ARE THE FONT BUILD,
+NOT THE ENGINE (trap 27a).  MEASURED, not asserted.
+--------------------------------------------------------------------------------
+`ft_decompose.py' over BOTH emmentaler-20 builds (selfcheck run first: 663
+glyphs, 0 bbox mismatches on each).  upem = 1000 and emmentaler-20's em is the
+20pt staff height = 4 staff spaces, so ONE FONT UNIT = 0.004 staff spaces.
+
+  glyph                     port bbox            oracle bbox          delta
+  accidentals.mensuralM1    (-13,-91,131,464)    (-13,-91,133,464)    -2 units
+  accidentals.hufnagelM1    (-22,-96,147,472)    (-22,-96,144,472)    +3 units
+  scripts.trill             (-323,-11,277,540)   (-322,-11,277,540)   -1 unit
+  noteheads.d2fa/.d2faThin  IDENTICAL
+  noteheads.u2fa/.u2faThin  IDENTICAL
+
+  accidental-ancient          -0.0120  = 3 units x 0.004                  ✓
+  markup-with-true-dimensions +0.0127  = 1 unit x 0.004 x 2^(10/6)        ✓
+                              +0.0254  = the same, twice                  ✓
+    (the file is \fontsize #10, magnification 3.1748)
+
+tools/font-build/README.txt §7 already recorded this: "Largest observed:
+clefs.hufnagel.do_change and accidentals.mensuralM1, both 3 units", and named
+the ONE code path that consults an outline bbox.  `\with-true-dimensions' is
+that path by definition.  This is D43's class exactly (R9), and the two rows
+need a RULING, not a fix.
+
+  ⚠ collision-head-solfa-fa and dead-notes are NOT this: their glyphs are
+    byte-identical between the builds.  They stay real work.
+
+
+ATTRIBUTION FROM THE SWEEP'S OWN DIAGNOSTICS (free, and it named two rows)
+--------------------------------------------------------------------------------
+SEVEN corpus files print "compressing over-full page by N staff-spaces".  Diffing
+the port's N against the oracle's reference/diagnostics:
+
+  auto-breaks                          4.8  /  4.8   agree
+  page-overflow-compression            1.4  /  1.4   agree
+  ssaattbb-template-with-all-staves    4.9  /  4.9   agree
+  stencil-expressions                  8.7  /  9.2   ⚠ DIFFER by 0.5
+
+`stencil-expressions-1' is a residue row (+-0.2205 on 331 marks) and this is its
+mechanism named for free: the port's page content is 0.5 staff-spaces SHORTER, so
+the compression redistribution differs and every system on the page moves.  The
+diagnostics gate had already flagged the same file as its one remaining
+TEXT-DIFFERS ("same sentence, different NUMBER"), which is the same fact.
+
+⚠ ssaattbb-template-with-all-staves compresses by the SAME amount on both engines
+and its 333 marks still drift -0.011..-0.018.  Different mechanism; do not fold
+the two together.
+
+
+THE REPEAT-SIGN FAMILY -- WHAT THE ORACLE ACTUALLY DOES
+--------------------------------------------------------------------------------
+A four-rung A/B-on-input ladder (probe-rs-v0..v3.ly: staff-space override on/off
+x line-positions override on/off), rendered on the pinned oracle:
+
+    v0  staff refpoints at 28.7622 / 37.7622 / 46.7622
+    v1  ditto          v2  ditto          v3  ditto
+
+EXACTLY 9.0 apart in every rung -- which is `staff-staff-spacing''s basic-distance,
+and it does NOT move when the staff-space or line-positions overrides come off.
+So the oracle's separation is the SPRING SOLUTION, not the skyline packing: the
+overrides change each staff's own line span and nothing about where it sits.
+
+The port's corpus deltas put its staves 8.9544 apart (9.0 - 0.0456), which is what
+skyline-distance + padding would give.  ⚠ NOT yet confirmed against the port --
+the confirming run needs a build and the cycle-2/3 sweep held the build slot.

@@ -1,0 +1,14 @@
+{
+ "arguments": [],
+ "input_file": "33k-Tie-Types.xml",
+ "messages": [
+  "musicxml2ly: warning: Ignoring cross-voice tie:"
+ ],
+ "name": "33k-Tie-Types",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 33k-Tie-Types.xml\n\\pointAndClickOff\n\n%% additional definitions required by the score:\nD = \\tweak Stem.direction #DOWN \\etc\nU = \\tweak Stem.direction #UP \\etc\n\n\n\\header {\n  texidoc = \"Varies tie types.\n\n    In measure 1, there is a cross-voice tie between beat 1 (in voice 1) and\n    beat 2 (in voice 2). On beat 4, there is a enharmonic tie to the first note\n    in measure 2.\n\n    In measure 2, there are three “arpeggio ties” starting at the sixth,\n    seventh, and eighth eighth note, respectively, tying to a chord on the first\n    beat in measure 3.\n\n    In measure 4, there is a laissez-vibrer tie on the eighth note.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    tieWaitForNote = ##t\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative g' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\key c \\major \\oneVoice \\U g4\n  \\voiceOne \\U a4 \\U b4 \\U ais4 ~ | % 1\n  \\oneVoice bes4 r4 r8 e,8 ~ [ g8 ~ c8 ~ ] | % 2\n  <e, g c>2 r2 | % 3\n  r4 g'8 \\laissezVibrer r8 r2 \\bar \"|.\"\n}\n\nPartPOneVoiceTwo = \\relative g' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\key c \\major s4 \\D g8 [ \\D fis8\n  ] \\D g4 \\D cis,8 e8\\rest s1*3 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\voiceOne \\PartPOneVoiceOne\n        }\n        \\context Voice = \"PartPOneVoiceTwo\" {\n          \\voiceTwo \\PartPOneVoiceTwo\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "33k-Tie-Types.xml",
+ "version_line": "\\version \"2.27.2\""
+}

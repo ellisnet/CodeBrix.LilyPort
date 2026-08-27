@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "46c-Midmeasure-Clef.xml",
+ "messages": [],
+ "name": "46c-Midmeasure-Clef",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 46c-Midmeasure-Clef.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"A clef change in the middle of a measure, using either an implicit\n    measure (as done for the second half of measure 2) with an <attributes>\n    element at its beginning, or placing an <attributes> element at the middle\n    of the measure (as done in measure 3).\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\clef \"treble\" \\time 4/4 \\key c \\major R1 | % 1\n  c4 c4 \\bar \"\"\n  \\clef \"mezzosoprano\" c4 c4 | % 2\n  c4 c4 \\clef \"treble\" c4 c4 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "46c-Midmeasure-Clef.xml",
+ "version_line": "\\version \"2.27.2\""
+}

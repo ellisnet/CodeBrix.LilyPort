@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "02a-Rests-Durations.xml",
+ "messages": [],
+ "name": "02a-Rests-Durations",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 02a-Rests-Durations.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"All different rest lengths: A two-bar multi-measure rest, a whole\n    rest, a half rest, etc., until a 1024th-rest, then the same with dotted\n    durations. The last bar is a full-measure rest with the attribute\n    ‘measure=\\\"no\\\"’.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n    \\override MultiMeasureRest.expand-limit = 1\n  }\n  \\context {\n    \\Score\n    skipBars = ##t\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\numericTimeSignature \\time 2/2 \\key c \\major R1*2 | % 2\n  R1 | % 3\n  r2 r4 r8 r16 r32 r64 r128 r256 r512 r1024 r1024 \\break | % 4\n  \\time 3/2 r2. r4. r8. r16. r32. r64. r128. r256. r512. r1024. r1024. | % 5\n  r1. \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "02a-Rests-Durations.xml",
+ "version_line": "\\version \"2.27.2\""
+}

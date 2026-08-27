@@ -1,0 +1,83 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <RootNamespace>Lily.Docs</RootNamespace>
+    <AssemblyName>Lily.Docs</AssemblyName>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!--
+    The two Texinfo packages are PINNED AT ONE VERSION AND MOVE TOGETHER. Bumping
+    one without the other is the mistake this comment exists to prevent (the same
+    pin discipline the CodeBrix.LilyScheme reference carries). Texinfo2Pdf brings
+    Texinfo2Html transitively; it is named anyway so the pin is visible in one
+    place and so neither can drift.
+  -->
+  <ItemGroup>
+    <PackageReference Include="CodeBrix.Texinfo2Html.MitLicenseForever" Version="1.0.238.1201" />
+    <PackageReference Include="CodeBrix.Texinfo2Pdf.MitLicenseForever" Version="1.0.238.1201" />
+  </ItemGroup>
+
+  <!--
+    NO NATIVE PACKAGE, AND NONE MAY RETURN. The whole chain - Texinfo2Pdf ->
+    CodeBrix.PdfDocCreate.Html2Pdf -> its SVG engine (CodeBrix.Imaging.Drawing.NoSkia)
+    - is fully managed on every operating system, and the engraved SVG pictures land
+    in the PDF as VECTOR content (Options.Html.SvgPlacement = Vector, the package
+    default, set and read back in ManualRenderer.ApplyPdfOptions and frozen as
+    SVG_PLACEMENT in every expected-warnings/*-pdf.tsv). Decision D52 - the shipped
+    CodeBrix.LilyPort package must never carry a native reference - is satisfied by
+    construction.
+    //was previously: a SkiaSharp.NativeAssets.Linux reference, 2026-08-21 to 2026-08-26,
+    //while Html2Pdf still rasterized SVG through SkiaSharp.
+  -->
+
+  <!--
+    CodeBrix.LilyPort references its sub-assemblies with PrivateAssets="all" so the
+    package ships as one unit, which means the Engine does NOT flow transitively.
+    Named directly, exactly as DocsDriver does, for the one thing it needs: reading
+    the vendored ly/generate-documentation.ly out of the Engine's embedded
+    resources rather than off a source path that only exists in a checkout.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\CodeBrix.LilyPort\CodeBrix.LilyPort.csproj" />
+    <ProjectReference Include="..\..\..\..\src\CodeBrix.LilyPort.Engine\CodeBrix.LilyPort.Engine.csproj" />
+  </ItemGroup>
+
+  <!--
+    The two GFDL macro files the Internals Reference cannot render without
+    (decision D49(a)). Vendored so the tool works without a lilypond checkout;
+    byte-identical to ../../../Documentation/en/, which VendoredAssetTests fences.
+  -->
+  <ItemGroup>
+    <None Include="..\..\assets\en\*.itexi" Link="assets\en\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!--
+    Decision D57 (2026-08-19). Two more vendored sets, copied beside the assembly for
+    the same reason assets/en is: the tool must run out of its output directory with no
+    repository present.
+
+      bib/     the five bibliographies translated ONCE by the BibTeX oracle, plus the
+               .bst style program that produced them (reference only — nothing executes
+               it). The essay manual cannot render its literature list without three of
+               these; upstream makes them at build time and they exist in no checkout.
+      staged/  ROADMAP and code-review-checklist.md, which the Contributor's Guide prints
+               verbatim. Upstream stages them out of the source tree the same way.
+
+    ⚠ Globbed rather than named so a re-sync that adds a file does not silently fail to
+    copy it — the MANIFEST.sha256 gates are what fence the CONTENT.
+  -->
+  <ItemGroup>
+    <None Include="..\..\assets\bib\*" Link="assets\bib\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\assets\staged\*" Link="assets\staged\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

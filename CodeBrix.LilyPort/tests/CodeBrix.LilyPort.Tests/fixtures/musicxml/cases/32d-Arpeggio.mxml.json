@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "32d-Arpeggio.xml",
+ "messages": [],
+ "name": "32d-Arpeggio",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 32d-Arpeggio.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Different arpeggio kinds and directions.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\key c \\major \\once \\omit Staff.TimeSignature <c e' g>4\n  \\arpeggio r4 \\arpeggioArrowUp <c e' g>4 \\arpeggio \\arpeggioNormal r4 | % 1\n  \\arpeggioArrowDown <c e' g>4 \\arpeggio \\arpeggioNormal r4 \\arpeggioBracket <c\n    e' g>4 \\arpeggio \\arpeggioNormal r4 | % 2\n  <c e' g>4 \\offset positions #'(4.5 . 0.0) \\arpeggio r4 \\arpeggioBracket <c e'\n    g>4 \\offset positions #'(4.5 . 0.0) \\arpeggio \\arpeggioNormal r4 \\bar \"|.\"\n}\n\nPartPOneVoiceOneLyricsOne = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  normal up down arpeggio partial partial\n}\n\nPartPOneVoiceOneLyricsTwo = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  \\skip1 \\skip1 \\skip1 bracket arpeggio arpeggio\n}\n\nPartPOneVoiceOneLyricsThree = \\lyricmode {\n  \\set ignoreMelismata = ##t\n  \\set includeGraceNotes = ##t\n  \\skip1 \\skip1 \\skip1 \\skip1 \\skip1 bracket\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsOne\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsTwo\n        }\n        \\new Lyrics \\lyricsto \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOneLyricsThree\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "32d-Arpeggio.xml",
+ "version_line": "\\version \"2.27.2\""
+}

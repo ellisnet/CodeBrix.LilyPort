@@ -1,0 +1,9 @@
+{
+ "frozen_version_line": "\\version \"2.14.0\"",
+ "messages": [],
+ "midi_base64": "TVRoZAAAAAYAAQACAYBNVHJrAAAAlwD/AQljcmVhdG9yOiAA/wEeTGlseVBvbmQgMi4yNy4yICAgICAgICAgICAgICAgAP9YBAQCGAgA/1EDD0JAjAD/BgTwnYSLjAD/BgTwnYSMpAD/BgjwnYSL8J2Ei4wA/wYI8J2EjPCdhIykAP8GD/CdhIvigIoz4oCK8J2Ei4wA/wYP8J2EjOKAijPigIrwnYSMmAD/LwBNVHJrAAAAeQD/AwVcbmV3OgCQPFqMAJA8AACQPlqMAJA+AACQQFqMAJBAAACQQVqMAJBBAACQPFqMAJA8AACQPlqMAJA+AACQQFqMAJBAAACQQVqMAJBBAACQPFqMAJA8AACQPlqMAJA+AACQQFqMAJBAAACQQVqMAJBBAAD/LwA=",
+ "name": "repeat-segno",
+ "options": {},
+ "output": "% Lily was here -- automatically converted by midi2ly from repeat-segno.midi\n\\version \"2.14.0\"\n\n\\layout {\n  \\context {\n    \\Voice\n    \\remove Note_heads_engraver\n    \\consists Completion_heads_engraver\n    \\remove Rest_engraver\n    \\consists Completion_rest_engraver\n  }\n}\n\ntrackAchannelA = {\n  \n  % [TEXT_EVENT] creator: \n  \n  % [TEXT_EVENT] LilyPond 2.27.2               \n  \n  \\time 4/4\n  \n  \\tempo 4 = 60\n  \\skip 1 \n  | % 2\n  \n  % [MARKER] ~~~~\n  \\skip 1 \n  | % 3\n  \n  % [MARKER] ~~~~\n  \\skip \\breve. \n  % [MARKER] ~~~~~~~~\n  \\skip 1 \n  | % 7\n  \n  % [MARKER] ~~~~~~~~\n  \\skip \\breve. \n  % [MARKER] ~~~~~~~3~~~~~~~\n  \\skip 1 \n  | % 11\n  \n  % [MARKER] ~~~~~~~3~~~~~~~\n  \\skip \\breve \n}\n\ntrackA = <<\n  \\context Voice = voiceA \\trackAchannelA\n>>\n\n\ntrackBchannelA = {\n  \n  \\set Staff.instrumentName = \"\\new:\"\n  \\skip \\maxima. \n}\n\ntrackBchannelB = \\relative c {\n  c'1 \n  | % 2\n  d \n  | % 3\n  e \n  | % 4\n  f \n  | % 5\n  c \n  | % 6\n  d \n  | % 7\n  e \n  | % 8\n  f \n  | % 9\n  c \n  | % 10\n  d \n  | % 11\n  e \n  | % 12\n  f \n  | % 13\n  \n}\n\ntrackB = <<\n  \\context Voice = voiceA \\trackBchannelA\n  \\context Voice = voiceB \\trackBchannelB\n>>\n\n\n\\score {\n  <<\n    \\context Staff=trackB \\trackA\n    \\context Staff=trackB \\trackB\n  >>\n  \\layout {}\n  \\midi {}\n}\n",
+ "source_name": "repeat-segno.midi"
+}

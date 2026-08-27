@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "24g-GraceNote-Dynamics.xml",
+ "messages": [],
+ "name": "24g-GraceNote-Dynamics",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 24g-GraceNote-Dynamics.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Grace notes in combination with dynamics. The ‘f’ sign is located\n    on the first grace note (using a <direction> element), followed by a\n    diminuendo wedge, and the ‘p’ sign is on the main beat (again using\n    <direction>).\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative g'' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 \\key c \\major \\grace { g16 [\n    _\\f _\\> f16 e16 d16 ] } c4 \\! _\\p }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "24g-GraceNote-Dynamics.xml",
+ "version_line": "\\version \"2.27.2\""
+}

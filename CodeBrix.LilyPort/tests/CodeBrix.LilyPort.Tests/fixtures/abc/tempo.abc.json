@@ -1,0 +1,12 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X: 1\nT: Tempo marks\nL: 1/4\nK: C bass\nQ:1/4=120\nCEGc | [Q: \"Andante\" 1/2=66] CEGc |]\n\n",
+ "messages": [],
+ "name": "tempo",
+ "options": {
+  "beams": false
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"1\"\n  footnotes = \"\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"Tempo marks\"\n}\n\ncadenzaMeasure = {\n  \\cadenzaOff\n  \\partial 1024 s1024\n  \\cadenzaOn\n}\n\n\"voicedefault\" = {\n\\key c \\major \\clef \"bass\"\n \\tempo 4 = 120\n \\once \\omit Staff.TimeSignature\n \\cadenzaOn\n c'4 e'4 g'4 c''4 \\cadenzaMeasure \\bar \"|\" \\tempo \"Andante\" 2 = 66\n c'4 e'4 g'4 c''4 \\cadenzaMeasure \\bar \"|.\" \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n  >>\n\n  \\layout {}\n  \\midi {}\n}\n",
+ "source": "upstream",
+ "source_name": "tempo.abc"
+}

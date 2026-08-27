@@ -1,0 +1,14 @@
+{
+ "arguments": [
+  "--nb"
+ ],
+ "input_file": "03a-Rhythm-Durations.xml",
+ "messages": [],
+ "name": "03a-Rhythm-Durations-no-beaming",
+ "options": "--nb",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 03a-Rhythm-Durations.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"All note durations, from maxima, long, brevis, whole, etc., until\n    1024th. First with their plain values, then dotted, and finally\n    double-dotted.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c'' {\n  \\clef \"treble\" \\time 16/2 \\key c \\major \\tweak style #'baroque c\\maxima | % 1\n  c\\longa c\\breve c1 c2 c4 c8 c16 c32 c64 c128 c256 c512 c1024 c1024 | % 2\n  \\time 24/2 \\tweak style #'baroque c\\maxima. | % 3\n  c\\longa. c\\breve. c1. c2. c4. c8. c16. c32. c64. c128. c256. c512. c1024. c1024.\n  | % 4\n  \\time 28/2 \\tweak style #'baroque c\\maxima.. | % 5\n  c\\longa.. c\\breve.. c1.. c2.. c4.. c8.. c16.. c32.. c64.. c128.. c256.. c512..\n  c1024.. c1024.. \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "variant",
+ "source_name": "03a-Rhythm-Durations.xml",
+ "version_line": "\\version \"2.27.2\""
+}

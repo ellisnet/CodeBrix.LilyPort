@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "21c-Chords-ThreeNotesDuration.xml",
+ "messages": [],
+ "name": "21c-Chords-ThreeNotesDuration",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 21c-Chords-ThreeNotesDuration.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Some three-note chords, with various durations.\"\n}\n\\layout {\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPZeroVoiceOne = \\relative f' {\n  \\clef \"treble\" \\numericTimeSignature \\time 4/4 <f a c>4. <a c g'>8 <a f c'>4\n  <a f c'>4 | % 1\n  <a f e'>4 <a f f'>4 <a f d'>2 }\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P0\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPZeroVoiceOne\" {\n          \\PartPZeroVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "21c-Chords-ThreeNotesDuration.xml",
+ "version_line": "\\version \"2.27.2\""
+}

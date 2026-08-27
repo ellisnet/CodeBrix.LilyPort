@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="SilverAssertions.ApacheLicenseForever" Version="1.0.49" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CodeBrix.LilyPort.Engine\CodeBrix.LilyPort.Engine.csproj" />
+  </ItemGroup>
+
+  <!--
+    The font-metadata tests need a real Emmentaler to read. These are the fonts this
+    repo builds and ships from its own vendored mf/ sources, so this is an in-repo
+    fixture, not an external dependency.
+  -->
+  <ItemGroup>
+    <None Include="..\..\assets\fonts\otf\emmentaler-20.otf"
+          Link="TestFonts\emmentaler-20.otf"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\assets\fonts\otf\emmentaler-brace.otf"
+          Link="TestFonts\emmentaler-brace.otf"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

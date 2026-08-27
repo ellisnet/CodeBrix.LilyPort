@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "72c-TransposingInstruments-Change.xml",
+ "messages": [],
+ "name": "72c-TransposingInstruments-Change",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 72c-TransposingInstruments-Change.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"An instrument change from one transposition (Clarinet in Eb) to\n    another transposing instrument (Clarinet in Bb). The displayed instrument\n    name should also be updated.\n\n    The whole piece is in Bb major (sounding), so first the key signature should\n    be one flat, after the change it should have no accidentals.\n\n    Both the instrument name and instrument name abbreviation use the\n    <accidental-text> element to display a proper ‘flat’ glyph.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative c' {\n  \\clef \"treble\" \\time 4/4 \\key g \\major \\transposition es' c1 | % 1\n  \\key c \\major \\transposition bes \\set Staff.instrumentName = \\markup \\concat {\n    \"Clarinet in B\" \\tiny \\number \"♭\" } \\set Staff.shortInstrumentName = \\markup\n  \\concat { \"Cl. (B\" \\tiny \\number \"♭\" \")\" } c1 \\break | % 2\n  c1 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\set Staff.instrumentName = \\markup \\concat { \"Clarinet in E\" \\tiny\n        \\number \"♭\" }\n      \\set Staff.shortInstrumentName = \\markup \\concat { \"Cl. (E\" \\tiny \\number\n        \"♭\" \")\" }\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "72c-TransposingInstruments-Change.xml",
+ "version_line": "\\version \"2.27.2\""
+}

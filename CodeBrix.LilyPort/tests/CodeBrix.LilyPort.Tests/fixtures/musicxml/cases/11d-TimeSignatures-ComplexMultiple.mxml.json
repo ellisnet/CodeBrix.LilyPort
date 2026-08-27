@@ -1,0 +1,12 @@
+{
+ "arguments": [],
+ "input_file": "11d-TimeSignatures-ComplexMultiple.xml",
+ "messages": [],
+ "name": "11d-TimeSignatures-ComplexMultiple",
+ "options": "defaults",
+ "oracle_crash": null,
+ "output": "\\version \"2.27.2\"\n% automatically converted by musicxml2ly from 11d-TimeSignatures-ComplexMultiple.xml\n\\pointAndClickOff\n\n\\header {\n  texidoc = \"Complex time signatures with separate fractions displayed:\n    3/8+2/8+3/4 and 5/2+1/8.\"\n}\n\\layout {\n  \\context {\n    \\Staff\n    printKeyCancellation = ##f\n  }\n  \\context {\n    \\Score\n    autoBeaming = ##f\n  }\n}\nPartPOneVoiceOne = \\relative b' {\n  \\clef \"treble\" \\time #'((3 . 8) (2 . 8) (3 . 4)) \\key c \\major b8 [ b8 b8 ] b8\n  [ b8 ] b4 b4 b4 | % 1\n  \\time #'((5 . 2) (1 . 8)) a\\breve a2 a8 \\bar \"|.\"\n}\n\n\n% The score definition\n\\score {\n  <<\n    \\new Staff = \"P1\" <<\n      \\context Staff <<\n        \\override Staff.BarLine.allow-span-bar = ##f\n        \\mergeDifferentlyDottedOn\n        \\mergeDifferentlyHeadedOn\n        \\context Voice = \"PartPOneVoiceOne\" {\n          \\PartPOneVoiceOne\n        }\n      >>\n    >>\n  >>\n  \\layout {}\n  % To create MIDI output, uncomment the following line:\n  % \\midi { \\tempo 4 = 100 }\n}\n\n",
+ "source": "upstream",
+ "source_name": "11d-TimeSignatures-ComplexMultiple.xml",
+ "version_line": "\\version \"2.27.2\""
+}

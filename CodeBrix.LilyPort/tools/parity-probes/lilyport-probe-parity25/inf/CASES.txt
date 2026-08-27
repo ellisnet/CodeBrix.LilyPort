@@ -1,0 +1,12 @@
+z0    digit 0, advance 366
+zsp   U+0020 space, advance 192
+zi    U+0069, UNMAPPED
+zq    U+0071, UNMAPPED
+zat   U+0040, UNMAPPED
+zthn  U+2009 thin space, advance 66
+zfig  U+2007 figure space, advance 400
+b0    digit 0 at magstep 2
+bi    UNMAPPED at magstep 2
+bsp   space at magstep 2
+c0    digit 0 at magstep 4
+ci    UNMAPPED at magstep 4

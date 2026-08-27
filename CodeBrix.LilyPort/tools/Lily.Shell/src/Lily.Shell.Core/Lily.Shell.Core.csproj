@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+
+    <!-- Match the namespace used by the app code -->
+    <RootNamespace>Lily.Shell</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.11" />
+    <PackageReference Include="CodeBrix.Platform.ApacheLicenseForever" Version="1.0.231.233" />
+    <!-- ⚠ THESE TWO MOVE WITH THE TEXINFO PIN. The 2026-08-26 Texinfo pair
+         (Texinfo2Pdf 1.0.238.1201 -> Html2Pdf 1.0.238.1192) asks for Roboto
+         >= 1.0.238.528 and Roboto Mono >= 1.0.238.534, and a lower pin here is a
+         package DOWNGRADE, which this solution treats as an error. Bumped in the
+         P6-A session, with the Lily.Docs ProjectReference the same edit had
+         dropped. -->
+    <PackageReference Include="CodeBrix.Platform.Fonts.Roboto.OflLicenseForever" Version="1.0.238.528" />
+    <!-- Roboto Mono - the terminal surface's monospace font (app chrome stays Roboto) -->
+    <PackageReference Include="CodeBrix.Platform.Fonts.RobotoMono.OflLicenseForever" Version="1.0.238.534" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\libs\Lily.Shell.Kernel\Lily.Shell.Kernel.csproj" />
+    <ProjectReference Include="..\libs\Lily.Shell.TerminalView\Lily.Shell.TerminalView.csproj" />
+  </ItemGroup>
+
+  <!-- The in-process LilyPort engine. The facade nuget packs its sub-assemblies
+       with PrivateAssets="all", so an in-repo ProjectReference consumer must
+       reference all four projects explicitly (a nuget consumer needs only the
+       one CodeBrix.LilyPort.GplLicenseForever package). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\CodeBrix.LilyPort\CodeBrix.LilyPort.csproj" />
+    <ProjectReference Include="..\..\..\..\src\CodeBrix.LilyPort.Engine\CodeBrix.LilyPort.Engine.csproj" />
+    <ProjectReference Include="..\..\..\..\src\CodeBrix.LilyPort.Backends\CodeBrix.LilyPort.Backends.csproj" />
+    <ProjectReference Include="..\..\..\..\src\CodeBrix.LilyPort.Parsing\CodeBrix.LilyPort.Parsing.csproj" />
+  </ItemGroup>
+
+  <!-- Lily.Docs - the Phase-5 documentation vehicle, so the shell's `docs'
+       command renders manuals in this process rather than shelling out to a
+       tool the user may not have built (decision D52: a repo tool PLUS a
+       Lily.Shell command).
+
+       ⚠ THIS REFERENCE BRINGS THE Texinfo -> Html2Pdf CHAIN IN, AND THAT CHAIN IS
+       FULLY MANAGED. Since the 2026-08-26 package bump (Texinfo2Pdf 1.0.238.626 ->
+       Html2Pdf 1.0.238.580 -> CodeBrix.Imaging.Drawing.NoSkia) it contains no SkiaSharp
+       and no native library; it costs managed assemblies and font packages only. The
+       chain is still refused for CodeBrix.LilyPort itself (D52: the shipped package
+       must not carry it); Lily.Shell ships nothing. The SkiaSharp the shell's desktop
+       heads DO carry comes from CodeBrix.Platform's runtime, as in every Platform
+       application, and has nothing to do with this reference.
+
+       ⚠ RESTORED 2026-08-26 (P6-A session). The 2026-08-26 Texinfo pin bump rewrote
+       the comment above and deleted the ItemGroup below with it, so this solution had
+       stopped compiling at HEAD d1e07a8: DocsCommand and DocsRunner reference
+       Lily.Docs and nothing supplied it. The comment the same edit wrote says the
+       reference is kept, so the deletion was not the intent. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Lily.Docs\src\Lily.Docs\Lily.Docs.csproj" />
+  </ItemGroup>
+
+  <!-- The Emmentaler faces: the engine's font layer probes <appdir>/fonts/otf.
+       CopyToOutputDirectory content flows to every head through the
+       ProjectReference chain. -->
+  <ItemGroup>
+    <None Include="..\..\..\..\assets\fonts\otf\*.otf" Link="fonts\otf\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

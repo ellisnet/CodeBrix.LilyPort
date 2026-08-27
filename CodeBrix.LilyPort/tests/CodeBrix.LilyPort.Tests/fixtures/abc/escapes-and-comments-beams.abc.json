@@ -1,0 +1,12 @@
+{
+ "frozen_version_line": "\\version \"2.24.0\"",
+ "input": "X: 10\nT: Comments and inline fields\nM: 4/4\nL: 1/8\nK: C\n%%MIDI nobarlines\nCDEF GABc | % a trailing comment\n%%LY voices \\bar \"||\"\n[K: D]\nDEFG ABcd |\n",
+ "messages": [],
+ "name": "escapes-and-comments-beams",
+ "options": {
+  "beams": true
+ },
+ "output": "\\version \"2.24.0\"\n\n\\header {\n  crossRefNumber = \"10\"\n  footnotes = \"\"\n  tagline = \"LilyPond 2.27.2 was here -- automatically converted from ABC\"\n  title = \"Comments and inline fields\"\n}\n\n\"voicedefault\" = {\n\\numericTimeSignature \\time 4/4 \\key c \\major % %MIDI nobarlines\n %  a trailing comment\n c'8[ d'8 e'8 f'8] g'8[ a'8 b'8 c''8] \\bar \"|\" \\bar \"||\" \n % %LY voices \\bar \"||\"\n \\key d \\major d'8[ e'8 fis'8 g'8] a'8[ b'8 cis''8 d''8] \\bar \"|\" \n}\n\n\n\\score {\n  <<\n    \\context Staff = \"default\" {\n      \\\"voicedefault\"\n    }\n  >>\n\n  \\layout {\n    \\context {\n      \\Voice\n      \\autoBeamOff\n      melismaBusyProperties = #'()\n    }\n  }\n  \\midi {}\n}\n",
+ "source": "probe",
+ "source_name": "escapes-and-comments.abc"
+}

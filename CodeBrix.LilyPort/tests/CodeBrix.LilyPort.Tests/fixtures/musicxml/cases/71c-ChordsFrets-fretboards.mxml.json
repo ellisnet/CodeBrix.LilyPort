@@ -1,0 +1,14 @@
+{
+ "arguments": [
+  "--fb"
+ ],
+ "input_file": "71c-ChordsFrets.xml",
+ "messages": [],
+ "name": "71c-ChordsFrets-fretboards",
+ "options": "--fb",
+ "oracle_crash": "IndexError: list index out of range",
+ "output": null,
+ "source": "variant",
+ "source_name": "71c-ChordsFrets.xml",
+ "version_line": null
+}

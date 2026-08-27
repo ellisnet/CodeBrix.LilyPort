@@ -1,0 +1,217 @@
+================================================================================
+CodeBrix.LilyPort -- tools/musicxml2lyprobe/DIVERGENCES.txt
+================================================================================
+
+WHERE THE MUSICXML IMPORTER DIFFERS FROM UPSTREAM, AND WHY.
+
+Read tools/abcprobe/DIVERGENCES.txt first: it is the worked example, it carries
+five RULED divergences, and the discipline it describes is the one this file
+follows.
+
+--------------------------------------------------------------------------------
+THE STANDARD THIS FILE IS HELD TO
+--------------------------------------------------------------------------------
+
+D64 (Jeremy, 2026-08-26) amends the faithfulness rule FOR THE TEXT CONVERTERS
+ONLY: where upstream is broken, the port FIXES it and says so at the site. It
+requires three things, and the first one is the one that bites:
+
+  (a) A DEFECT IS PROVED BY MEASUREMENT AGAINST THE ORACLE, NEVER BY READING THE
+      PYTHON. The first pass over abc2ly/midi2ly listed EIGHT "reproduced
+      defects" and three of them were not defects at all.
+  (b) A comment at the site naming the upstream line, the measured symptom, and
+      what the port does instead.
+  (c) The gate stays strict: the fixture keeps the ORACLE's own output (rule 33)
+      and adds a frozen `port_output' beside it; `--accept' refuses any case not
+      in a committed declared-divergence table; the suite asserts every reason is
+      documented.
+
+--------------------------------------------------------------------------------
+STATUS (2026-08-26, evening): NOTHING IS RULED, AND THE BASELINE IS NOW GREEN
+--------------------------------------------------------------------------------
+
+THE PORT IS COMPLETE AND THE CORPUS IS GRADED: 206 MATCH / 0 ACCEPTED / 0 DIFFERS
+/ 0 SKIPPED of 206. There is no declared divergence, the declared-divergence
+table in MusicXmlProbe is EMPTY, and no fixture carries a frozen `port_output'.
+That is the baseline a fix would go on top of, and it exists now.
+
+What follows are CANDIDATES: four upstream defects, ONE of them measured and
+three of them read. None has been fixed.
+
+⚠ THE ORDER OF WORK IS PARITY FIRST, THEN DIVERGENCE. The port was written to
+REPRODUCE upstream, the corpus is graded byte for byte, and only then is a
+declared fix applied on top of a green baseline. Fixing while porting would have
+meant every failing case had two possible causes -- and in the event, five of the
+port's own defects were found by exactly that grading, which a mixed run would
+have muddled.
+
+================================================================================
+CANDIDATE 1 -- the memoised string tunings crash. MEASURED.
+================================================================================
+
+WHERE       scripts/musicxml2ly.py, musicxml_get_string_tunings (line 3346) and
+            musicxml_harmony_to_lily_fretboards (line 3407, the `tunings[string
+            - 1]' on line 3468).
+
+WHAT        `string_tunings' is a module global memoised on FIRST use:
+
+                global string_tunings
+                if string_tunings is None:
+                    ...build a list of `lines' pitches...
+                return string_tunings[0:lines]
+
+            The guard tests only whether the list EXISTS, never whether it is
+            long enough. A first fret diagram with four strings fixes the list at
+            four entries; a later six-string diagram then asks for six, gets four
+            back, and indexes past the end.
+
+MEASUREMENT The oracle, run over its own corpus:
+
+                musicxml2ly --loglevel=WARN --fb 71c-ChordsFrets.xml
+                  -> IndexError: list index out of range, NO FILE WRITTEN
+
+            Recorded in the fixture 71c-ChordsFrets-fretboards as
+            `oracle_crash'. The same file converts cleanly WITHOUT --fb, and
+            71d-ChordsFrets-Multistaff converts cleanly WITH it, so the trigger
+            is the differing string counts within one document.
+
+WHAT THE PORT DOES TODAY  REPRODUCES IT, and the corpus proves it does:
+            MusicXmlConverter.MusicXmlHarmonyToLilyFretboards raises
+            ImportAbortedException.PythonTraceback("IndexError: list index out of
+            range") at the same read, the import answers no text, and the fixture
+            -- whose `output' is null and whose `oracle_crash' names that
+            exception -- MATCHES.
+
+            ⚠ NOTHING IS WRITTEN TO ImportResult.Messages for it, deliberately. A
+            traceback carries none of the converter's own diagnostic shape, so a
+            caller filtering the script's stderr for `musicxml2ly:' lines sees
+            nothing new; what it does see is no output at all, which is exactly
+            what the absent file on disk says.
+
+THE OBVIOUS FIX  Rebuild the memo when the requested count exceeds what is
+            memoised. That is a one-line guard and it makes the file convert.
+            NOT APPLIED, NOT RULED.
+
+================================================================================
+CANDIDATE 2 -- get_transpose("integer") can only ever answer 0. READ, NOT MEASURED.
+================================================================================
+
+WHERE       python/musicexp.py, generic_tone_to_pitch (line 478) and
+            get_transpose (line 388).
+
+WHAT        generic_tone_to_pitch's first statement is
+
+                p.octave = tone_.count("'") - tone_.count(",")
+
+            and `p = Pitch()' comes three lines LATER. `p' is a local, so the
+            attribute assignment runs against an unbound name and raises
+            UnboundLocalError on every call. That exception derives from
+            NameError -- which is exactly what get_transpose's `except' clause
+            names -- so the failure is swallowed and the answer is 0.
+
+            The two sites that ask are both in FretEvent (musicexp.py lines 3531
+            and 3535), so fret numbers in a chord diagram are never transposed by
+            --transpose in any release carrying this code.
+
+WHY IT IS ONLY A CANDIDATE  D64(a). This one was found by READING, and the
+            measurement that would prove it needs a corpus file with a <frame>
+            AND a --transpose run: no such variant is recorded yet, because the
+            two fretboard files are recorded under --fb and the transpose
+            variants are recorded over pitch and key files. Add the variant, see
+            what the oracle does, THEN decide.
+
+WHAT THE PORT DOES TODAY  Reproduces it. MusicXmlImportState.GetTransposeSemitones
+            returns 0 with the whole chain written out in its remarks, so nobody
+            reading the port mistakes it for an oversight.
+
+================================================================================
+CANDIDATE 3 -- a rest's DOT font size writes the NOTE's. READ, NOT MEASURED.
+================================================================================
+
+WHERE       python/musicexp.py, RestEvent.pre_note_ly (line 3913; the
+            `elements.insert(0, ...)' at the end of the dot-font-size branch).
+
+WHAT        The branch tests `dot_font_size' and then writes `font_size':
+
+                dot_font_size = get_font_size(self.dot_font_size, command=False)
+                if dot_font_size is not None:
+                    elements.insert(0, r'\once \override Dots.font-size = %s'
+                                    % font_size)
+
+            So a rest whose `<dot>' carries a font size is given the size of the
+            REST, not of the dot -- and when the rest carries none, `font_size'
+            is None and the override reads `Dots.font-size = None', which is not
+            LilyPond input at all. The line immediately above it, commented out,
+            is the one that would have used `dot_font_size'.
+
+WHY IT IS ONLY A CANDIDATE  D64(a). Found by READING while porting. No corpus
+            file carries a `<dot font-size="...">' on a rest, so the oracle has
+            never been asked; 02b-Rests-PitchedRests and 02a-Rests-Durations are
+            the closest and neither reaches it. To rule it, write a probe with a
+            dotted rest whose dot names a size, record what the oracle does, THEN
+            decide.
+
+WHAT THE PORT DOES TODAY  Reproduces it, `None' and all, with the upstream line
+            and the symptom written at the site in LilyRhythmicEvent.cs.
+
+================================================================================
+CANDIDATE 4 -- a figured-bass SUFFIX overwrites the PREFIX. READ, NOT MEASURED.
+================================================================================
+
+WHERE       python/musicexp.py, FiguredBassNote.set_suffix (line 4719).
+
+WHAT        The method assigns the wrong field:
+
+                def set_suffix(self, suffix):
+                    self.prefix = suffix
+
+            so a `<figure>' with both a `<prefix>' and a `<suffix>' loses the
+            prefix, and one with a suffix alone prints it where the prefix goes.
+            `ly_expression' writes prefix then suffix, so the two positions are
+            distinguishable in the output.
+
+WHY IT IS ONLY A CANDIDATE  D64(a). Found by READING. The corpus's figured-bass
+            files (75a and 75b) do not carry a `<figure>' with both, so the
+            oracle has never been asked to show the difference. To rule it, write
+            a probe with a prefixed AND suffixed figure, measure, THEN decide.
+
+WHAT THE PORT DOES TODAY  Reproduces it, with the upstream line and the symptom
+            written at the site in LilyStaffMusic.cs.
+
+================================================================================
+NOT DIVERGENCES -- recorded so they are not re-opened
+================================================================================
+
+* THE \version LINE. musicxml2ly substitutes @TOPLEVEL_VERSION@, so the line
+  names the ported release and rule 16 governs it: the port writes
+  LilyVersion.CompatibleWithVersion and the fixture records "2.27.2". This is the
+  OPPOSITE case to abc2ly's frozen "2.24.0" (D63), and the two must not be made
+  to match each other.
+
+* Part.normalize_intervals' MERGE IS DEAD CODE upstream: the closing
+  `intervals = merged' rebinds a local and the merged list is discarded. What the
+  function does reach the caller with is the SORT, which mutates in place. The
+  port computes and discards the merge exactly as upstream does. Not a defect to
+  fix -- a behaviour to reproduce -- and the comment at the site says so.
+
+* THE Keep_alive SYNTHESIS IS INSIDE THE `if max_vid is None' BRANCH in
+  Part.interpret, although the comment above it sits at the outer level. A staff
+  whose voice merely ends early therefore gets no keep-alive element. Reproduced,
+  with the indentation called out at the site.
+
+* utilities.interpret_alter_element READS ITS VALUE WITH python's `eval'. The
+  port parses a number instead. This IS a deliberate divergence but not a D64
+  one: it is a SAFETY divergence, because eval would let an untrusted document
+  run code inside whatever application called the importer. Every alteration a
+  valid MusicXML document can carry is a number and the two readings agree on all
+  of them. Recorded in PORT-COVERAGE as well as here.
+
+* python's `warnings.warn' (Xml_node.get_maybe_exist_typed_child, and the
+  spanner-end-without-start report in Part.extract_voices) prints through the
+  warnings machinery, which prefixes the source file and line that raised it.
+  That prefix is a recording of upstream's own tree, so the port reports the
+  message text alone. Nothing in the corpus reaches either site.
+
+* A python TRACEBACK, where upstream dies of an uncaught exception, is likewise
+  a recording of the machine it ran on. The fixture keeps the exception line
+  alone. See README.txt, WHEN THE ORACLE CRASHES.
