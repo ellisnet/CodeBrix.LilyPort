@@ -30,7 +30,9 @@ namespace MutopiaProbe;
 /// <para>
 /// Usage: <c>MutopiaProbe CORPUS_PIECES_DIR OUT_DIR [--files a,b] [--limit N] [--resume]
 /// [--retry-hung] [--timeout-seconds N] [--dpi N] [--no-ink] [--oracle [PATH]]
-/// [--oracle-timeout-seconds N]</c>.
+/// [--oracle-timeout-seconds N]</c>, or
+/// <c>MutopiaProbe CORPUS_PIECES_DIR OUT_DIR --regrade EXISTING_RUN_DIR</c> to re-grade a sweep
+/// that has already run, from its artefacts, without engraving anything (see Report/Regrader.cs).
 /// </para>
 /// <para>
 /// THIS IS NOT A FIDELITY ORACLE. Mutopia's PDFs and MIDIs were produced by the LilyPond named
@@ -63,7 +65,8 @@ public static class Program
             Console.Error.WriteLine(
                 "usage: MutopiaProbe CORPUS_PIECES_DIR OUT_DIR [--files a,b] [--limit N] [--resume]"
                 + " [--retry-hung] [--timeout-seconds N] [--dpi N] [--no-ink] [--oracle [PATH]]"
-                + " [--oracle-timeout-seconds N]");
+                + " [--oracle-timeout-seconds N]"
+                + "\n       MutopiaProbe CORPUS_PIECES_DIR OUT_DIR --regrade EXISTING_RUN_DIR [--dpi N] [--no-ink]");
             return 2;
         }
 
@@ -77,9 +80,16 @@ public static class Program
         int timeoutSeconds = 300;
         int oracleTimeoutSeconds = 0;
         string oracleBinary = null;
+        string regradeFrom = null;
 
         for (int i = 2; i < args.Length; i++)
         {
+            if (args[i] == "--regrade" && i + 1 < args.Length)
+            {
+                regradeFrom = Path.GetFullPath(args[++i]);
+                continue;
+            }
+
             if (args[i] == "--limit" && i + 1 < args.Length)
             {
                 limit = int.Parse(args[++i], CultureInfo.InvariantCulture);
@@ -124,6 +134,13 @@ public static class Program
                 Console.Error.WriteLine("unknown option: " + args[i]);
                 return 2;
             }
+        }
+
+        if (regradeFrom != null)
+        {
+            // Nothing is engraved: the earlier run's SVG pages, PDFs and MIDIs are re-graded and a
+            // fresh table is written elsewhere. See Report/Regrader.cs.
+            return Regrader.Run(corpusRoot, regradeFrom, outputRoot, ink);
         }
 
         Directory.CreateDirectory(outputRoot);
@@ -402,53 +419,14 @@ public static class Program
         // 4. Grade the PDF.
         string referencePdf = Path.Combine(pieceDirectory, entry.ReferencePdf);
         PdfComparison pdf = PdfComparison.Grade(portPdf, referencePdf, ink ? Path.Combine(entryOutput, "compare") : null);
-        row.Set("pages_port", pdf.PortPages);
-        row.Set("pages_ref", pdf.ReferencePages);
-        row["page_count"] = pdf.PageCountVerdict;
-        row["size_port"] = pdf.PortPageSize;
-        row["size_ref"] = pdf.ReferencePageSize;
-        row["page_size"] = pdf.PageSizeVerdict;
-        row["text"] = pdf.TextVerdict;
-        row.Set("text_sim", pdf.TextSimilarity);
-        row.Set("text_contain", pdf.TextContainment);
-        row.Set("text_bag", pdf.TextBag);
-        row.Set("tokens_port", pdf.PortTokens);
-        row.Set("tokens_ref", pdf.ReferenceTokens);
-        row["ink"] = ink ? pdf.InkVerdict : "INK-OFF";
-        row.Set("block_diff", pdf.BlockDifference);
-        row.Set("ink_iou", pdf.InkIoU);
-        row.Set("ink_port", pdf.PortInk);
-        row.Set("ink_ref", pdf.ReferenceInk);
-        row["staves"] = pdf.StavesVerdict ?? string.Empty;
-        row.Set("staves_port", pdf.PortStaves);
-        row.Set("staves_ref", pdf.ReferenceStaves);
-        row.Set("compared_pages", pdf.ComparedPages);
-        row["note"] = Append(row["note"], pdf.Note);
+        RowFiller.FillMutopiaPdf(row, pdf, ink);
 
         // 5. Grade the MIDI. The port names its first performance <stem>.midi.
         string portMidi = outcome.MidiFiles.FirstOrDefault(m =>
             string.Equals(Path.GetFileName(m), entry.Stem + ".midi", StringComparison.Ordinal)) ?? outcome.MidiFiles.FirstOrDefault();
         string referenceMidi = entry.ReferenceMidi == null ? null : Path.Combine(pieceDirectory, entry.ReferenceMidi);
         MidiComparison midi = MidiComparison.Grade(portMidi, referenceMidi);
-        row["midi"] = midi.Verdict;
-        row["midi_channel"] = midi.ChannelVerdict ?? string.Empty;
-        row["midi_channel_first_diff"] = midi.ChannelFirstDifference ?? string.Empty;
-        row["midi_notes"] = midi.NotesVerdict ?? string.Empty;
-        row["midi_pitches"] = midi.PitchesVerdict ?? string.Empty;
-        row.Set("midi_tracks_port", midi.PortTracks);
-        row.Set("midi_tracks_ref", midi.ReferenceTracks);
-        row.Set("midi_div_port", midi.PortDivision);
-        row.Set("midi_div_ref", midi.ReferenceDivision);
-        row.Set("midi_notes_port", midi.PortNotes);
-        row.Set("midi_notes_ref", midi.ReferenceNotes);
-        row.Set("midi_len_port", midi.PortLength);
-        row.Set("midi_len_ref", midi.ReferenceLength);
-        row.Set("midi_tempos_port", midi.PortTempos);
-        row.Set("midi_tempos_ref", midi.ReferenceTempos);
-        row.Set("midi_programs_port", midi.PortPrograms);
-        row.Set("midi_programs_ref", midi.ReferencePrograms);
-        row["midi_stamp_ref"] = midi.ReferenceStamp ?? string.Empty;
-        row["midi_first_diff"] = midi.FirstDifference ?? string.Empty;
+        RowFiller.FillMutopiaMidi(row, midi);
         if (outcome.MidiFiles.Count > 0 && referenceMidi == null)
         {
             row["note"] = Append(row["note"], "port wrote MIDI but Mutopia published none for this entry");
@@ -461,6 +439,7 @@ public static class Program
         //    the verdict say DRIFT rather than "differs from a PDF built in 2009".
         PdfComparison oraclePdf = null;
         MidiComparison oracleMidi = null;
+        SvgStaffComparison svgStaves = null;
         bool oracleHasPages = false;
         bool oracleHasMidi = false;
         bool oracleFinished = false;
@@ -504,24 +483,18 @@ public static class Program
 
             oracleHasPages = oraclePdfPath != null;
             oraclePdf = PdfComparison.Grade(portPdf, oraclePdfPath, ink ? Path.Combine(entryOutput, "compare-oracle") : null);
-            row["o_page_count"] = oraclePdf.PageCountVerdict;
-            row["o_page_size"] = oraclePdf.PageSizeVerdict;
-            row["o_text"] = oraclePdf.TextVerdict;
-            row.Set("o_text_bag", oraclePdf.TextBag);
-            row["o_ink"] = ink ? oraclePdf.InkVerdict : "INK-OFF";
-            row.Set("o_block_diff", oraclePdf.BlockDifference);
-            row["o_staves"] = oraclePdf.StavesVerdict ?? string.Empty;
-            row.Set("o_staves_oracle", oraclePdf.ReferenceStaves);
 
-            string oracleMidiPath = oracle.MidiFiles.FirstOrDefault(m =>
-                string.Equals(Path.GetFileName(m), entry.Stem + ".midi", StringComparison.Ordinal)) ?? oracle.MidiFiles.FirstOrDefault();
+            // THE STAFF RUNG, read off the two sides' SVG pages rather than off a rasterisation
+            // of the PDFs they became. Both sides emit LilyPond-style SVG, so one algorithm
+            // serves both, and nothing downstream of the engraver can move the number.
+            svgStaves = SvgStaves.Compare(outcome.SvgPages, oracle.SvgPages);
+            RowFiller.FillOraclePdf(row, oraclePdf, svgStaves, ink);
+
+            // Paired BY NAME with the port's file: both sides name performances per book.
+            string oracleMidiPath = MidiComparison.Counterpart(oracle.MidiFiles, portMidi, entry.Stem);
             oracleHasMidi = oracleMidiPath != null;
             oracleMidi = MidiComparison.Grade(portMidi, oracleMidiPath);
-            row["o_midi"] = oracleMidi.Verdict;
-            row["o_midi_channel"] = oracleMidi.ChannelVerdict ?? string.Empty;
-            row["o_midi_notes"] = oracleMidi.NotesVerdict ?? string.Empty;
-            row["o_midi_pitches"] = oracleMidi.PitchesVerdict ?? string.Empty;
-            row["o_midi_first_diff"] = oracleMidi.FirstDifference ?? string.Empty;
+            RowFiller.FillOracleMidi(row, oracleMidi);
             if (oracle.MidiFiles.Count != outcome.MidiFiles.Count)
             {
                 row["note"] = Append(row["note"], "port wrote " + outcome.MidiFiles.Count
@@ -533,7 +506,7 @@ public static class Program
             row["oracle"] = "OFF";
         }
 
-        row["verdict_pdf"] = DriftVerdict.ForPdf(pdf, oraclePdf, portPdf != null, oracleHasPages, oracleFinished);
+        row["verdict_pdf"] = DriftVerdict.ForPdf(pdf, oraclePdf, svgStaves, portPdf != null, oracleHasPages, oracleFinished);
         row["verdict_midi"] = DriftVerdict.ForMidi(midi, oracleMidi, portMidi != null, oracleHasMidi, oracleFinished);
         row["verdict"] = DriftVerdict.Worse(row["verdict_pdf"], row["verdict_midi"]);
 

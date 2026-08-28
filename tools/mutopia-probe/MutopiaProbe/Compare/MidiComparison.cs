@@ -83,6 +83,39 @@ public sealed class MidiComparison
     /// <summary>Gets or sets the first channel-event difference, described.</summary>
     public string ChannelFirstDifference { get; set; }
 
+    /// <summary>
+    /// Picks the file on one side that answers a performance on the other. The port and the
+    /// oracle name performances the same way since 2026-08-28 (per book, per performance:
+    /// <c>stem.midi</c>, <c>stem-1.midi</c>, <c>stem-1-1.midi</c>...), so the counterpart of a
+    /// file is the one with the SAME NAME. Before this the probe took the first of each list,
+    /// and the two lists were ordered differently -- the oracle's by ordinal name, the port's
+    /// in write order -- which on a file with several performances graded movement 1 against
+    /// movement 2 and reported a time-signature difference that did not exist.
+    /// </summary>
+    /// <param name="candidates">The files on the other side.</param>
+    /// <param name="counterpartOf">The file whose namesake is wanted, or null.</param>
+    /// <param name="stem">The entry's stem, for the fallback.</param>
+    /// <returns>
+    /// The namesake when there is one; otherwise <c>stem.midi</c> when there is one; otherwise
+    /// the first candidate; null when there are none.
+    /// </returns>
+    public static string Counterpart(IEnumerable<string> candidates, string counterpartOf, string stem)
+    {
+        List<string> files = new List<string>(candidates ?? Array.Empty<string>());
+        if (counterpartOf != null)
+        {
+            string wanted = Path.GetFileName(counterpartOf);
+            string namesake = files.Find(m => string.Equals(Path.GetFileName(m), wanted, StringComparison.Ordinal));
+            if (namesake != null)
+            {
+                return namesake;
+            }
+        }
+
+        return files.Find(m => string.Equals(Path.GetFileName(m), stem + ".midi", StringComparison.Ordinal))
+            ?? (files.Count > 0 ? files[0] : null);
+    }
+
     /// <summary>Grades a pair.</summary>
     /// <param name="portMidi">The port's file, or null.</param>
     /// <param name="referenceMidi">Mutopia's file, or null.</param>

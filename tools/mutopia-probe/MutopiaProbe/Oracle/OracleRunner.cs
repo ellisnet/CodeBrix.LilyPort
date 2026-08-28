@@ -248,12 +248,30 @@ public static class OracleRunner
 
     private static void Collect(Outcome outcome, string outputDirectory, string outputBaseName)
     {
-        // Upstream's naming, from scm/framework-svg.scm and scm/midi.scm: a one-page score is
-        // <base>.svg and a longer one is <base>-1.svg .. <base>-N.svg; the first performance is
-        // <base>.midi and any further ones <base>-<n>.midi. The port reproduces both exactly,
-        // so the same ordering rule serves both sides.
+        CollectOutputs(outputDirectory, outputBaseName, out List<string> svg, out List<string> midi);
+        outcome.SvgPages.AddRange(svg);
+        outcome.MidiFiles.AddRange(midi);
+    }
+
+    /// <summary>
+    /// Lists the SVG pages and MIDI files an engraving run left in a directory, in page order.
+    /// Upstream's naming, from scm/framework-svg.scm and scm/midi.scm: a one-page score is
+    /// <c>&lt;base&gt;.svg</c> and a longer one is <c>&lt;base&gt;-1.svg</c> ..
+    /// <c>&lt;base&gt;-N.svg</c>; the first performance is <c>&lt;base&gt;.midi</c> and any
+    /// further ones <c>&lt;base&gt;-&lt;n&gt;.midi</c>. The port reproduces both exactly, so the
+    /// same rule serves both sides — and lets <c>--regrade</c> recover either side's pages from
+    /// an existing run directory without re-engraving anything.
+    /// </summary>
+    /// <param name="outputDirectory">The directory to list.</param>
+    /// <param name="outputBaseName">The output base name (the entry point's stem).</param>
+    /// <param name="svgPages">Receives the SVG pages, in page order.</param>
+    /// <param name="midiFiles">Receives the MIDI files, in name order.</param>
+    public static void CollectOutputs(string outputDirectory, string outputBaseName, out List<string> svgPages, out List<string> midiFiles)
+    {
         List<(int Number, string Path)> pages = new List<(int, string)>();
         List<string> midi = new List<string>();
+        svgPages = new List<string>();
+        midiFiles = midi;
         if (!Directory.Exists(outputDirectory))
         {
             return;
@@ -289,11 +307,10 @@ public static class OracleRunner
         pages.Sort((a, b) => a.Number.CompareTo(b.Number));
         foreach ((int _, string path) in pages)
         {
-            outcome.SvgPages.Add(path);
+            svgPages.Add(path);
         }
 
         midi.Sort(StringComparer.Ordinal);
-        outcome.MidiFiles.AddRange(midi);
     }
 
     private static Process Start(string binary, string arguments, string workingDirectory)

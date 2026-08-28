@@ -28,12 +28,26 @@ public sealed class ResultRow
         "engraved_from", "engrave", "parse_errors", "systems", "svg_pages", "midi_files", "side_files",
         "pdf", "pdf_warnings", "pages_port", "pages_ref", "page_count", "size_port", "size_ref", "page_size",
         "text", "text_bag", "text_sim", "text_contain", "tokens_port", "tokens_ref",
-        "ink", "block_diff", "ink_iou", "ink_port", "ink_ref", "staves", "staves_port", "staves_ref", "compared_pages",
+        //was previously: "staves", "staves_port", "staves_ref" — renamed 2026-08-28 so that no
+        //reader can mistake the RASTER count, which now decides nothing, for the SVG-structure
+        //count in the svg_staves* columns, which is the rung the verdict is cut on.
+        "ink", "block_diff", "ink_iou", "ink_port", "ink_ref",
+        "raster_staves", "raster_staves_port", "raster_staves_ref", "compared_pages",
         "midi", "midi_channel", "midi_notes", "midi_pitches", "midi_tracks_port", "midi_tracks_ref", "midi_div_port", "midi_div_ref",
         "midi_notes_port", "midi_notes_ref", "midi_len_port", "midi_len_ref", "midi_tempos_port", "midi_tempos_ref",
         "midi_programs_port", "midi_programs_ref", "midi_stamp_ref", "midi_first_diff", "midi_channel_first_diff",
         "oracle", "oracle_seconds", "oracle_errors", "oracle_warnings", "oracle_pages", "oracle_midi_files",
-        "o_page_count", "o_page_size", "o_text", "o_text_bag", "o_ink", "o_block_diff", "o_staves", "o_staves_oracle",
+        "o_page_count", "o_page_size", "o_text", "o_text_bag", "o_ink", "o_block_diff",
+        //was previously: "o_staves", "o_staves_oracle". Renamed, and o_raster_staves_port added:
+        //the old table held the port's raster count only for the MUTOPIA comparison (over
+        //min(port, Mutopia) pages) while o_staves_oracle counted the ORACLE over min(port,
+        //oracle) pages, so the two numbers a reader naturally paired were measured over
+        //different page sets. That is what made Mendelssohn_Octet_-_Viola_1 look like a
+        //fifteen-staff disagreement (106 over 10 pages against 121 over 11).
+        "o_raster_staves", "o_raster_staves_port", "o_raster_staves_oracle",
+        // The staff rung the verdict is cut on: counted from the SVG structure, per page.
+        "svg_staves", "svg_staves_port", "svg_staves_oracle",
+        "svg_staves_by_page_port", "svg_staves_by_page_oracle", "svg_staves_diff_pages",
         "o_midi", "o_midi_channel", "o_midi_notes", "o_midi_pitches", "o_midi_first_diff",
         "verdict", "verdict_pdf", "verdict_midi",
         "seconds", "error", "note",
@@ -101,6 +115,47 @@ public sealed class ResultRow
         }
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// Reads an existing <c>results.tsv</c> onto fresh rows, matching cells BY COLUMN NAME. A
+    /// column the file has and this build does not is dropped, and a column this build has and
+    /// the file does not stays blank — which is what lets <c>--regrade</c> read a table written
+    /// before a column was renamed and re-fill the columns it recomputes.
+    /// </summary>
+    /// <param name="path">The results file.</param>
+    /// <returns>The rows, in file order.</returns>
+    public static List<ResultRow> Read(string path)
+    {
+        List<ResultRow> rows = new List<ResultRow>();
+        string[] header = null;
+        foreach (string line in File.ReadLines(path))
+        {
+            string[] cells = line.Split('\t');
+            if (header == null)
+            {
+                header = cells;
+                continue;
+            }
+
+            if (line.Length == 0)
+            {
+                continue;
+            }
+
+            ResultRow row = new ResultRow();
+            for (int i = 0; i < header.Length && i < cells.Length; i++)
+            {
+                if (Array.IndexOf(Columns, header[i]) >= 0)
+                {
+                    row[header[i]] = cells[i];
+                }
+            }
+
+            rows.Add(row);
+        }
+
+        return rows;
     }
 
     /// <summary>Reads the keys already present in a results file.</summary>

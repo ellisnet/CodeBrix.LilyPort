@@ -78,10 +78,18 @@ public sealed class PageBitmap
     }
 
     /// <summary>
-    /// Counts the staves: rows more than <paramref name="rowFraction"/> ink are staff-line rows,
+    /// Counts the staves FROM THE RASTER. ⚠ INFORMATIONAL ONLY since 2026-08-28: this number
+    /// moves with the grading resolution (a checked pair reversed sign between 100 and 200 dpi)
+    /// and with the PDF writer's font coverage (four newly-drawn footer glyphs once added a
+    /// phantom staff), so it decides no verdict any more. <see cref="SvgStaves"/> reads the count
+    /// off the SVG structure instead. It stays here because it is the only staff signal available
+    /// against MUTOPIA, which published a PDF and no SVG.
+    /// <para>
+    /// Rows more than <paramref name="rowFraction"/> ink are staff-line rows,
     /// adjacent line rows are one line, and lines closer together than 1.8× the median line gap
     /// belong to one staff. A staff is a group of four or more lines (five for a staff, six for
     /// tablature; four allows for one line lost to anti-aliasing).
+    /// </para>
     /// </summary>
     /// <param name="rowFraction">The ink fraction a row needs to count as a staff line.</param>
     /// <returns>The staff count.</returns>

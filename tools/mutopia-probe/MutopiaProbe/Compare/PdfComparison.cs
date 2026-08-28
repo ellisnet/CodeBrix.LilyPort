@@ -31,7 +31,12 @@ public sealed class PdfComparison
         /// <summary>Text similarity at or above which the words are NEAR.</summary>
         public static double TextNear = 0.90;
 
-        /// <summary>The ink fraction of a row that makes it a staff-line row.</summary>
+        /// <summary>
+        /// The ink fraction of a row that makes it a staff-line row. INFORMATIONAL ONLY since
+        /// 2026-08-28: the raster staff count no longer decides any verdict — <see cref="SvgStaves"/>
+        /// does — because this number moves with the grading resolution and with any change to the
+        /// PDF writer's font coverage. See the README's A NOTE ON THE STAFF RUNG.
+        /// </summary>
         public static double StaffRow = 0.30;
 
         /// <summary>The resolution pages are graded at.</summary>
@@ -95,14 +100,21 @@ public sealed class PdfComparison
     /// <summary>Gets or sets the reference's mean ink ratio.</summary>
     public double ReferenceInk { get; set; }
 
-    /// <summary>Gets or sets the port's staff count summed over compared pages.</summary>
-    public int PortStaves { get; set; }
+    //was previously: PortStaves / ReferenceStaves / StavesVerdict. Renamed 2026-08-28 so that a
+    //reader cannot confuse the RASTER count, which is now informational, with the SVG-structure
+    //count in SvgStaves, which is what the verdict ladder consults.
 
-    /// <summary>Gets or sets the reference's staff count summed over compared pages.</summary>
-    public int ReferenceStaves { get; set; }
+    /// <summary>Gets or sets the port's RASTER staff count summed over compared pages. Informational: decides nothing.</summary>
+    public int RasterPortStaves { get; set; }
 
-    /// <summary>Gets or sets the staff-count verdict: STAVES-EQUAL or STAVES-DIFFER over the compared pages.</summary>
-    public string StavesVerdict { get; set; }
+    /// <summary>Gets or sets the reference's RASTER staff count summed over compared pages. Informational: decides nothing.</summary>
+    public int RasterReferenceStaves { get; set; }
+
+    /// <summary>
+    /// Gets or sets the RASTER staff-count verdict: STAVES-EQUAL or STAVES-DIFFER over the
+    /// compared pages. Reported and no longer believed — see <see cref="SvgStaves"/>.
+    /// </summary>
+    public string RasterStavesVerdict { get; set; }
 
     /// <summary>Gets or sets the ordered text containment: LCS over the shorter side's length.</summary>
     public double TextContainment { get; set; }
@@ -263,8 +275,8 @@ public sealed class PdfComparison
 
             portInk += port.InkRatio();
             referenceInk += reference.InkRatio();
-            comparison.PortStaves += port.StaffCount(Thresholds.StaffRow);
-            comparison.ReferenceStaves += reference.StaffCount(Thresholds.StaffRow);
+            comparison.RasterPortStaves += port.StaffCount(Thresholds.StaffRow);
+            comparison.RasterReferenceStaves += reference.StaffCount(Thresholds.StaffRow);
         }
 
         comparison.ComparedPages = pages;
@@ -272,7 +284,7 @@ public sealed class PdfComparison
         comparison.InkIoU = iouCount == 0 ? -1 : iouSum / iouCount;
         comparison.PortInk = pages == 0 ? 0 : portInk / pages;
         comparison.ReferenceInk = pages == 0 ? 0 : referenceInk / pages;
-        comparison.StavesVerdict = comparison.PortStaves == comparison.ReferenceStaves ? "STAVES-EQUAL" : "STAVES-DIFFER";
+        comparison.RasterStavesVerdict = comparison.RasterPortStaves == comparison.RasterReferenceStaves ? "STAVES-EQUAL" : "STAVES-DIFFER";
         comparison.InkVerdict = comparison.BlockDifference <= Thresholds.Similar ? "SIMILAR"
             : comparison.BlockDifference <= Thresholds.LayoutDiffers ? "LAYOUT-DIFFERS"
             : "VERY-DIFFERENT";

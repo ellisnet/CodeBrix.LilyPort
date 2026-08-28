@@ -84,6 +84,26 @@ RUNNING IT
 
     python3 ../summarize.py ~/ClaudeHome/mutopia-probe-<date>/results.tsv [--by declared_version]
 
+RE-GRADING A SWEEP THAT HAS ALREADY RUN, without engraving anything:
+
+    dotnet run -c Release -- ~/ClaudeHome/Mutopia/pieces ~/ClaudeHome/mutopia-probe-<newdate> \
+        --regrade ~/ClaudeHome/mutopia-probe-<olddate>  [--dpi N] [--no-ink]
+
+    Reads the OLD run's artefacts -- its SVG pages, PDFs and MIDIs, both sides -- re-runs every
+    grade over them, and writes a fresh results.tsv into the NEW directory. The old run is opened
+    read-only and is not written to. Neither engraver runs, so what would be an 85-minute sweep
+    is 106 seconds (measured, 227 rows).
+
+    Every GRADED column is recomputed. Every column that describes the RUN -- convert, engrave,
+    parse_errors, systems, svg_pages, midi_files, pdf, oracle, oracle_seconds, oracle_errors,
+    oracle_warnings, oracle_pages, seconds -- is carried forward from the old table cell for cell,
+    because it cannot be recovered from the artefacts and is not something to guess at. Cells are
+    matched BY COLUMN NAME, so a table written before a column was renamed still reads.
+    Not reproduced: the comparison PNGs and the midi-crosscheck copies; the old run still has them.
+
+    Use it when the GRADING changed and the engraving did not. When the engine changed, re-run
+    the sweep: a regrade would grade the old pages.
+
 The engine starts once (~20 s of Scheme boot) and every entry point runs in that one
 session, exactly as BatchDriver does. Per-file times are seconds for a song and minutes
 for an orchestral score.
@@ -131,12 +151,17 @@ WHAT ONE ENTRY POINT GOES THROUGH
                      -- pdftotext on both sides, ordered tokens, similarity = 2*LCS/(n+m)
         ink          SIMILAR | LAYOUT-DIFFERS | VERY-DIFFERENT | INK-SKIPPED
                      -- both PDFs rasterised by PDFium (page pairs up to the shorter
-                     document); per page: ink ratio, staff count (rows of >= 30 % ink,
-                     grouped into staves), ink IoU when the pixel sizes match, and the
-                     BLOCK DIFFERENCE -- ink density on a 24-cell-wide grid, sum|a-b| /
+                     document); per page: ink ratio, ink IoU when the pixel sizes match, and
+                     the BLOCK DIFFERENCE -- ink density on a 24-cell-wide grid, sum|a-b| /
                      max(sum a, sum b), 0 = identically distributed, ~1 = nothing in common.
                      block_diff is the number the verdict is cut on. The first two page
                      pairs are saved as compare/port-N.png and compare/ref-N.png.
+        raster_staves
+                     STAVES-EQUAL | STAVES-DIFFER  -- ⚠ REPORTED, NOT BELIEVED. Rows of
+                     >= 30 % ink, grouped into staves, summed over the compared pages. It
+                     decides nothing (see A NOTE ON THE STAFF RUNG); it is kept because it
+                     is the only staff signal available against MUTOPIA, which published a
+                     PDF and no SVG.
 
   5. GRADE THE MIDI in compare-midi.py's vocabulary and with its four normalisations
      (absolute ticks, running status expanded, version stamp -> marker, end-of-track
@@ -227,21 +252,57 @@ graded on the same rungs as the Mutopia comparison, then the worse of the two:
     NOT-GRADED     that axis has nothing on either side (no \midi in the source).
     NO-ORACLE      --oracle was not passed.
 
-"Agrees" on the page axis means PAGES-EQUAL and not STAVES-DIFFER and ink not
-LAYOUT-DIFFERS/VERY-DIFFERENT and text not TEXT-DIFFERS/TEXT-PORT-EMPTY. On the
-performance axis it means MATCH or CHANNEL-EQUAL against the oracle -- a stricter bar
+"Agrees" on the page axis means PAGES-EQUAL and ink not LAYOUT-DIFFERS/VERY-DIFFERENT and
+text not TEXT-DIFFERS/TEXT-PORT-EMPTY -- and, against the ORACLE only, SVG-STAVES-EQUAL. On
+the performance axis it means MATCH or CHANNEL-EQUAL against the oracle -- a stricter bar
 than the NOTES-EQUAL used against Mutopia, because velocity defaults, channel numbering
 and program numbers changed between the corpus's releases and 2.27.2 but must not
 change between the port and the version it targets.
 
-A NOTE ON THE STAFF RUNG. It is the shift-tolerant signal against Mutopia, where the
-differences it was calibrated on are large. Against the ORACLE it is the sole basis of
-about half the PORT-GAP verdicts, and it is not fully trustworthy there: re-graded at
-200 dpi instead of 100, three of four checked pairs kept their difference exactly while
-one REVERSED SIGN (9/8 became 8/9 at o_block_diff 0.002). The absolute counts move with
-resolution. Counting systems from the SVG structure rather than from the raster would
-remove the question; until then, read a staves-only PORT-GAP beside its o_block_diff.
-See OBSERVATIONS_lilyport_mutopia_2026-08-27.txt section L1.
+A NOTE ON THE STAFF RUNG.  ** Replaced 2026-08-28; the raster count decides nothing now. **
+
+WHAT IT USED TO BE. Both PDFs were rasterised and a page row holding >= 30 % ink counted as
+a staff line; the staves were summed over the whole document and a difference in that sum was
+enough, on its own, for PORT-GAP. It was the sole basis of 36 of the 72 PORT-GAP verdicts of
+the 2026-08-27 sweep, and two measurements showed it could not carry them: re-graded at 200 dpi
+instead of 100, one checked pair REVERSED SIGN (9/8 became 8/9 at o_block_diff 0.002), and when
+the Html2Pdf pin moved -- a change that altered no page geometry at all -- four newly-drawn
+footer glyphs put enough ink in one raster row to count as a staff and manufactured two PORT-GAP
+verdicts. A rung a font-coverage change can flip has no business deciding anything.
+
+WHAT IT IS NOW (Compare/SvgStaves.cs). The staves are counted from the SVG the engraver wrote,
+which is a property of the DOCUMENT: no resolution, no PDF library and no font can move it. Both
+sides emit LilyPond-style SVG -- the port's SvgBackend is a port of upstream's -- so ONE
+algorithm reads both. Every <line> is placed by summing its ancestors' translate(); a line is
+horizontal when |y1-y2| <= 1e-4; horizontal lines are bucketed by their exact x-extent and the
+literal text of their stroke-width; each bucket is cut into maximal runs of EQUALLY SPACED lines;
+and a run is ONE STAFF when it holds 4 to 6 lines (4 Gregorian, 5 usual, 6 tablature) and each
+line is at least 3x as long as the spacing.
+
+    COUNTED PER PAGE AND COMPARED PER PAGE, so one borderline page cannot decide a whole row and
+    a plus-one on page 3 cannot cancel a minus-one on page 9. svg_staves_diff_pages names the
+    pages that differ, as "p4:16/15 p7:16/17".
+
+    This rung exists only against the ORACLE. Mutopia published PDFs and no SVG, so on that axis
+    the RASTER rung stays in force (DriftVerdict.MutopiaAgrees): the Mutopia ladder was
+    calibrated with it in place, an agreeing pair there sits at block_diff 0.13-0.18 where the
+    raster count is the shift-tolerant layout signal, and retiring it would have moved 28 rows
+    to CLEAN on no measurement -- the 2026-08-28 re-grade tried exactly that and the number was
+    put back. So: against the oracle the SVG count decides and the raster count decides
+    nothing; against Mutopia the raster count decides as it always did.
+
+    NOT COUNTED: a one-line percussion staff, which cannot be told from a stray horizontal rule
+    without guessing. None occurs in this corpus, and the omission would apply to both sides.
+
+    NOT DELIVERED: a SYSTEM count. The SVG carries no system grouping -- no id, no class, no
+    wrapper element -- and neither vertical proximity nor document order recovers one. Measured on
+    StraussJJ/blue_danube, one page: the gap INSIDE a two-staff system is 5.00 to 6.74 units and
+    the gap BETWEEN systems 8.35 to 9.53, ranges close enough that any fixed cut is a guess, and a
+    largest-gap split would invent systems on a single-staff part where every gap is a break.
+    Staves per page is what this rung reports.
+
+See OBSERVATIONS_lilyport_mutopia_2026-08-27.txt sections L1 and L4 for what forced the change,
+and REPORT_lilyport_L1_svg_staves_2026-08-28.txt for the re-grade it produced.
 
 READING THE NUMBERS. The port-vs-oracle ink number is not on the same scale as the
 Mutopia one: an agreeing pair sits at 0.001-0.002 (measured), where an agreeing pair
@@ -252,8 +313,23 @@ calls it SIMILAR.
 
 COLUMNS: oracle, oracle_seconds, oracle_errors, oracle_warnings, oracle_pages,
 oracle_midi_files, then o_page_count, o_page_size, o_text, o_text_bag, o_ink,
-o_block_diff, o_staves, o_staves_oracle, o_midi, o_midi_channel, o_midi_notes,
+o_block_diff, o_raster_staves, o_raster_staves_port, o_raster_staves_oracle,
+svg_staves, svg_staves_port, svg_staves_oracle, svg_staves_by_page_port,
+svg_staves_by_page_oracle, svg_staves_diff_pages, o_midi, o_midi_channel, o_midi_notes,
 o_midi_pitches, o_midi_first_diff, then verdict, verdict_pdf, verdict_midi.
+
+    RENAMED 2026-08-28: staves -> raster_staves, staves_port -> raster_staves_port,
+    staves_ref -> raster_staves_ref, o_staves -> o_raster_staves, o_staves_oracle ->
+    o_raster_staves_oracle. The svg_staves* columns are the rung the verdict is cut on; the
+    raster_staves* ones are reported and decide nothing, and the names now say which is which.
+
+    o_raster_staves_port IS NEW, and it closes a trap the old table set. The port's raster staff
+    count was recorded only for the MUTOPIA comparison, over min(port, Mutopia) pages, while
+    o_staves_oracle counted the ORACLE over min(port, oracle) pages -- so the two numbers a reader
+    naturally paired were measured over DIFFERENT PAGE SETS. That is the whole of
+    Mendelssohn_Octet_-_Viola_1's "unexplained fifteen-staff difference": 106 was ten pages
+    against Mutopia and 121 was eleven pages against the oracle. On the same eleven pages the
+    raster reads 122 against 121, and the SVG reads 122 against 122, page for page.
 
 --------------------------------------------------------------------------------
 THE OUTPUT TREE
@@ -314,20 +390,52 @@ VERY-DIFFERENT (100 dpi, ink = grey < 200).
   it is 0.04-0.19 even for identical layouts, because a staff line is thinner than a pixel at
   this resolution and never lands on the same pixel twice.
 
-  The STAFF COUNT is the shift-tolerant layout signal and agreed with the eye on every pair
-  checked (Canon 6 vs 7 systems, wtk1 24 = 24). It is summed over the compared pages; the
-  `staves` column says STAVES-EQUAL or STAVES-DIFFER.
+  THE RASTER STAFF COUNT was the shift-tolerant layout signal and agreed with the eye on every
+  pair checked (Canon 6 vs 7 systems, wtk1 24 = 24). It is summed over the compared pages; the
+  `raster_staves` column says STAVES-EQUAL or STAVES-DIFFER.
 
-  ⚠ BUT IT IS TOO FRAGILE TO DECIDE A VERDICT ALONE, and two measurements say so. Re-graded
-  at 200 dpi instead of 100, one checked pair REVERSED SIGN (9/8 became 8/9 at o_block_diff
-  0.002) while three others kept their delta exactly. And when the Html2Pdf pin moved to
-  1.0.240.106 -- a change that altered NO page geometry, ink identical on all 227 rows --
-  two rows gained a staff on the port side alone (blue_danube and AugenhaltenM, both 8/8 ->
-  9/8 at unchanged o_block_diff) because newly-covered footer glyphs put enough ink in one
-  raster row to cross the 30 % threshold. Two PORT-GAP verdicts were manufactured by four
-  footer characters becoming visible. Counting systems from the SVG structure rather than
-  from the raster would remove the question; until then, read a staves-only PORT-GAP beside
-  its o_block_diff. See OBSERVATIONS_lilyport_mutopia_2026-08-27.txt sections L1 and L4.
+  ⚠ IT DECIDES NOTHING SINCE 2026-08-28, and two measurements say why. Re-graded at 200 dpi
+  instead of 100, one checked pair REVERSED SIGN (9/8 became 8/9 at o_block_diff 0.002) while
+  three others kept their delta exactly. And when the Html2Pdf pin moved to 1.0.240.106 -- a
+  change that altered NO page geometry, ink identical on all 227 rows -- two rows gained a
+  staff on the port side alone (blue_danube and AugenhaltenM, both 8/8 -> 9/8 at unchanged
+  o_block_diff) because newly-covered footer glyphs put enough ink in one raster row to cross
+  the 30 % threshold. Two PORT-GAP verdicts were manufactured by four footer characters
+  becoming visible. See OBSERVATIONS_lilyport_mutopia_2026-08-27.txt sections L1 and L4.
+
+THE SVG STAFF COUNT, which replaced it on the oracle axis. Calibrated on the 1962 SVG pages the
+2026-08-27 sweep left on disk -- 227 rows, both sides -- and defined in full under A NOTE ON THE
+STAFF RUNG above. The two rules it turns on are nowhere near their data:
+
+      run length (lines)         1: 4392   2: 549   3: 43   4: 64   5: 23391   6: 12
+      length/spacing of a 4-6 run   <= 0.23  (stacked LEDGER LINES, which repeat at the
+                                             staff-to-staff pitch across a system)
+                                    >= 3.72  (a real staff; median 125)
+                                    the cut at 3.0 sits in an empty gap sixteen times the noise
+
+  The runs of two and three that a length rule alone would have accepted are all volta, ottava
+  and piano-pedal rules, told apart by their own stroke-width: on DvorakA/O95/Sym9 Mvt3 page 16,
+  65 lines at width 0.1219 are the thirteen staves and 6 at 0.1950 are the brackets.
+
+  VALIDATED before it was wired in. On the 28 rows the authoritative run calls CLEAN, the port
+  and the oracle agree on every page (28/28, no exceptions). On the three rows known to be raster
+  artefacts -- MussorgskyM/promenade-2 (the 200 dpi sign reversal) and StraussJJ/blue_danube and
+  VolkmannR/AugenhaltenM (the two the Html2Pdf bump manufactured) -- all three read 8 staves
+  against 8. And on ClementiM/O36/sonatina-1, which survives as a real difference, the counter
+  says 16 against 14 on page 1 and the saved PNGs show eight systems against seven.
+
+  RE-GRADE, 2026-08-28 (~/ClaudeHome/mutopia-probe-L1-regrade-2026-08-28/, produced by --regrade
+  from the authoritative run):
+
+      verdict          before   after
+      DRIFT              117      120
+      PORT-GAP            72       41
+      CLEAN               28       56
+      INPUT-REFUSED        7        7
+      PORT-AHEAD           3        3
+
+  Of the 36 PORT-GAP rows that failed on the staff rung and nothing else, 31 were artefacts of
+  the raster count and 5 are real per-page differences.
 
 THE TEXT GRADE: letter-run tokens, verdict on BAG containment >= 0.90.
 

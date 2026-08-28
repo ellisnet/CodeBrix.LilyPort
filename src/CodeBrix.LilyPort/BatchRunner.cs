@@ -608,6 +608,28 @@ public static class BatchRunner
             ? null
             : session.MainInputVersionString;
 
+        // THE FILE IS REFUSED, because 2.27.2 would already be dead. See
+        // MusicFunctionReturnedUnspecified for the whole reasoning; the point here is
+        // only that the refusal happens BEFORE any book is processed, which is where
+        // upstream's own death happens — inside the parse — so nothing is engraved, no
+        // page and no performance is written, and the run reports its errors.
+        if (MusicFunctionReturnedUnspecified(diagnostics))
+        {
+            Flower.Warn.CheckExpectedWarnings();
+            (Flower.Warn.Output as Flower.LineTrackingWriter)?.EndOpenLine();
+
+            return new BatchRunResult(
+                null,
+                books.Count,
+                0,
+                0,
+                errorCount,
+                diagnostics,
+                System.Array.Empty<string>(),
+                System.Array.Empty<string>(),
+                declaredVersion);
+        }
+
         // One stencil per PAGE, as the page breaker chose them.
         // Until this group it was one per SCORE, stacked at a fixed padding into a single
         // document per input file -- which is why every multi-page reference page in the
@@ -626,7 +648,6 @@ public static class BatchRunner
         // "system(s)". It read as a line count and was not one: accidental-styles.ly has
         // twenty scores and reported twenty systems before line breaking existed at all.
         int lines = 0;
-        List<Performance> performances = new List<Performance>();
         int skipped = 0;
         // THE PARSER STAYS CURRENT ACROSS ENGRAVING.
         //
@@ -727,6 +748,22 @@ public static class BatchRunner
                     }
                 }
 
+                // THE PERFORMANCES BELONG TO THE BOOK THAT PRODUCED THEM, and that is what
+                // names their files: upstream reaches write-performances-midis from
+                // `Paper_book::output', which is called once PER BOOK with the name
+                // get-outfile-name computed for THAT book (lily/paper-book.cc::output ->
+                // scm/midi.scm::write-performances-midis). Collected into one flat list
+                // for the whole file they were named from the INPUT's base name with one
+                // running counter, which is right only while a file holds a single book.
+                List<Performance> bookPerformances = new List<Performance>();
+                foreach (object performance in Pair.ToList(paperBook.Performances()))
+                {
+                    if (performance is Performance performed)
+                    {
+                        bookPerformances.Add(performed);
+                    }
+                }
+
                 // Both figures are read AFTER Pages(): `first-page-number' is not
                 // necessarily the one the paper block asked for. Page_turn_page_breaking's
                 // make_pages WRITES it back, because with auto-first-page-number the
@@ -736,17 +773,10 @@ public static class BatchRunner
                     bookIndex < bookNames.Count ? bookNames[bookIndex] : baseName,
                     bookPages,
                     SchemeConvert.ToInt(paperBook.Paper.CVariable("first-page-number"), 1),
-                    unitLength));
+                    unitLength,
+                    bookPerformances));
 
                 lines += CountLines(paperBook);
-
-                foreach (object performance in Pair.ToList(paperBook.Performances()))
-                {
-                    if (performance is Performance performed)
-                    {
-                        performances.Add(performed);
-                    }
-                }
             }
             catch (Exception exception) when (!(exception is OutOfMemoryException))
             {
@@ -784,7 +814,8 @@ public static class BatchRunner
         List<string> svgPaths = new List<string>();
         List<string> midiPaths = new List<string>();
         cancellationToken.ThrowIfCancellationRequested();
-        if (bookOutputs.Exists(output => output.Pages.Count > 0) || performances.Count > 0)
+        if (bookOutputs.Exists(
+                output => output.Pages.Count > 0 || output.Performances.Count > 0))
         {
             Directory.CreateDirectory(outputRoot);
             string previousDirectory = Directory.GetCurrentDirectory();
@@ -792,7 +823,7 @@ public static class BatchRunner
             try
             {
                 WriteBookPages(bookOutputs, svgPaths, diagnostics);
-                WritePerformances(performances, baseName, midiPaths, diagnostics);
+                WritePerformances(bookOutputs, midiPaths, diagnostics);
             }
             finally
             {
@@ -965,37 +996,57 @@ public static class BatchRunner
     /// which is the name upstream's <c>Performance::write_output</c> reports.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// <c>scm/midi.scm</c>'s <c>write-performances-midis</c> counts from 0 and suffixes
     /// only when the count is POSITIVE — so the FIRST performance is always
-    /// <c>&lt;base&gt;.midi</c>, even in a file that goes on to produce more. The old
+    /// <c>&lt;name&gt;.midi</c>, even in a book that goes on to produce more. The old
     /// <c>-1/-2</c> naming for multi-performance files paired every candidate with the
     /// WRONG reference: the port's first output was compared against the oracle's second,
     /// and the oracle's first was reported missing.
+    /// </para>
+    /// <para>
+    /// ⚠ THE NAME IS THE BOOK'S, NOT THE INPUT FILE'S, AND THE COUNTER RESTARTS PER BOOK.
+    /// Upstream reaches <c>write-performances-midis</c> from
+    /// <c>lily/paper-book.cc</c>'s <c>Paper_book::output</c>, which runs once per book and
+    /// is handed the name <c>get-outfile-name</c> computed for THAT book — so a file whose
+    /// SECOND book performs writes <c>&lt;base&gt;-1.midi</c> and
+    /// <c>&lt;base&gt;-1-1.midi</c>, the book counter and the performance counter both
+    /// present. Naming every performance in a file from the input's base name with one
+    /// running counter is right only while the file holds a single book; the Mendelssohn
+    /// Octet holds two (an explicit <c>\book</c> that only prints, then the implicit book
+    /// its toplevel <c>\score … \midi</c> blocks build), and its four MIDI files — byte
+    /// for byte upstream's — came out one book-suffix short, so a comparator pairing by
+    /// name alone matched the port's first movement against upstream's second.
+    /// </para>
     /// </remarks>
-    /// <param name="performances">The performances to write.</param>
-    /// <param name="baseName">The output base name, which carries no directory.</param>
+    /// <param name="bookOutputs">The books to write, each under its own name.</param>
     /// <param name="names">Receives each file's bare name, in the order written.</param>
     /// <param name="diagnostics">Receives one line per failed performance.</param>
     private static void WritePerformances(
-        List<Engine.Layout.Performance> performances,
-        string baseName,
+        List<BookOutput> bookOutputs,
         List<string> names,
         List<string> diagnostics)
     {
-        for (int i = 0; i < performances.Count; i++)
+        for (int b = 0; b < bookOutputs.Count; b++)
         {
-            string midiName = i > 0
-                ? baseName + "-" + i + ".midi"
-                : baseName + ".midi";
+            List<Engine.Layout.Performance> performances = bookOutputs[b].Performances;
+            string bookName = bookOutputs[b].Name;
 
-            try
+            for (int i = 0; i < performances.Count; i++)
             {
-                performances[i].WriteOutput(midiName, PerformanceName(performances[i]));
-                names.Add(midiName);
-            }
-            catch (Exception exception) when (!(exception is OutOfMemoryException))
-            {
-                diagnostics.Add("MIDI output failed: " + exception.Message);
+                string midiName = i > 0
+                    ? bookName + "-" + i + ".midi"
+                    : bookName + ".midi";
+
+                try
+                {
+                    performances[i].WriteOutput(midiName, PerformanceName(performances[i]));
+                    names.Add(midiName);
+                }
+                catch (Exception exception) when (!(exception is OutOfMemoryException))
+                {
+                    diagnostics.Add("MIDI output failed: " + exception.Message);
+                }
             }
         }
     }
@@ -1233,6 +1284,65 @@ public static class BatchRunner
     }
 
     /// <summary>
+    /// Whether the parse hit a music function whose body evaluated to
+    /// <c>#&lt;unspecified&gt;</c> — the one place where this port is MORE PERMISSIVE
+    /// than 2.27.2 rather than less, and therefore a file 2.27.2 refuses.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// WHAT UPSTREAM DOES. Guile refuses to apply a procedure with fewer arguments than
+    /// its required parameters and raises <c>wrong-number-of-args</c>; nothing in
+    /// LilyPond catches it during a parse, so the error escapes
+    /// <c>Lily_parser::parse_file</c> and the run dies with no output at all and a
+    /// non-zero status. Measured on 2.27.2 with
+    /// <c>\applyMusic #unfold-repeats { c'4 d' e' f' }</c> — <c>unfold-repeats</c> gained
+    /// a leading <c>types</c> argument, so a 2.10-era source calls it one argument short:
+    /// <c>Wrong number of arguments to #&lt;procedure unfold-repeats (types music)&gt;</c>,
+    /// exit 1, not one file written. Three rows of the Mutopia corpus do exactly this
+    /// (ChopinFF/O64, DiabelliA/O149/op149-7, FischerJKF/Fischer_EratoAllemande) and
+    /// convert-ly does not rewrite embedded Scheme on either side.
+    /// </para>
+    /// <para>
+    /// WHAT THE PORT DOES INSTEAD, AND WHY THIS IS NOT THE FIX IT LOOKS LIKE. The Scheme
+    /// interpreter under this port binds a missing required parameter to
+    /// <c>#&lt;unspecified&gt;</c> and applies the procedure anyway — measured directly:
+    /// <c>#(define (needs-two a b) (list a b))</c> then <c>(needs-two 1)</c> answers
+    /// <c>(1 #&lt;unspecified&gt;)</c> where Guile raises. That leniency is the
+    /// INTERPRETER's, not this port's, and it is not this port's to change; until it is
+    /// changed, the arity error the file deserves is never raised and the port cannot see
+    /// the arity mismatch itself.
+    /// </para>
+    /// <para>
+    /// What it CAN see is the consequence, one step later and at a boundary this port
+    /// owns: the music function's body returns <c>#&lt;unspecified&gt;</c>,
+    /// <c>scm/ly-syntax-constructors.scm</c>'s <c>music-function</c> tests the return
+    /// against the signature's predicate, and <c>music-function-call-error</c> reports
+    /// <c>music function cannot return ##&lt;unspecified&gt;</c>. Upstream reaches that
+    /// report only for a body that genuinely evaluates to unspecified — a file that is
+    /// already a failed file there — and never by way of a short call, because Guile
+    /// killed the run first. So treating this diagnostic as fatal refuses exactly the
+    /// files 2.27.2 refuses, plus a class upstream also calls an error and which the
+    /// 2,146-file regression suite does not contain (measured: zero files produce it).
+    /// </para>
+    /// <para>
+    /// ⚠ RETIRE THIS WHEN THE INTERPRETER CHECKS ARITY. The exact-parity fix lives one
+    /// layer down: applying a closure with fewer arguments than its required parameters
+    /// must raise Guile's <c>wrong-number-of-args</c> instead of binding the missing ones
+    /// to <c>#&lt;unspecified&gt;</c>. With that in place the error escapes the parse on
+    /// its own, the existing fatal path carries it (the same one that already refuses
+    /// <c>cannot find music object: MarkEvent</c>), the wording matches upstream's, and
+    /// this proxy has nothing left to catch.
+    /// </para>
+    /// </remarks>
+    /// <param name="diagnostics">Everything the parse reported.</param>
+    /// <returns><see langword="true"/> when the file must produce nothing.</returns>
+    private static bool MusicFunctionReturnedUnspecified(List<string> diagnostics)
+        => diagnostics.Exists(
+            diagnostic => diagnostic != null
+                && diagnostic.Contains("function cannot return", StringComparison.Ordinal)
+                && diagnostic.Contains("#<unspecified>", StringComparison.Ordinal));
+
+    /// <summary>
     /// <c>scm/lily-library.scm</c>'s <c>get-outfile-name</c>: the file name one BOOK's
     /// output prints under.
     /// <para>
@@ -1304,13 +1414,19 @@ public static class BatchRunner
         /// <param name="pages">The book's pages, in order.</param>
         /// <param name="firstPageNumber">The page number the first page prints at.</param>
         /// <param name="unitLength">The book's own <c>output-scale</c>.</param>
+        /// <param name="performances">The book's performances, in order.</param>
         public BookOutput(
-            string name, List<Stencil> pages, int firstPageNumber, double unitLength)
+            string name,
+            List<Stencil> pages,
+            int firstPageNumber,
+            double unitLength,
+            List<Engine.Layout.Performance> performances)
         {
             Name = name;
             Pages = pages;
             FirstPageNumber = firstPageNumber;
             UnitLength = unitLength;
+            Performances = performances;
         }
 
         /// <summary>Gets the name the book's files print under.</summary>
@@ -1325,6 +1441,10 @@ public static class BatchRunner
         /// <summary>Gets the book's own <c>output-scale</c>, which the backend divides
         /// font sizes by.</summary>
         public double UnitLength { get; }
+
+        /// <summary>Gets the book's performances, in the order they were produced —
+        /// the list <c>write-performances-midis</c> names from this book's name.</summary>
+        public List<Engine.Layout.Performance> Performances { get; }
     }
 }
 

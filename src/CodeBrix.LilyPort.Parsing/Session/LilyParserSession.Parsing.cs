@@ -185,42 +185,134 @@ public sealed partial class LilyParserSession
 
     /// <summary>
     /// Resolves an <c>\include</c> — first against the vendored <c>ly/</c> layer, then
-    /// against whatever the caller added.
-    /// <para>Upstream searches a path built from the installation's <c>ly/</c>
-    /// directory and the input file's own directory. The port's <c>ly/</c> is an
-    /// embedded resource, so it is searched by name rather than by path — which also
-    /// means an init file cannot be shadowed by one sitting beside a regression
-    /// input.</para>
+    /// against the INCLUDING FILE'S OWN DIRECTORY, then against whatever the caller
+    /// added.
+    /// <para>
+    /// Upstream searches, in this order: the directory of the file being parsed, the
+    /// directory of the main input, the installation's <c>ly/</c>, <c>ps/</c>,
+    /// <c>scm/</c> and font directories, the <c>-I</c> directories, and finally the
+    /// working directory. Confirmed against 2.27.2 itself, which prints the whole list
+    /// when a file is missing (see the search path in the error
+    /// <c>Includable_lexer::new_input</c> reports).
+    /// </para>
+    /// <para>
+    /// The port keeps ONE deliberate divergence from that order: its <c>ly/</c> is an
+    /// embedded resource, searched by name rather than by path, and it is searched
+    /// FIRST — so an init file cannot be shadowed by one sitting beside a regression
+    /// input, where upstream (whose ly/ comes after the two source directories) would
+    /// let the local file win. Everything below the init layer follows upstream: the
+    /// including file's directory, then the caller's <see cref="IncludePath"/> (which
+    /// is where a host puts the main input's directory and its <c>-I</c> entries).
+    /// </para>
     /// </summary>
     /// <param name="name">The file name as written.</param>
-    /// <returns>The source text, or <see langword="null"/>.</returns>
-    private string ResolveInclude(string name)
+    /// <param name="includingFileName">
+    /// The file the <c>\include</c> was read from, or <see langword="null"/>.
+    /// </param>
+    /// <returns>The resolved include, or <see langword="null"/>.</returns>
+    private IncludedSource ResolveInclude(string name, string includingFileName)
     {
         string text = LilyPondScheme.ReadInitFile(name);
+        string resolvedName = name;
         if (text == null)
         {
-            foreach (string directory in IncludePath)
+            string path = FindIncludeFile(name, includingFileName);
+            if (path == null)
             {
-                string path = System.IO.Path.Combine(directory, name);
-                if (System.IO.File.Exists(path))
-                {
-                    text = System.IO.File.ReadAllText(path);
-                    break;
-                }
+                return null;
+            }
+
+            text = System.IO.File.ReadAllText(path);
+
+            // THE NAME THE SEARCH SETTLED ON, not the one written. Upstream's
+            // Includable_lexer::new_input pushes file->name_string () — the found path —
+            // and every nested \include is then resolved relative to THAT. Keeping the
+            // as-written name instead is what made a piece laid out in subdirectories
+            // lose its includes one level down: `common/conductor-staff.ily' would have
+            // looked for its sibling `version.ily' in `common/' relative to the working
+            // directory rather than beside the file that asked for it.
+            resolvedName = path;
+        }
+
+        // Upstream: Includable_lexer::new_input goes through Sources::get_file, so
+        // the included file joins the run's source set and stays there.
+        OpenSource(resolvedName, text);
+        return new IncludedSource(resolvedName, text);
+    }
+
+    /// <summary>
+    /// Finds an <c>\include</c>'s file on disk: an absolute name as it stands, then the
+    /// including file's own directory, then <see cref="IncludePath"/>.
+    /// <para>Upstream: <c>File_path::find (name, cur_dir)</c>, which answers a rooted
+    /// name from the file system directly and otherwise joins the name onto each search
+    /// path entry in turn, the current directory being the first of them.</para>
+    /// </summary>
+    /// <param name="name">The file name as written.</param>
+    /// <param name="includingFileName">
+    /// The file the <c>\include</c> was read from, or <see langword="null"/>.
+    /// </param>
+    /// <returns>The path found, or <see langword="null"/>.</returns>
+    private string FindIncludeFile(string name, string includingFileName)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return null;
+        }
+
+        if (System.IO.Path.IsPathRooted(name))
+        {
+            return System.IO.File.Exists(name) ? name : null;
+        }
+
+        // The including file's directory, which is upstream's cur_dir. A name written
+        // with a directory part of its own — `\include "../common/x.ily"' — joins onto
+        // it exactly as any other does, which is how a part reaches a sibling folder.
+        string includingDirectory = IncludingDirectory(includingFileName);
+        if (includingDirectory != null)
+        {
+            string beside = System.IO.Path.Combine(includingDirectory, name);
+            if (System.IO.File.Exists(beside))
+            {
+                return beside;
             }
         }
 
-        if (text != null)
+        foreach (string directory in IncludePath)
         {
-            // Upstream: Includable_lexer::new_input goes through Sources::get_file, so
-            // the included file joins the run's source set and stays there.
-            OpenSource(name, text);
+            string path = System.IO.Path.Combine(directory, name);
+            if (System.IO.File.Exists(path))
+            {
+                return path;
+            }
         }
 
-        return text;
+        return null;
     }
 
-    /// <summary>Gets the directories an <c>\include</c> searches after the vendored layer.</summary>
+    /// <summary>
+    /// Answers the directory an included name is searched relative to, which is the
+    /// directory of the file the <c>\include</c> was read from.
+    /// </summary>
+    /// <param name="includingFileName">The including file's name, or <see langword="null"/>.</param>
+    /// <returns>The directory, or <see langword="null"/> when the name has none.</returns>
+    private static string IncludingDirectory(string includingFileName)
+    {
+        if (string.IsNullOrEmpty(includingFileName))
+        {
+            return null;
+        }
+
+        // A parse of text rather than of a file names itself `<input>', `<string>' or
+        // the like, and a vendored init file names itself by bare name; neither has a
+        // directory, and neither should reach the file system.
+        string directory = System.IO.Path.GetDirectoryName(includingFileName);
+        return string.IsNullOrEmpty(directory) ? null : directory;
+    }
+
+    /// <summary>
+    /// Gets the directories an <c>\include</c> searches after the vendored layer and
+    /// after the including file's own directory.
+    /// </summary>
     public List<string> IncludePath { get; } = new List<string>();
 
     /// <summary>

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using CodeBrix.LilyPort.Engine.Bootstrap;
 using CodeBrix.LilyPort.Engine.Music;
 using CodeBrix.LilyPort.Parsing.Session;
@@ -207,6 +208,163 @@ public class LilyParserSessionTests
         // lexer errors rather than in the session's own diagnostics.
         string all = string.Join("; ", outcome.LexerErrors);
         all.Should().Contain("no-such-file");
+    }
+
+    [Fact]
+    public void a_nested_include_finds_a_sibling_of_the_file_that_asked_for_it()
+    {
+        //Arrange
+        // The shape every Mutopia piece laid out in subdirectories has: the entry file
+        // includes a file in a folder, and THAT file includes its own siblings by bare
+        // name. Upstream resolves those against the directory of the file being parsed
+        // (Includable_lexer::new_input hands dir_name of the top of the include stack to
+        // Sources::get_file); nothing else can find them.
+        string root = NewFixtureDirectory("nested");
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "sub"));
+            File.WriteAllText(Path.Combine(root, "main.ly"), "\\include \"sub/a.ily\"\n");
+            File.WriteAllText(Path.Combine(root, "sub", "a.ily"), "\\include \"b.ily\"\n");
+            File.WriteAllText(Path.Combine(root, "sub", "b.ily"), "nestedSiblingMarker = #7\n");
+
+            LilyParserSession session = NewSession();
+
+            // What BatchRunner does for the entry file: its directory goes on the path.
+            session.IncludePath.Add(root);
+
+            //Act
+            ParseOutcome outcome = session.ParseText(
+                File.ReadAllText(Path.Combine(root, "main.ly")), "main.ly");
+
+            //Assert
+            session.LookupIdentifier("nestedSiblingMarker").Should().Be(7L);
+            string.Join("; ", outcome.LexerErrors).Should().NotContain("cannot find file");
+        }
+        finally
+        {
+            Delete(root);
+        }
+    }
+
+    [Fact]
+    public void a_nested_include_reaches_a_sibling_folder_through_a_parent_relative_name()
+    {
+        //Arrange
+        // KV525's own shape: a part in 01_allegro/ includes ../common/version.ily. The
+        // name joins onto the including file's directory exactly as a bare name does.
+        string root = NewFixtureDirectory("parentrelative");
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "parts"));
+            Directory.CreateDirectory(Path.Combine(root, "common"));
+            File.WriteAllText(Path.Combine(root, "main.ly"), "\\include \"parts/violin.ily\"\n");
+            File.WriteAllText(
+                Path.Combine(root, "parts", "violin.ily"), "\\include \"../common/shared.ily\"\n");
+            File.WriteAllText(
+                Path.Combine(root, "common", "shared.ily"), "parentRelativeMarker = #11\n");
+
+            LilyParserSession session = NewSession();
+            session.IncludePath.Add(root);
+
+            //Act
+            ParseOutcome outcome = session.ParseText(
+                File.ReadAllText(Path.Combine(root, "main.ly")), "main.ly");
+
+            //Assert
+            session.LookupIdentifier("parentRelativeMarker").Should().Be(11L);
+            string.Join("; ", outcome.LexerErrors).Should().NotContain("cannot find file");
+        }
+        finally
+        {
+            Delete(root);
+        }
+    }
+
+    [Fact]
+    public void a_nested_include_of_a_file_in_neither_place_is_still_reported()
+    {
+        //Arrange
+        // The new search must not turn a missing file into a silent skip: a skipped
+        // include produces a file that parses and means something else.
+        string root = NewFixtureDirectory("nestedmissing");
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "sub"));
+            File.WriteAllText(Path.Combine(root, "main.ly"), "\\include \"sub/a.ily\"\n");
+            File.WriteAllText(
+                Path.Combine(root, "sub", "a.ily"), "\\include \"no-such-sibling.ily\"\n");
+
+            LilyParserSession session = NewSession();
+            session.IncludePath.Add(root);
+
+            //Act
+            ParseOutcome outcome = session.ParseText(
+                File.ReadAllText(Path.Combine(root, "main.ly")), "main.ly");
+
+            //Assert
+            string all = string.Join("; ", outcome.LexerErrors);
+            all.Should().Contain("cannot find file");
+            all.Should().Contain("no-such-sibling.ily");
+        }
+        finally
+        {
+            Delete(root);
+        }
+    }
+
+    [Fact]
+    public void a_vendored_init_file_is_not_shadowed_by_one_beside_the_input()
+    {
+        //Arrange
+        // A DELIBERATE DIVERGENCE, asserted so it stays deliberate. The port's ly/ is an
+        // embedded resource searched by name and searched FIRST. Upstream 2.27.2 searches
+        // the file's own directory before its installed ly/ (its error message spells the
+        // order out: <current file's dir>, <main input's dir>, <datadir>/ly, ..., -I dirs,
+        // cwd), so upstream WOULD let this local file win — checked against the 2.27.2
+        // binary, which prints the local file's marker. The port keeps the init layer
+        // unshadowable instead; see ResolveInclude's doc comment.
+        string root = NewFixtureDirectory("shadow");
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(root, "chord-modifiers-init.ly"), "localShadowMarker = #99\n");
+            File.WriteAllText(
+                Path.Combine(root, "main.ly"), "\\include \"chord-modifiers-init.ly\"\n");
+
+            LilyParserSession session = NewSession();
+            session.IncludePath.Add(root);
+
+            //Act
+            session.ParseText(File.ReadAllText(Path.Combine(root, "main.ly")), "main.ly");
+
+            //Assert
+            // The vendored file was read, not the local one: the local file's identifier
+            // was never defined (LookupIdentifier answers the undefined sentinel), and one
+            // only the vendored file assigns was. (The vendored file reports plenty on its
+            // own in a session with no init layer, exactly as the include test above notes.)
+            session.LookupIdentifier("localShadowMarker").Should().Be(DefaultArgument.Instance);
+            session.LookupIdentifier("whiteCircleMarkup").Should().NotBe(DefaultArgument.Instance);
+        }
+        finally
+        {
+            Delete(root);
+        }
+    }
+
+    private static string NewFixtureDirectory(string tag)
+    {
+        string path = Path.Combine(
+            Path.GetTempPath(), "lilyport-include-" + tag + "-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private static void Delete(string directory)
+    {
+        if (Directory.Exists(directory))
+        {
+            Directory.Delete(directory, true);
+        }
     }
 
     private static bool AnyDiagnosticMentions(LilyParserSession session, string text)

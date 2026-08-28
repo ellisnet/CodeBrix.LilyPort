@@ -257,8 +257,10 @@ RUNNING A FILE
         extension and also what diagnostics call the input ("<baseName>.ly").
         includeDirectory is the directory the text's own \include statements
         resolve against, or null for none (the vendored ly/ files -- articulate.ly,
-        english.ly, gregorian.ly and the rest -- always resolve). outputDirectory
-        is created if missing.
+        english.ly, gregorian.ly and the rest -- always resolve). An include
+        INSIDE an included file resolves against ITS OWN directory first, so a
+        piece laid out in subdirectories only needs its top directory passed here.
+        outputDirectory is created if missing.
 
     static void SplitOutputName(string outputName, out string directory,
                                 out string baseName)
@@ -778,8 +780,13 @@ THE PARSER: LilyParserSession
     void ParseString(string code);  void IncludeString(string code)
     ParseOutcome LoadInitLayer()
     List<string> IncludePath { get; }
-        Directories an \include searches AFTER the vendored ly/ layer. The
-        vendored files are found by name and cannot be shadowed.
+        Directories an \include searches after the vendored ly/ layer and after
+        the INCLUDING FILE'S OWN DIRECTORY. The full order is: the vendored ly/
+        files (found by name, and they cannot be shadowed), then the directory
+        of the file the \include was read from -- so a piece laid out in
+        subdirectories reaches its siblings by bare name and its neighbours
+        through "../other/x.ily" -- then these directories in order. An absolute
+        include name is used as it stands.
     object LookupIdentifier(string name)
     void SetIdentifier(object key, object value)
     string OutputBaseName { get; set; }

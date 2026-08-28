@@ -136,6 +136,57 @@ public sealed class LexerRule
 }
 
 /// <summary>
+/// What an <c>\include</c> resolved to: the text to scan, and the name that text is
+/// known by from here on.
+/// <para>
+/// Upstream: the <c>Source_file</c> <c>Sources::get_file</c> answers with. Its
+/// <c>name_string ()</c> is the name the SEARCH SETTLED ON, not the one the
+/// <c>\include</c> wrote — <c>Includable_lexer::new_input</c> pushes that resolved
+/// name onto <c>file_name_strings_</c>, so an error inside the included file quotes
+/// the found path and, more consequentially, a FURTHER <c>\include</c> inside it is
+/// searched relative to where the file actually was.
+/// </para>
+/// </summary>
+public sealed class IncludedSource
+{
+    /// <summary>Initializes the resolved include.</summary>
+    /// <param name="name">The name the text is known by.</param>
+    /// <param name="text">The text.</param>
+    public IncludedSource(string name, string text)
+    {
+        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Text = text ?? throw new ArgumentNullException(nameof(text));
+    }
+
+    /// <summary>Gets the name the text is known by — the path the search settled on.</summary>
+    public string Name { get; }
+
+    /// <summary>Gets the included file's text.</summary>
+    public string Text { get; }
+}
+
+/// <summary>
+/// Resolves an <c>\include</c> to source text — from the caller's file system, or from
+/// the vendored <c>ly/</c> resources.
+/// <para>
+/// Upstream: <c>Includable_lexer::new_input (name, sources)</c> takes the directory of
+/// the file on top of the include stack and hands it to <c>Sources::get_file (name,
+/// current_dir)</c>, which searches through <c>File_path::find (name, cur_dir)</c>.
+/// The including file's own directory is therefore part of the question, which is why
+/// it is a parameter here rather than something the resolver is left to guess.
+/// </para>
+/// </summary>
+/// <param name="name">The file's name, exactly as the <c>\include</c> wrote it.</param>
+/// <param name="includingFileName">
+/// The file the <c>\include</c> was read from, whose directory the name is searched
+/// relative to. It may name no directory at all (a top-level input given by base name,
+/// or one of the vendored init files), in which case there is nothing to search
+/// relative to.
+/// </param>
+/// <returns>The resolved include, or <see langword="null"/> when it cannot be found.</returns>
+public delegate IncludedSource LexerIncludeResolver(string name, string includingFileName);
+
+/// <summary>
 /// The scanner engine: flex's runtime, reimplemented for a hand-ported rule set.
 /// <para>
 /// Three things it has to get right, all of them observable:
@@ -289,10 +340,14 @@ public sealed class ModalScanner : IParserInput, CodeBrix.LilyPort.Engine.Origin
     /// is a lexer error rather than a silent skip, because a skipped include produces
     /// a file that parses and means something else.
     /// </para>
+    /// <para>
+    /// The scanner hands the resolver the file the <c>\include</c> was READ FROM
+    /// (<see cref="CurrentFileName"/>) along with the name asked for, because upstream
+    /// searches that file's own directory first — a piece laid out in subdirectories
+    /// includes its siblings by bare name and nothing else can find them.
+    /// </para>
     /// </summary>
-    /// <returns>The included file's text, or <see langword="null"/> when it cannot be
-    /// found.</returns>
-    public Func<string, string> IncludeResolver { get; set; }
+    public LexerIncludeResolver IncludeResolver { get; set; }
 
     /// <summary>Gets the file currently being scanned, which an include changes.</summary>
     public string CurrentFileName => _fileName;
@@ -302,20 +357,24 @@ public sealed class ModalScanner : IParserInput, CodeBrix.LilyPort.Engine.Origin
 
     /// <summary>
     /// Switches the scanner to an included file, remembering where to resume.
-    /// <para>Upstream: <c>Includable_lexer::new_input</c>.</para>
+    /// <para>Upstream: <c>Includable_lexer::new_input</c>, which asks
+    /// <c>Sources::get_file</c> for the name RELATIVE TO THE FILE IT IS READING —
+    /// <c>dir_name (include_stack_.back ()-&gt;name_string ())</c> — and then remembers
+    /// the name the search settled on rather than the one that was asked for, so the
+    /// next <c>\include</c> down is searched relative to the right directory.</para>
     /// </summary>
     /// <param name="name">The file's name, as written in the <c>\include</c>.</param>
     /// <returns><see langword="true"/> when the file was found and opened.</returns>
     public bool BeginInclude(string name)
     {
-        string text = IncludeResolver?.Invoke(name);
-        if (text == null)
+        IncludedSource included = IncludeResolver?.Invoke(name, _fileName);
+        if (included == null)
         {
             Error("cannot find file: `" + name + "'");
             return false;
         }
 
-        BeginIncludeText(name, text);
+        BeginIncludeText(included.Name, included.Text);
         return true;
     }
 

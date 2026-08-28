@@ -58,14 +58,21 @@ public static class DriftVerdict
         PortGap, InputRefused, Inconclusive, PortAhead, Drift, Clean, NotGraded, NoOracle,
     };
 
+    //was previously: ForPdf(mutopia, oracle, portHasPages, oracleHasPages, oracleFinished) — the
+    //staff rung came from PdfAgrees, which read the RASTER count. Since 2026-08-28 the staff rung
+    //is the SVG-structure count and arrives as its own argument.
+
     /// <summary>Grades the page axis.</summary>
     /// <param name="mutopia">The port against Mutopia's PDF.</param>
     /// <param name="oracle">The port against the oracle's PDF, or null when the oracle did not run.</param>
+    /// <param name="svgStaves">The port's staves against the oracle's, read off the SVG pages, or null when the oracle did not run.</param>
     /// <param name="portHasPages">Whether the port produced a PDF at all.</param>
     /// <param name="oracleHasPages">Whether the oracle produced pages at all.</param>
     /// <param name="oracleFinished">Whether the oracle ran to completion; false when it was killed or would not launch.</param>
     /// <returns>The verdict.</returns>
-    public static string ForPdf(PdfComparison mutopia, PdfComparison oracle, bool portHasPages, bool oracleHasPages, bool oracleFinished)
+    public static string ForPdf(
+        PdfComparison mutopia, PdfComparison oracle, SvgStaffComparison svgStaves,
+        bool portHasPages, bool oracleHasPages, bool oracleFinished)
     {
         if (oracle == null)
         {
@@ -94,13 +101,39 @@ public static class DriftVerdict
             return PortAhead;
         }
 
-        if (!PdfAgrees(oracle))
+        if (!PdfAgrees(oracle) || StavesDiffer(svgStaves))
         {
             return PortGap;
         }
 
-        return PdfAgrees(mutopia) ? Clean : Drift;
+        return MutopiaAgrees(mutopia) ? Clean : Drift;
     }
+
+    /// <summary>
+    /// Whether the port agrees with Mutopia's PDF: <see cref="PdfAgrees"/> plus the RASTER staff
+    /// rung, which this axis keeps. Mutopia published a PDF and no SVG, so the SVG-structure
+    /// count that replaced the raster rung against the oracle cannot be taken here; and the
+    /// Mutopia ladder was calibrated (see README, CALIBRATION) with the raster rung in place,
+    /// where an agreeing pair sits at block_diff 0.13-0.18 and the rung is the shift-tolerant
+    /// layout signal. Retiring it here would loosen the CLEAN bar without a measurement to
+    /// justify it -- the 2026-08-28 re-grade measured exactly that: 28 rows to CLEAN. So the
+    /// raster count still decides on THIS axis only, and decides nothing against the oracle.
+    /// </summary>
+    /// <param name="mutopia">The port against Mutopia's PDF.</param>
+    /// <returns>True when the two documents agree as far as the Mutopia ladder can see.</returns>
+    public static bool MutopiaAgrees(PdfComparison mutopia)
+        => PdfAgrees(mutopia) && mutopia.RasterStavesVerdict != "STAVES-DIFFER";
+
+    /// <summary>
+    /// Whether the SVG-structure staff rung shows a real difference. Only
+    /// <see cref="SvgStaffComparison.Differ"/> counts: an unavailable or unreadable rung is no
+    /// evidence either way and must never produce a verdict, which is the mistake the raster
+    /// rung it replaced kept making.
+    /// </summary>
+    /// <param name="svgStaves">The rung, or null when the oracle did not run.</param>
+    /// <returns>True when at least one page holds a different number of staves.</returns>
+    public static bool StavesDiffer(SvgStaffComparison svgStaves)
+        => svgStaves != null && svgStaves.Verdict == SvgStaffComparison.Differ;
 
     /// <summary>Grades the performance axis.</summary>
     /// <param name="mutopia">The port against Mutopia's MIDI.</param>
@@ -156,20 +189,23 @@ public static class DriftVerdict
         => Array.IndexOf(Severity, first) <= Array.IndexOf(Severity, second) ? first : second;
 
     /// <summary>
-    /// Whether a PDF grade shows no evidence of a difference: the same number of pages, the same
-    /// number of staves on them, ink the calibrated grid calls SIMILAR, and no text the other
-    /// side has that this one lost.
+    /// Whether a PDF grade shows no evidence of a difference: the same number of pages, ink the
+    /// calibrated grid calls SIMILAR, and no text the other side has that this one lost.
+    /// <para>
+    /// //was previously: this also required RasterStavesVerdict != "STAVES-DIFFER". Removed
+    /// 2026-08-28. That rung was resolution-dependent and could be flipped by a font-coverage
+    /// change inside the PDF library, and it was the sole basis of half the PORT-GAP verdicts of
+    /// the 2026-08-27 sweep. Against the ORACLE the staff rung is now the SVG-structure count,
+    /// applied by <see cref="ForPdf"/>. Against MUTOPIA the raster rung is kept, by
+    /// <see cref="MutopiaAgrees"/>: that axis has no SVG to read and its ladder was calibrated
+    /// with the rung in place, so it stays where it was calibrated.
+    /// </para>
     /// </summary>
     /// <param name="comparison">The grade.</param>
     /// <returns>True when the two documents agree as far as the ladder can see.</returns>
     public static bool PdfAgrees(PdfComparison comparison)
     {
         if (comparison == null || comparison.PageCountVerdict != "PAGES-EQUAL")
-        {
-            return false;
-        }
-
-        if (comparison.StavesVerdict == "STAVES-DIFFER")
         {
             return false;
         }

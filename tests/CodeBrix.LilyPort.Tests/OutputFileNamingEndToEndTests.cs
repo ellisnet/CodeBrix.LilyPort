@@ -64,6 +64,16 @@ public class OutputFileNamingEndToEndTests
         return result.SvgPaths.Select(Path.GetFileName).ToList();
     }
 
+    /// <summary>The MIDI files written, in the order the runner wrote them.</summary>
+    private static List<string> WrittenMidiNames(string source, string name)
+    {
+        BatchRunResult result = BatchRunner.RunText(
+            source, name, null, ScratchDirectory());
+
+        result.MidiPaths.Should().NotBeNull();
+        return result.MidiPaths.Select(Path.GetFileName).ToList();
+    }
+
     /// <summary>A two-page book: the page break is forced, so the count is not a guess.</summary>
     private static string TwoPageBook(string paper)
         => Version
@@ -146,5 +156,52 @@ public class OutputFileNamingEndToEndTests
         //Assert
         names.Should().Equal(
             new List<string> { "naming-twobooks.svg", "naming-twobooks-1.svg" });
+    }
+
+    [Fact]
+    public void midi_files_are_named_from_the_book_that_performed_them()
+    {
+        //Arrange
+        // The Mendelssohn Octet's own shape, reduced: an explicit \book that only PRINTS,
+        // then toplevel scores that only PERFORM and so build a SECOND book.
+        // get-outfile-name gives that second book "-1", and upstream reaches
+        // write-performances-midis once per book with the book's name -- so the two
+        // performances are <base>-1.midi and <base>-1-1.midi, carrying the book counter
+        // AND the performance counter. Named from the INPUT's base name with one running
+        // counter they came out <base>.midi and <base>-1.midi, one book-suffix short, and
+        // a comparator pairing by name matched the first movement against the second.
+        string source =
+            Version
+            + "\\book { \\score { { c'1 } \\layout { } } }\n"
+            + "\\score { { d'1 } \\midi { } }\n"
+            + "\\score { { e'1 } \\midi { } }\n";
+
+        //Act
+        List<string> names = WrittenMidiNames(source, "naming-bookmidi");
+
+        //Assert
+        names.Should().Equal(
+            new List<string> { "naming-bookmidi-1.midi", "naming-bookmidi-1-1.midi" });
+    }
+
+    [Fact]
+    public void midi_files_of_the_only_book_are_named_from_the_base_name()
+    {
+        //Arrange
+        // THE CONTROL that makes the pair mean something, and the reason the defect above
+        // stayed invisible: with a single book the book's name IS the base name, so the
+        // two rules agree and every one-book file in the suite was named correctly either
+        // way. Without this half, a namer that always appended "-1" would pass.
+        string source =
+            Version
+            + "\\score { { d'1 } \\midi { } }\n"
+            + "\\score { { e'1 } \\midi { } }\n";
+
+        //Act
+        List<string> names = WrittenMidiNames(source, "naming-onebookmidi");
+
+        //Assert
+        names.Should().Equal(
+            new List<string> { "naming-onebookmidi.midi", "naming-onebookmidi-1.midi" });
     }
 }

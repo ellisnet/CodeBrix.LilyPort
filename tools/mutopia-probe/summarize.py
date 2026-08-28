@@ -15,11 +15,11 @@ Standard library only. Prints, per verdict column, the count of each verdict; th
 rows with the highest block_diff (the ink grade's number) and the rows that produced no
 page at all, so the OBSERVATIONS document can be written from one screen of output.
 
-When the results were produced with --oracle, the oracle columns are tallied too and two
+When the results were produced with --oracle, the oracle columns are tallied too and three
 further sections appear: every PORT-GAP row with what actually differs from upstream 2.27.2,
-and the tail of o_block_diff -- because the port-vs-oracle ink number sits around 0.001 for
+the tail of o_block_diff -- because the port-vs-oracle ink number sits around 0.001 for
 an agreeing pair, so a row at 0.2 is worth reading even though the calibrated ladder still
-calls it SIMILAR.
+calls it SIMILAR -- and every row whose SVG staff count differs, with the pages it differs on.
 """
 
 import argparse
@@ -32,8 +32,12 @@ VERDICT_COLUMNS = ["convert", "engraved_from", "engrave", "pdf", "page_count", "
 
 # Only tallied when the sweep was run with --oracle; "verdict" is the column the OBSERVATIONS
 # document is sorted on.
+# was previously: ... "o_staves" ... -- renamed 2026-08-28, and svg_staves added beside it. The
+# raster staff count is reported and decides nothing; svg_staves, counted off the SVG structure
+# per page, is the rung the verdict is cut on. See the README's A NOTE ON THE STAFF RUNG.
 ORACLE_COLUMNS = ["oracle", "verdict", "verdict_pdf", "verdict_midi",
-                  "o_page_count", "o_text", "o_ink", "o_staves", "o_midi", "o_midi_channel"]
+                  "o_page_count", "o_text", "o_ink", "svg_staves", "o_raster_staves",
+                  "o_midi", "o_midi_channel"]
 
 
 def main():
@@ -115,9 +119,18 @@ def main():
     against_oracle = [r for r in rows if r.get("o_ink") in ("SIMILAR", "LAYOUT-DIFFERS", "VERY-DIFFERENT")]
     against_oracle.sort(key=lambda r: -number(r, "o_block_diff"))
     for row in against_oracle[:arguments.worst]:
-        print("  %-6s %-9s %s/%s pages vs oracle  %-14s %-13s %s" % (
+        print("  %-6s %-9s %s/%s pages vs oracle  %-14s %-18s %s" % (
             row["o_block_diff"], row["verdict"], row["pages_port"], row["oracle_pages"],
-            row["o_ink"], row["o_staves"], row["key"]))
+            row["o_ink"], row.get("svg_staves", ""), row["key"]))
+    print()
+
+    print("SVG staff differences per page (port/oracle), the layout rung the verdict is cut on:")
+    differing = [r for r in rows if r.get("svg_staves") == "SVG-STAVES-DIFFER"]
+    differing.sort(key=lambda r: r["key"])
+    for row in differing:
+        print("  %-9s %-42s %s" % (row["verdict"], row["key"][-42:], row.get("svg_staves_diff_pages")))
+    if not differing:
+        print("  (none)")
     print()
 
     print("oracle diagnostics on the converted source (its own errors, not the port's):")
@@ -135,8 +148,12 @@ def why_port_gap(row):
     reasons = []
     if row.get("o_page_count") != "PAGES-EQUAL":
         reasons.append("pages %s vs %s (%s)" % (row.get("pages_port"), row.get("oracle_pages"), row.get("o_page_count")))
-    if row.get("o_staves") == "STAVES-DIFFER":
-        reasons.append("staves %s vs %s" % (row.get("staves_port"), row.get("o_staves_oracle")))
+    # was previously: cut on o_staves, pairing staves_port (measured against MUTOPIA, over
+    # min(port, Mutopia) pages) with o_staves_oracle (measured over min(port, oracle) pages) --
+    # two counts over different page sets. The staff rung is now the SVG one, per page.
+    if row.get("svg_staves") == "SVG-STAVES-DIFFER":
+        reasons.append("staves %s vs %s on %s" % (
+            row.get("svg_staves_port"), row.get("svg_staves_oracle"), row.get("svg_staves_diff_pages")))
     if row.get("o_ink") in ("LAYOUT-DIFFERS", "VERY-DIFFERENT"):
         reasons.append("ink %s (%s)" % (row.get("o_ink"), row.get("o_block_diff")))
     if row.get("o_text") in ("TEXT-DIFFERS", "TEXT-PORT-EMPTY"):

@@ -1032,8 +1032,10 @@ THE SCANNER'S INCLUDE STACK
 
   The include is opened between tokens in Next() rather than inside the rule
   action, so the rule stays a translation of lexer.ll's action. Resolution goes
-  through IncludeResolver: the vendored ly/ layer first, then the caller's
-  IncludePath. An unresolved include is a LEXER ERROR, never a silent skip -- a
+  through IncludeResolver: the vendored ly/ layer first, then the INCLUDING
+  FILE'S OWN DIRECTORY, then the caller's IncludePath (see the dated section
+  "NESTED \include SEARCHES THE INCLUDING FILE'S DIRECTORY" at the end of this
+  file). An unresolved include is a LEXER ERROR, never a silent skip -- a
   skipped include produces a file that parses and means something else.
 
 -------------------------------------------------------------------------------
@@ -1239,3 +1241,66 @@ THE LEXER'S BASE MODE IS `notes'
   Getting it wrong is silent -- Terminal() answers -1 for an unknown name and
   the driver reports "unexpected token -1" at what looks like an ordinary
   syntax error. The octave mark accounted for 25 init-layer errors.
+
+-------------------------------------------------------------------------------
+NESTED \include SEARCHES THE INCLUDING FILE'S DIRECTORY (added 2026-08-28)
+-------------------------------------------------------------------------------
+
+  THE DEFECT. IncludeResolver was handed only the NAME an \include asked for.
+  The scanner knew which file it was reading (CurrentFileName) and never said,
+  so the resolver could not search relative to anything and fell straight to
+  the caller's IncludePath. Every piece laid out in subdirectories lost its
+  includes one level down: the Mutopia sweep of 2026-08-27 found all nine
+  MozartWA/KV525 entry points failing this way -- common/conductor-staff.ily
+  line 1 is \include "version.ily", a SIBLING in common/, and the port said
+  "cannot find file: `version.ily'". The cascade was "unknown command:
+  \violinII", then a page with a title and no music.
+
+  WHAT UPSTREAM DOES. Includable_lexer::new_input takes dir_name of the file on
+  top of the include stack and passes it to Sources::get_file (name, cur_dir),
+  which searches through File_path::find (name, cur_dir). MEASURED against the
+  2.27.2 binary rather than argued: a missing include makes upstream print its
+  whole search path, and the order it prints, from a file E5/sub/a.ily included
+  by E5/main.ly with two -I directories given, is
+
+      <dir of the file being parsed>      E5/sub
+      <dir of the main input>             E5
+      <datadir>/ly, /ps, /scm, fonts/otf, fonts/svg
+      <the -I directories>                in the order given
+      ""                                  the working directory, last
+
+  Four further checks on the same binary: a bare sibling name resolves from a
+  nested file (E1); "../common/x.ily" resolves from a subdirectory (E2); a name
+  present BOTH beside the including file and on a -I directory resolves to the
+  sibling (E3); and an absolute include name resolves as it stands (E7).
+
+  WHAT THE PORT NOW DOES. IncludeResolver is the LexerIncludeResolver delegate,
+  taking (name, includingFileName) and answering an IncludedSource -- the text
+  AND the name the search settled on. Both halves matter: BeginInclude now
+  records the RESOLVED name, exactly as new_input pushes file->name_string ()
+  onto file_name_strings_, so the next \include down is searched relative to
+  where the file actually was rather than to the string that asked for it.
+  LilyParserSession.FindIncludeFile is File_path::find: a rooted name as it
+  stands, then the including file's directory, then IncludePath.
+
+  A side effect worth knowing: an included file now enters Sources under its
+  resolved path, so two files called version.ily in different folders are two
+  entries rather than one overwriting the other, and a diagnostic inside an
+  included file quotes the path it was found at (which is what upstream quotes).
+
+  THE ONE DELIBERATE DIVERGENCE, unchanged by this pass and now measured. The
+  port's ly/ is an embedded resource searched BY NAME and searched FIRST, so an
+  init file cannot be shadowed. Upstream's ly/ sits AFTER the two source
+  directories, so upstream WOULD let a local file win: a gregorian.ly beside the
+  input shadows the installed one on the 2.27.2 binary (E4). The port keeps the
+  init layer unshadowable -- the vendored layer is the only copy there is, and a
+  regression input that happens to name a file after one of the 62 init files
+  must not silently replace it. Fenced by
+  LilyParserSessionTests.a_vendored_init_file_is_not_shadowed_by_one_beside_the_input,
+  whose comment states upstream's behaviour so the divergence stays deliberate.
+
+  NOT TOUCHED, and a separate question: ParserPrimitives.ResolveOnIncludePath,
+  which is what ly:parse-file and ly:parse-init resolve through. It tries the
+  name as given (so, the working directory) and then IncludePath, and knows
+  nothing of any including file. Upstream routes those through the same
+  global_path as the lexer.
