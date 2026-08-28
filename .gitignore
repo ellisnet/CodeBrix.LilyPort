@@ -427,3 +427,8 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Claude Code per-machine files: agent worktrees and local settings overrides.
+# Shareable project config (.claude/settings.json, agents/, skills/, commands/) stays tracked.
+.claude/worktrees/
+.claude/settings.local.json
