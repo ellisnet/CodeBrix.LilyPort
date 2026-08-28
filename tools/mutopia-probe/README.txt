@@ -318,6 +318,17 @@ VERY-DIFFERENT (100 dpi, ink = grey < 200).
   checked (Canon 6 vs 7 systems, wtk1 24 = 24). It is summed over the compared pages; the
   `staves` column says STAVES-EQUAL or STAVES-DIFFER.
 
+  ⚠ BUT IT IS TOO FRAGILE TO DECIDE A VERDICT ALONE, and two measurements say so. Re-graded
+  at 200 dpi instead of 100, one checked pair REVERSED SIGN (9/8 became 8/9 at o_block_diff
+  0.002) while three others kept their delta exactly. And when the Html2Pdf pin moved to
+  1.0.240.106 -- a change that altered NO page geometry, ink identical on all 227 rows --
+  two rows gained a staff on the port side alone (blue_danube and AugenhaltenM, both 8/8 ->
+  9/8 at unchanged o_block_diff) because newly-covered footer glyphs put enough ink in one
+  raster row to cross the 30 % threshold. Two PORT-GAP verdicts were manufactured by four
+  footer characters becoming visible. Counting systems from the SVG structure rather than
+  from the raster would remove the question; until then, read a staves-only PORT-GAP beside
+  its o_block_diff. See OBSERVATIONS_lilyport_mutopia_2026-08-27.txt sections L1 and L4.
+
 THE TEXT GRADE: letter-run tokens, verdict on BAG containment >= 0.90.
 
   First run: every pair TEXT-DIFFERS, reference token counts 3-30x the port's. Mutopia's PDFs

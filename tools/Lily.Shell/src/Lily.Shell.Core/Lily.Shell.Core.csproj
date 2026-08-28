@@ -10,13 +10,14 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.11" />
     <PackageReference Include="CodeBrix.Platform.ApacheLicenseForever" Version="1.0.231.233" />
-    <!-- ⚠ THESE TWO MOVE WITH THE TEXINFO PIN. The 2026-08-26 Texinfo pair
-         (Texinfo2Pdf 1.0.238.1201 -> Html2Pdf 1.0.238.1192) asks for Roboto
-         >= 1.0.238.528 and Roboto Mono >= 1.0.238.534, and a lower pin here is a
-         package DOWNGRADE, which this solution treats as an error. Bumped in the
-         P6-A session, with the Lily.Docs ProjectReference the same edit had
-         dropped. -->
-    <PackageReference Include="CodeBrix.Platform.Fonts.Roboto.OflLicenseForever" Version="1.0.238.528" />
+    <!-- ⚠ THESE TWO MOVE WITH THE TEXINFO PIN. The 2026-08-27 Texinfo pair
+         (Texinfo2Pdf 1.0.240.201 -> Html2Pdf 1.0.240.106) asks for Roboto
+         >= 1.0.240.51 and Roboto Mono >= 1.0.238.534, and a lower pin here is a
+         package DOWNGRADE, which this solution treats as an error (NU1605), and it
+         fired on exactly this line when the Texinfo pair moved. Roboto alone moved
+         this time: that release adds NotoSans.ttf for Greek Polytonic, which is what
+         the Html2Pdf floor is reaching for. Roboto Mono is unchanged. -->
+    <PackageReference Include="CodeBrix.Platform.Fonts.Roboto.OflLicenseForever" Version="1.0.240.51" />
     <!-- Roboto Mono - the terminal surface's monospace font (app chrome stays Roboto) -->
     <PackageReference Include="CodeBrix.Platform.Fonts.RobotoMono.OflLicenseForever" Version="1.0.238.534" />
   </ItemGroup>

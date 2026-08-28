@@ -20,9 +20,17 @@
   <ItemGroup>
     <!-- The SVG-pages-to-PDF route and the PDFium rasterizer used for grading. These are
          TOOL dependencies (decision D52(a)): CodeBrix.LilyPort itself must never depend on
-         the Html2Pdf chain, and this project is not referenced by anything that ships. -->
-    <PackageReference Include="CodeBrix.PdfDocCreate.Html2Pdf.MitLicenseForever" Version="1.0.238.1192" />
-    <PackageReference Include="CodeBrix.PdfRasterizer.MitLicenseForever" Version="1.0.238.1192" />
+         the Html2Pdf chain, and this project is not referenced by anything that ships.
+
+         PINNED TOGETHER at one version, and moved 2026-08-27 from 1.0.238.1192 to
+         1.0.240.106 alongside the Texinfo pair in Lily.Docs. That release carries better
+         font-fallback logic and pulls Fonts.Roboto 1.0.240.51 (which adds NotoSans.ttf for
+         Greek Polytonic). ⚠ A BUMP HERE CHANGES WHAT THE PROBE MEASURES, so the sweep is
+         re-run and diffed when it moves: both sides of the port-vs-oracle grade go through
+         THIS writer, so that axis is common-mode and should hold, but the port-vs-Mutopia
+         text and ink rungs read the fallback chain and can shift. -->
+    <PackageReference Include="CodeBrix.PdfDocCreate.Html2Pdf.MitLicenseForever" Version="1.0.240.106" />
+    <PackageReference Include="CodeBrix.PdfRasterizer.MitLicenseForever" Version="1.0.240.106" />
   </ItemGroup>
 
 </Project>
