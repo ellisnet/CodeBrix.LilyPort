@@ -267,7 +267,16 @@ public sealed partial class LilyParserSession
         // The including file's directory, which is upstream's cur_dir. A name written
         // with a directory part of its own — `\include "../common/x.ily"' — joins onto
         // it exactly as any other does, which is how a part reaches a sibling folder.
-        string includingDirectory = IncludingDirectory(includingFileName);
+        //
+        // THE MAIN INPUT'S DIRECTORY IS THAT SAME MEMBER SEEN AT THE BOTTOM OF THE STACK,
+        // NOT A SECOND PLACE TO LOOK. Upstream computes ONE cur_dir per lookup
+        // (`includable-lexer.cc:52-56'): the directory of the file on top of the include
+        // stack, which for an \include read from the main input IS the main input's own
+        // directory, because upstream names its main input by the path it was opened
+        // from. A host hands this session the main input's TEXT under a bare name, so the
+        // name carries no directory and MainInputDirectory supplies what
+        // `dir_name (main_input_name_)' would have.
+        string includingDirectory = IncludingDirectory(includingFileName) ?? MainInputDirectory;
         if (includingDirectory != null)
         {
             string beside = System.IO.Path.Combine(includingDirectory, name);
@@ -312,8 +321,31 @@ public sealed partial class LilyParserSession
     /// <summary>
     /// Gets the directories an <c>\include</c> searches after the vendored layer and
     /// after the including file's own directory.
+    /// <para>This is the port's <c>global_path</c>: a host's <c>-I</c> entries, which is
+    /// also what <c>ly:parser-append-to-include-path</c> appends to. It is what
+    /// <c>ly:find-file</c>, <c>ly:parse-file</c> and <c>ly:parse-init</c> search, so what
+    /// goes on it is visible to a <c>.ly</c> file's own Scheme.</para>
     /// </summary>
     public List<string> IncludePath { get; } = new List<string>();
+
+    /// <summary>
+    /// Gets or sets the directory the main input came from — upstream's
+    /// <c>dir_name (main_input_name_)</c>, which is what an <c>\include</c> read from the
+    /// main input resolves against when the input was handed over as text under a bare
+    /// name.
+    /// <para>
+    /// ⚠ THIS IS DELIBERATELY NOT PART OF <see cref="IncludePath"/>, AND THE SEPARATION IS
+    /// UPSTREAM'S. Upstream keeps two lists: <c>Sources</c>' <c>cur_dir</c>, which only the
+    /// lexer's <c>\include</c> consults, and <c>global_path</c>, which is what
+    /// <c>ly:find-file</c>, <c>ly:parse-file</c> and <c>ly:parse-init</c> search. The main
+    /// input's directory is on the first and NOT on the second — MEASURED on 2.27.2:
+    /// <c>#(ly:find-file "asset.txt")</c> with the asset sitting beside the input and the
+    /// working directory elsewhere answers <c>#f</c>. Putting this directory on
+    /// <see cref="IncludePath"/> instead, which the batch runner once did, made the port
+    /// find files upstream cannot. See PORT-COVERAGE.
+    /// </para>
+    /// </summary>
+    public string MainInputDirectory { get; set; }
 
     /// <summary>
     /// Runs the <c>ly/</c> initialisation layer, which is what turns a bare

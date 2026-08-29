@@ -148,13 +148,13 @@ public static class BatchRunner
         interpreter.DefinePrimitive("ly:parse-file", 1, 1, a =>
         {
             string name = ArgumentText(a[0], "ly:parse-file");
-            string path = ResolveSource(name);
+            LilyParserSession session = LilyPondInit.Session();
+            string path = ResolveSource(name, session.IncludePath);
             if (path == null)
             {
                 throw FileFailed(name);
             }
 
-            LilyParserSession session = LilyPondInit.Session();
             List<string> diagnostics = new List<string>();
             int errors = RunLifecycle(
                 session,
@@ -173,10 +173,25 @@ public static class BatchRunner
         interpreter.DefinePrimitive("ly:parse-init", 1, 1, a =>
         {
             string name = ArgumentText(a[0], "ly:parse-init");
+
+            // Upstream builds a FRESH parser over fresh Sources for this. The port
+            // has one session per process (the call-after-session guards make a
+            // second init-layer load impossible), so the shared session parses the
+            // file directly — recorded in PORT-COVERAGE.
+            LilyParserSession session = LilyPondInit.Session();
+
             string text = LilyPondScheme.ReadInitFile(name);
-            if (text == null && File.Exists(name))
+            if (text == null)
             {
-                text = File.ReadAllText(name);
+                // Upstream's `global_path.find (file)' — the working directory and then
+                // the include path, and NO extension list, which is the one thing that
+                // separates this entry point from ly:parse-file. The vendored layer keeps
+                // its place in front, which is the port's recorded shadowing divergence.
+                string path = ResolveOnPath(name, session.IncludePath);
+                if (path != null)
+                {
+                    text = File.ReadAllText(path);
+                }
             }
 
             if (text == null)
@@ -184,11 +199,6 @@ public static class BatchRunner
                 throw FileFailed(name);
             }
 
-            // Upstream builds a FRESH parser over fresh Sources for this. The port
-            // has one session per process (the call-after-session guards make a
-            // second init-layer load impossible), so the shared session parses the
-            // file directly — recorded in PORT-COVERAGE.
-            LilyParserSession session = LilyPondInit.Session();
             ParseOutcome outcome = session.ParseText(text, name);
             if (!outcome.Success)
             {
@@ -204,15 +214,101 @@ public static class BatchRunner
             ? CodeBrix.LilyScheme.Primitives.StringPrimitives.Text(value, procedureName)
             : throw new ArgumentException(procedureName + ": expected a string file name");
 
-    private static string ResolveSource(string name)
+    /// <summary>
+    /// Finds a <c>ly:parse-file</c> argument the way upstream's
+    /// <c>global_path.find (file, input_extensions)</c> does: the extension loop is the
+    /// OUTER one, so <c>name.ly</c> is looked for in the working directory and in every
+    /// include-path entry before bare <c>name</c> is looked for in any of them.
+    /// <para>
+    /// ⚠ TWO DIVERGENCES THIS CLOSES, both MEASURED on the pinned 2.27.2. The extension
+    /// used to be tried SECOND and only in the working directory, so a directory holding
+    /// both <c>x</c> and <c>x.ly</c> opened the one upstream does not; and the include
+    /// path was not searched at all, so <c>(ly:parse-file "sub")</c> threw
+    /// <c>ly-file-failed</c> with <c>sub.ly</c> sitting on the path, where the oracle
+    /// parses it.
+    /// </para>
+    /// <para>
+    /// ⚠ The engine carries a twin of this resolver for a session that never loads this
+    /// facade (<c>ParserPrimitives.ResolveWithInputExtensions</c>), because this class
+    /// REBINDS <c>ly:parse-file</c> over the engine's. The two move together.
+    /// </para>
+    /// </summary>
+    /// <param name="name">The file name as written.</param>
+    /// <param name="includePath">
+    /// The session's include path, which is the port's <c>global_path</c>.
+    /// </param>
+    /// <returns>The resolved path, or <see langword="null"/>.</returns>
+    private static string ResolveSource(string name, IReadOnlyList<string> includePath)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return null;
+        }
+
+        Flower.FileName fileName = new Flower.FileName(name);
+        string originalExtension = fileName.Extension;
+
+        foreach (string extension in InputExtensions)
+        {
+            // Upstream joins the extension onto whatever the name already carried,
+            // separated by a dot only when BOTH are non-empty: `sub' asks for `sub.ly'
+            // and then `sub', while `sub.ly' asks for `sub.ly.ly' and then `sub.ly'. The
+            // second pass is what keeps a fully spelled name working.
+            fileName.Extension = originalExtension;
+            if (extension.Length != 0 && fileName.Extension.Length != 0)
+            {
+                fileName.Extension += ".";
+            }
+
+            fileName.Extension += extension;
+
+            string found = ResolveOnPath(fileName.ToString(), includePath);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The extensions <c>ly:parse-file</c> searches, in upstream's order —
+    /// <c>lily-parser-scheme.cc</c>'s <c>input_extensions</c>. <c>ly:parse-init</c> passes
+    /// NONE, and that is not an oversight: MEASURED on 2.27.2, <c>(ly:parse-init "sub")</c>
+    /// does not open <c>sub.ly</c> where <c>(ly:parse-file "sub")</c> does.
+    /// </summary>
+    private static readonly string[] InputExtensions = { "ly", string.Empty };
+
+    /// <summary>
+    /// Searches one exact name the way upstream's <c>File_path::find (name)</c> does — the
+    /// working directory, then each include-path entry in turn.
+    /// </summary>
+    /// <param name="name">The file name to look for, extension already decided.</param>
+    /// <param name="includePath">
+    /// The session's include path, which is the port's <c>global_path</c>.
+    /// </param>
+    /// <returns>The path found, or <see langword="null"/>.</returns>
+    private static string ResolveOnPath(string name, IReadOnlyList<string> includePath)
     {
         if (File.Exists(name))
         {
             return name;
         }
 
-        string withExtension = name + ".ly";
-        return File.Exists(withExtension) ? withExtension : null;
+        if (includePath != null)
+        {
+            foreach (string directory in includePath)
+            {
+                string candidate = Path.Combine(directory, name);
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        return null;
     }
 
     private static Exception FileFailed(string name)
@@ -1136,10 +1232,23 @@ public static class BatchRunner
         string includeDirectory,
         List<string> diagnostics)
     {
-        if (includeDirectory != null)
-        {
-            session.IncludePath.Add(includeDirectory);
-        }
+        // WHERE THE ENTRY DIRECTORY GOES, AND WHY IT IS NO LONGER THE INCLUDE PATH.
+        //
+        // This is upstream's `main_input_name_' half: the directory an \include read from
+        // the main input resolves against (`includable-lexer.cc:52-56'). It used to be
+        // pushed onto session.IncludePath, which is the port's `global_path', and that put
+        // it in front of ly:find-file, ly:parse-file and ly:parse-init as well. Upstream
+        // keeps the two apart, and the difference is observable: MEASURED on 2.27.2,
+        // `#(ly:find-file "asset.txt")' with the asset beside the input and the working
+        // directory elsewhere answers #f, where the port answered the asset's path.
+        // A host's -I entries still belong on IncludePath, which is where
+        // ly:parser-append-to-include-path still puts them.
+        //
+        // Saved and restored rather than cleared, so a run nested inside another leaves
+        // the outer run's directory exactly as it found it — the shape the IncludePath
+        // add/remove pair had.
+        string enclosingMainInputDirectory = session.MainInputDirectory;
+        session.MainInputDirectory = includeDirectory;
 
         try
         {
@@ -1188,10 +1297,7 @@ public static class BatchRunner
         }
         finally
         {
-            if (includeDirectory != null)
-            {
-                session.IncludePath.Remove(includeDirectory);
-            }
+            session.MainInputDirectory = enclosingMainInputDirectory;
         }
     }
 

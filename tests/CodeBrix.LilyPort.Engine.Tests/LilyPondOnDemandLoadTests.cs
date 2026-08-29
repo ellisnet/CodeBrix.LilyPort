@@ -206,17 +206,41 @@ public class LilyPondOnDemandLoadTests
         {
             ["hyphenate-internal-words"] = "$defaultlayout",
 
-            // RESTATED 2026-08-13 (EPG24), and the move is the good kind. This recorded
+            // RESTATED 2026-08-13 (EPG24), and the move was the good kind. This recorded
             // "string-length", which was a real defect of its own showing through: a
             // GOOPS slot's #:init-value '() was stored as the quoted list, so a childless
             // <texi-node> looked like it had children and documentation-lib read a node
-            // name off the symbol `quote'. With that fixed the file gets as far as its
-            // own output code and stops at the ONE thing this project structurally
+            // name off the symbol `quote'. With that fixed the file got as far as its
+            // own output code and stopped at the ONE thing this project structurally
             // cannot supply -- hyphenation-rules-string, which hyphenate-internal-words
-            // above would have defined if the parser were reachable. So the signature is
-            // now the parser gate itself, which is what the note beside BlockedFiles
-            // has claimed all along.
-            ["documentation-generate"] = "hyphenation-rules-string",
+            // above would have defined if the parser were reachable.
+            //
+            // RESTATED AGAIN 2026-08-29 (L20), when the wide module import was dropped
+            // for Guile's narrow one. The file now stops EARLIER, at `dump-node', and
+            // the cause was MEASURED rather than guessed: after this class's fixpoint
+            // load the CURRENT MODULE is `(lily to-xml)', not `(lily)'.
+            // documentation-lib.scm carries no define-module, so it loads into whatever
+            // module is current when its turn comes, and to-xml.scm -- which does carry
+            // one -- got there first and never put the current module back. `dump-node'
+            // therefore lands in `(lily to-xml)': `(module-variable (resolve-module
+            // '(lily)) 'dump-node)' answers #f. The wide import used to make that
+            // module's private names visible anyway; the narrow one does not.
+            //
+            // ⚠ THAT LEAK IS UPSTREAM'S, NOT A PORT DEFECT, WHICH IS WHY THIS IS A
+            // RE-RECORDING AND NOT A FIX. Upstream's ly:load calls primitive-load-path
+            // (scm/lily.scm), and Guile's own load-from-path is
+            // `(start-stack 'load-stack (primitive-load-path name))' -- no
+            // save-module-excursion anywhere on the path, so a loaded define-module
+            // changes the current module for good. Guile behaves the same way.
+            // What this class does that upstream never does is load the on-demand set in
+            // an order upstream does not use (see RunLoad's own note: alphabetical order
+            // inverts the real one), which is what puts to-xml before documentation-lib.
+            //
+            // ⚠ AND THE REAL DOCUMENTATION PATH IS UNAFFECTED: G8 renders all nineteen
+            // generated files BYTE-IDENTICAL to the oracle under narrow imports, because
+            // generate-documentation.ly is parsed and ly:loads the pipeline from inside
+            // (lily), where dump-node lands in the module that asks for it.
+            ["documentation-generate"] = "dump-node",
         };
 
         //Act

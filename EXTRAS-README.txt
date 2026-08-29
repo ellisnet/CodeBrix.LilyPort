@@ -612,8 +612,20 @@ HOW TO RUN
         cd tools/mutopia-probe/MutopiaProbe
         dotnet run -c Release -- ~/ClaudeHome/Mutopia/pieces ~/ClaudeHome/mutopia-probe-<date> \
             [--files key1,key2,...] [--limit N] [--resume] [--retry-hung] \
-            [--timeout-seconds N] [--dpi N] [--no-ink]
+            [--timeout-seconds N] [--dpi N] [--no-ink] \
+            [--oracle [PATH]] [--oracle-timeout-seconds N] [--regrade RUN_DIR]
         python3 ../summarize.py ~/ClaudeHome/mutopia-probe-<date>/results.tsv [--by declared_version]
+
+    --oracle is what turns the tool from a Mutopia comparison into a FIDELITY
+    one: it engraves each entry point with the pinned 2.27.2 binary as well
+    (default ~/ClaudeHome/oracle/lilypond-2.27.2/bin/lilypond, with its own
+    fonts) and adds the o_* columns, which grade the port against upstream on
+    the SAME converted source.  Those are the columns a PORT-GAP verdict is
+    cut on; without them the caveat below is the whole story.  Give it
+    --oracle-timeout-seconds 1800 for a full run -- the Mendelssohn Octet full
+    score needs ~395 s of oracle time on its own.
+    --regrade RUN_DIR re-runs only the GRADING over an existing run's output,
+    which is how a threshold change is measured without re-engraving.
 
     The corpus root and the output directory are both command-line arguments
     and both must be OUTSIDE the repository: the corpus is a local download

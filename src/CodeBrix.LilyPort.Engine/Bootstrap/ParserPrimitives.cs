@@ -294,11 +294,13 @@ public static class ParserPrimitives
     {
         interpreter.DefinePrimitive("ly:parse-file", 1, 1, a =>
             ParseThroughAmbientSession(
-                interpreter, a[0], "ly:parse-file", setOutputName: true));
+                interpreter, a[0], "ly:parse-file",
+                setOutputName: true, tryInputExtensions: true));
 
         interpreter.DefinePrimitive("ly:parse-init", 1, 1, a =>
             ParseThroughAmbientSession(
-                interpreter, a[0], "ly:parse-init", setOutputName: false));
+                interpreter, a[0], "ly:parse-init",
+                setOutputName: false, tryInputExtensions: false));
     }
 
     /// <summary>
@@ -312,9 +314,14 @@ public static class ParserPrimitives
     /// Whether to derive the output base name from the input, as <c>ly:parse-file</c>
     /// does and <c>ly:parse-init</c> does not.
     /// </param>
+    /// <param name="tryInputExtensions">
+    /// Whether to search <c>input_extensions</c> as well as the name as written, which
+    /// <c>ly:parse-file</c> does and <c>ly:parse-init</c> does not.
+    /// </param>
     /// <returns>Unspecified, or throws.</returns>
     private static object ParseThroughAmbientSession(
-        Interpreter interpreter, object argument, string procedureName, bool setOutputName)
+        Interpreter interpreter, object argument, string procedureName, bool setOutputName,
+        bool tryInputExtensions)
     {
         if (!(argument is MutableString) && !(argument is string))
         {
@@ -324,7 +331,9 @@ public static class ParserPrimitives
         string file = StringPrimitives.Text(argument, procedureName);
         ILilyParser parser = Parser(interpreter, procedureName);
 
-        string resolved = ResolveOnIncludePath(parser, file);
+        string resolved = tryInputExtensions
+            ? ResolveWithInputExtensions(parser, file)
+            : ResolveOnIncludePath(parser, file);
         if (resolved == null)
         {
             // Upstream warns and then still throws ly-file-failed below, rather than
@@ -370,6 +379,58 @@ public static class ParserPrimitives
     private static SchemeThrow FileFailed(string fileName)
         => new SchemeThrow(
             Symbol.Intern("ly-file-failed"), Pair.List(new MutableString(fileName)));
+
+    /// <summary>
+    /// The extensions <c>ly:parse-file</c> tries, in upstream's order —
+    /// <c>lily-parser-scheme.cc</c>'s <c>input_extensions</c>. <c>ly:parse-init</c> passes
+    /// none, so the two entry points deliberately do NOT resolve alike.
+    /// </summary>
+    private static readonly string[] InputExtensions = { "ly", string.Empty };
+
+    /// <summary>
+    /// Finds a file the way upstream's <c>File_path::find (name, extensions)</c> does.
+    /// <para>The extension loop is the OUTER one: <c>name.ly</c> is looked for in every
+    /// search directory before bare <c>name</c> is looked for in any of them. MEASURED on
+    /// 2.27.2 — with <c>sub.ly</c> on the search path, <c>(ly:parse-file "sub")</c> opens
+    /// it; the port used to answer <c>cannot find file</c> and throw
+    /// <c>ly-file-failed</c>.</para>
+    /// </summary>
+    /// <param name="parser">The parser whose include path to search.</param>
+    /// <param name="file">The file name as written.</param>
+    /// <returns>The resolved path, or <see langword="null"/>.</returns>
+    private static string ResolveWithInputExtensions(ILilyParser parser, string file)
+    {
+        if (string.IsNullOrEmpty(file))
+        {
+            return null;
+        }
+
+        Flower.FileName name = new Flower.FileName(file);
+        string originalExtension = name.Extension;
+
+        foreach (string extension in InputExtensions)
+        {
+            // Upstream appends the extension to whatever the name already carried,
+            // separating them with a dot only when BOTH are non-empty: `sub' asks for
+            // `sub.ly' and then `sub', while `sub.ly' asks for `sub.ly.ly' and then
+            // `sub.ly'. The second pass is what keeps a fully spelled name working.
+            name.Extension = originalExtension;
+            if (extension.Length != 0 && name.Extension.Length != 0)
+            {
+                name.Extension += ".";
+            }
+
+            name.Extension += extension;
+
+            string found = ResolveOnIncludePath(parser, name.ToString());
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Finds a file on the parser's include path, trying the name as given first.

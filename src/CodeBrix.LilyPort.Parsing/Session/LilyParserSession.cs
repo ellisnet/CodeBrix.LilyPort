@@ -119,6 +119,11 @@ public sealed partial class LilyParserSession : IParserHost, ILexerHost
         _pitchNameStates.AddRange(source._pitchNameStates);
         _chordModifiers = source._chordModifiers;
         IncludePath.AddRange(source.IncludePath);
+
+        // main_input_name_ is a member of the lexer the copy constructor builds FROM the
+        // original (`includable-lexer.hh:45'), so a clone resolves an \include against the
+        // same directory the original would have.
+        MainInputDirectory = source.MainInputDirectory;
         foreach (KeyValuePair<string, SourceFile> entry in source._sourceFiles)
         {
             _sourceFiles[entry.Key] = entry.Value;

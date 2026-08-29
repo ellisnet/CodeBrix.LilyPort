@@ -1304,3 +1304,72 @@ NESTED \include SEARCHES THE INCLUDING FILE'S DIRECTORY (added 2026-08-28)
   name as given (so, the working directory) and then IncludePath, and knows
   nothing of any including file. Upstream routes those through the same
   global_path as the lexer.
+
+  ⚠ RESOLVED 2026-08-29 (L18), AND THE PARAGRAPH ABOVE WAS HALF WRONG.  "Knows
+  nothing of any including file" is TRUE, and it is not a defect: upstream's
+  ly:parse-file and ly:parse-init resolve through global_path.find, which knows
+  nothing of an including file either.  What was actually wrong is the opposite
+  divergence, described in the next section.  Do not "fix" these two primitives
+  by routing them through the lexer's resolver -- that would make them search a
+  directory upstream does not search.
+
+TWO SEARCH PATHS, NOT ONE: MainInputDirectory vs IncludePath (2026-08-29, L18)
+-----------------------------------------------------------------------------
+
+  UPSTREAM HAS TWO LISTS AND THIS PORT HAD ONE, AND THE DIFFERENCE IS OBSERVABLE.
+
+    * Sources' cur_dir -- the directory of the file on top of the include stack
+      (includable-lexer.cc:52-56, with relative-includes defaulting to #t in
+      scm/lily.scm:428).  ONLY the lexer's \include consults it.
+    * global_path -- the datadir directories, the working directory and the -I
+      entries (relocate.cc:259-267, main.cc:623).  It is what ly:find-file,
+      ly:parse-file and ly:parse-init search.  The main input's directory is NOT
+      on it.
+
+  The port had one list, IncludePath, and BatchRunner.RunLifecycle pushed the
+  entry directory onto it for the duration of the parse -- which is how an
+  \include read from the main input found its siblings, the main input being
+  parsed under a bare name that carries no directory of its own.  The cost was
+  that the same push put the entry directory in front of all three primitives.
+
+  MEASURED on the pinned 2.27.2, working directory elsewhere, asset beside the
+  input (probes under ~/ClaudeHome/l18-probes/):
+
+      #(ly:message "~a" (ly:find-file "asset.txt"))
+          oracle:  #f
+          port:    /.../assetdir/asset.txt        <-- the divergence
+
+  WHAT THE PORT NOW DOES.  LilyParserSession.MainInputDirectory carries what
+  dir_name (main_input_name_) carries upstream, and FindIncludeFile reads
+  `IncludingDirectory(includingFileName) ?? MainInputDirectory' -- ONE cur_dir
+  per lookup, as upstream computes one.  IncludePath is left as global_path
+  alone.  BatchRunner sets and restores the property instead of mutating the
+  list; a clone carries it, because main_input_name_ is a lexer member the copy
+  constructor brings along.
+
+  ⚠ WHAT THIS IS NOT.  It is NOT the change the 2026-08-28 A1 report proposed
+  under "load path: ''", and that proposal is REFUTED -- see the facade's
+  PORT-COVERAGE, which records the measurement.  Keeping the entry directory on
+  the load path for the whole run would have made the port find four assets the
+  oracle cannot.
+
+  ⚠ ONE CONFLATION KEPT, DELIBERATELY.  ly:parser-append-to-include-path appends
+  to Sources' path_ upstream (lily-parser-scheme.cc), NOT to global_path, so an
+  appended directory is visible to \include and NOT to ly:find-file -- MEASURED:
+  the oracle still answers `cannot find file' for ly:parse-file after appending.
+  The port appends to its single IncludePath, so an appended directory IS
+  visible to all three primitives.  KEPT because that is how a host says -I, and
+  -I on upstream's own command line DOES reach global_path; tools/Lily.Docs
+  depends on it, reaching Documentation/pictures for \epsfile that way
+  (ManualRenderer's snippetPaths).  The divergence only ever makes MORE files
+  findable, and only for a host that asked.  REVISIT if a host ever needs the
+  two halves apart.
+
+  THE FENCES.  LilyParserSessionTests.
+  an_include_from_the_main_input_resolves_against_the_main_input_directory, with
+  IncludePath deliberately EMPTY, and its control
+  ..._fails_when_no_main_input_directory_is_set.  End to end, the facade suite's
+  SearchPathSeparationEndToEndTests.
+  the_entry_directory_serves_include_and_is_invisible_to_find_file asserts both
+  answers in ONE run over ONE directory.  All three were A/B'd: each fails with
+  its own fix reverted.

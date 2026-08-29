@@ -594,3 +594,78 @@ figure reproduces EXACTLY.
   the proxy's shape would go on passing if the arity check regressed.  Its two
   controls are unchanged: \applyMusic with the declared arity engraves, and an
   ordinary hand-written music function called correctly still prints.
+
+ly:parse-file AND ly:parse-init: THE RESOLVER, AND WHAT THE LOAD PATH IS FOR
+---------------------------------------------------------------------------
+  (2026-08-29, L18.  Measured against the pinned 2.27.2; probes under
+  ~/ClaudeHome/l18-probes/.)
+
+  WHICH IMPLEMENTATION RUNS.  There are TWO.  BatchRunner.InstallSessionBindings
+  REBINDS ly:parse-file and ly:parse-init over the engine's pair in
+  ParserPrimitives, and LilyPondInit installs it "once the layers are up, so the
+  bindings exist in every real session".  So the FACADE's pair is what the corpus
+  and every host actually reach; the engine's is the fallback for a session that
+  never loads this assembly.  ⚠ ANYONE FIXING ONE MUST FIX BOTH -- a change made
+  only in ParserPrimitives is dead code in every real run, which is how the
+  extension defect below survived being "fixed" once.
+
+  DEFECT 1, THE EXTENSION LIST.  Upstream resolves ly:parse-file through
+  global_path.find (file, input_extensions) with input_extensions = {"ly", ""}
+  (lily-parser-scheme.cc:34,73), and File_path::find runs the EXTENSION loop
+  OUTER and the directory loop INNER: name.ly is looked for everywhere before
+  bare name is looked for anywhere.  ly:parse-init passes NO extensions
+  (lily-parser-scheme.cc:143) -- the two entry points deliberately differ.
+
+  ResolveSource tried `name' and then `name + ".ly"', in the working directory
+  only.  Both halves were wrong.  MEASURED, with `sub' and `sub.ly' side by side
+  in the working directory and saying different things:
+
+      (ly:parse-file "sub")     oracle: sub.ly      port (before): sub
+      (ly:parse-init "sub")     oracle: sub         port (before): sub
+
+  and, with sub.ly reachable on the include path rather than the cwd:
+
+      (ly:parse-file "sub")     oracle: parses it   port (before): ly-file-failed
+
+  ResolveSource now walks upstream's two loops in upstream's order over the
+  working directory and then IncludePath; ly:parse-init gets the same directory
+  search with no extension list, which it never had at all.
+
+  ⚠ ONE UPSTREAM BEHAVIOUR NOT REPRODUCED.  When ly:parse-init resolves nothing,
+  2.27.2 goes on to parse the empty name and DUMPS CORE (measured, with -I set
+  and a name that does not resolve).  The port raises ly-file-failed, which is
+  what the rest of this entry point already did.  Rule 2 asks for upstream's
+  bugs, not upstream's crashes.
+
+  DEFECT 2, THE LOAD PATH -- AND THE PROPOSAL THAT WAS REFUTED.  The A1 report of
+  2026-08-28 recorded, under "load path: ''", that RunLifecycle adds the entry
+  directory to IncludePath for the PARSE and removes it in a finally, while book
+  processing -- where ly:find-file serves \epsfile, \markup \image and
+  \verbatim-file -- runs afterwards and searches an empty path.  It proposed
+  keeping the entry directory on the load path for the whole run, "mirroring
+  where upstream's global_path gets it".
+
+  THAT PROPOSAL IS REFUTED, AND IT IS THE PORT'S PARSE-TIME BEHAVIOUR THAT WAS
+  WRONG.  Upstream's global_path never holds the main input's directory at all.
+  MEASURED, working directory elsewhere, asset beside the input:
+
+      book time (\verbatim-file)   oracle: fatal, cannot find   port: identical
+      parse time (ly:find-file)    oracle: #f                   port: FOUND IT
+
+  So the empty load path at book time is upstream's own answer, reproduced; the
+  divergence was at parse time, in the other direction.  Had the proposal been
+  carried out, four graded corpus rows would have moved: lilypond.eps,
+  lilypond-uppercase-ext.PNG, verbatim.txt and clip-systems' EPS are all PRESENT
+  in tests/regression/, and the oracle misses them only because the harness
+  chdirs to a scratch directory.  The port would have found all four and stopped
+  reproducing the oracle's failure -- the four inputs L7 blessed as settled.
+
+  THE FIX is in the Parsing assembly (LilyParserSession.MainInputDirectory); this
+  file's half is that RunLifecycle now sets and restores that property instead of
+  pushing onto IncludePath.  Full record in the Parsing PORT-COVERAGE under "TWO
+  SEARCH PATHS, NOT ONE".
+
+  THE FENCE.  SearchPathSeparationEndToEndTests, two cases, each carrying its own
+  control inside one run: \include reaches the entry directory while ly:find-file
+  does not, and ly:parse-file opens sub.ly where ly:parse-init opens sub.  Both
+  A/B'd -- each fails with its own fix reverted.

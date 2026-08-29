@@ -351,6 +351,66 @@ public class LilyParserSessionTests
         }
     }
 
+    [Fact]
+    public void an_include_from_the_main_input_resolves_against_the_main_input_directory()
+    {
+        //Arrange
+        // Upstream's cur_dir for an \include read from the main input is
+        // `dir_name (main_input_name_)' (includable-lexer.cc:52-56). A host hands this
+        // session TEXT under a bare name, so the name has no directory and
+        // MainInputDirectory is what carries it. ⚠ IncludePath is left EMPTY on purpose:
+        // it is the port's global_path, and the entry directory does not belong on it —
+        // see the property's own doc comment and PORT-COVERAGE.
+        string root = NewFixtureDirectory("maininput");
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "sibling.ily"), "mainDirMarker = #7\n");
+
+            LilyParserSession session = NewSession();
+            session.MainInputDirectory = root;
+
+            //Act
+            session.ParseText("\\include \"sibling.ily\"\n", "main.ly");
+
+            //Assert
+            session.LookupIdentifier("mainDirMarker").Should().NotBe(DefaultArgument.Instance);
+        }
+        finally
+        {
+            Delete(root);
+        }
+    }
+
+    [Fact]
+    public void an_include_from_the_main_input_fails_when_no_main_input_directory_is_set()
+    {
+        //Arrange
+        // THE CONTROL for the test above, and the reason it proves anything: the same
+        // file, the same bare main-input name, the same EMPTY IncludePath — and with
+        // MainInputDirectory unset there is nowhere left to look, so the include fails
+        // the way upstream's does when cur_dir is empty.
+        string root = NewFixtureDirectory("maininput-control");
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "sibling.ily"), "mainDirMarker = #7\n");
+
+            LilyParserSession session = NewSession();
+
+            //Act
+            ParseOutcome outcome = session.ParseText("\\include \"sibling.ily\"\n", "main.ly");
+
+            //Assert
+            session.LookupIdentifier("mainDirMarker").Should().Be(DefaultArgument.Instance);
+            string all = string.Join("; ", outcome.LexerErrors);
+            all.Should().Contain("cannot find file");
+            all.Should().Contain("sibling.ily");
+        }
+        finally
+        {
+            Delete(root);
+        }
+    }
+
     private static string NewFixtureDirectory(string tag)
     {
         string path = Path.Combine(

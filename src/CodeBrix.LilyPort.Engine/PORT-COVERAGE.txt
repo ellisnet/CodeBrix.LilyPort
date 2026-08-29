@@ -10974,3 +10974,153 @@ THE SLUR PURE-HEIGHT SHORTFALL, AND THE ITEM PURE-HEIGHT CACHE UNDER IT
   and the PORT IS TALLER in most of them (mHi +1.49453 where the oracle reports a
   bare staff 2.05821, mLo -0.94179), where this defect made the port shorter.  It
   is its own item and is NOT closed by L17.
+  It is answered in the section that follows.
+
+================================================================================
+THE SAME CACHE, ON THE OTHER ENGINE: Mendelssohn_Octet_-_Violin_2
+(L21, 2026-08-29 -- proposed D70, Jeremy rules)
+================================================================================
+
+  The fifth Mutopia row the section above left open.  The port puts 16 systems on
+  page 5 and 16 on page 8 where 2.27.2 puts 15 and 17; 116 systems and 8 pages
+  either way, PAGES-EQUAL and SVG-STAVES-DIFFER.  L17 recorded a hypothesis and
+  said in terms that it must not be assumed.  It was measured, and it holds.
+
+  THE GROB NAMED.  At the first differing bucket -- VerticalAxisGroup 3 of 4,
+  measure 71, window [544,548] -- the port's contributions are the staff symbol
+  [-2.05821, 2.05821], a note column at rank 547 [-3.33333, 0.55274], a bar line,
+  and a SLUR spanning ranks [547,559] measuring [1.05274, 3.55274].  Both engines
+  report the note column, so the whole divergence is the slur, which begins
+  inside the measure and reaches eleven ranks past it.  The oracle's bucket is
+  the bare staff.
+
+  THE EXPECTATION READ OFF THE ORACLE FIRST.  A Slur.before-line-breaking probe
+  identifying that slur by its rank interval, printing its pure height over the
+  SAME window [544,548], on both engines, with and without asking its seven note
+  columns over a window that contains them first:
+
+                          port                        oracle
+      asked cold      [1.05274, 3.55274]          [1.05274, 1.05274]
+      columns warmed  [1.05274, 3.55274]          [1.05274, 3.55274]
+
+  direction = 1 on both.  Cold, the oracle's six columns past rank 548 answer
+  (+inf.0 . -inf.0) -- EMPTY -- and Item::pure_y_extent freezes that for the run;
+  Slur::pure_height then has one live column (d[UP] = 0.55274), adds the +0.5 its
+  comment explains, and returns a degenerate point inside the staff.  Warmed, the
+  oracle's seven columns are IDENTICAL TO THE PORT'S digit for digit, the maximum
+  is 3.05274 at rank 555, and the oracle returns the port's 3.55274.  This is the
+  defect of the section above with the engines swapped: it is the ORACLE that
+  freezes the EMPTY here, because the port stopped doing so at L17.
+
+  THE DECISIVE RUN, WITH CONTROLS.  A VerticalAxisGroup.before-line-breaking
+  probe asks every grob of pure-relevant-grobs for its pure height over
+  [max(0, rankLeft-1), rankRight+1] -- the port's own rule, written in Scheme so
+  it runs identically on either engine, reading only and setting no property;
+  both engines report the same pure-relevant-grobs counts, 5944/3025/4144/6445.
+
+      Violin_2   base  port    11 13 15 16 16 16 16 13
+                 base  oracle  11 13 15 15 16 16 17 13
+                 warm  port    11 13 15 16 16 16 16 13   unmoved
+                 warm  oracle  11 13 15 16 16 16 16 13   MOVES ONTO THE PORT
+
+      controls -- three rows where the engines already agree, all four legs each:
+      TenthRegClar2 12 / 12 / 12 / 12; Octet Cello_2 9,10,14,15,15,12,13,5;
+      Octet Viola_2 7,8,15,9,10,14,13,16,8.  NOT ONE MOVES.
+
+  Bucket distances over all four VerticalAxisGroups, tolerance 0.01, as
+  differing-values / total absolute error: port(L17) vs oracle, both cold,
+  67/56.165; port(pre-L17) vs oracle, both cold, 74/62.491; oracle cold vs oracle
+  WARM 74/55.116; port cold vs port WARM 17/7.521; port(pre-L17) vs oracle WARM
+  135/112.601; port(L17) vs oracle WARM 24/11.492; port WARM vs oracle WARM
+  24/10.585.  Against the accident-free reference the L17 fix moves the port from
+  135 values and 112.6 to 24 and 11.5.
+
+  THERE IS NO FIX TO MAKE.  Closing the row page-for-page would mean the port
+  reproducing the oracle's frozen EMPTYs -- introsort's tie order, which the
+  section above refuses on the ground that rule 2 cannot ask for behaviour
+  unspecified at its source, and which the pre-L17 port does not reproduce either
+  (it still prints 16/16 here; its visit order poisons different columns).  It
+  would also undo the four rows L17 closed.  The row is therefore classified as
+  an ORACLE-side accident rather than a port gap; no code changed, and no
+  baseline moved -- the Mutopia probe carries no skip or accept list, it reports,
+  and the OBSERVATIONS document sorts.  Nothing graded is affected: the
+  2,146-file regression corpus does not contain this shape.
+
+  ⚠ THE RESIDUE, BOUNDED AND NOT ATTRIBUTED.  With BOTH engines warmed, 24 of 636
+  bucket values still differ, total 10.585, worst 1.000, mixed sign, and they do
+  not move this file's page assignment.  Named, they are two shapes: slurs that
+  start near the end of a measure and reach past it (VAG 0 measure 68, slur
+  [853,863] in window [848,862]; VAG 3 measure 248, slur [2741,2747] in window
+  [2734,2742]), so the probe's hook point evidently leaves some caches already
+  frozen; and buckets carrying outside-staff grobs (RehearsalMark,
+  DynamicLineSpanner, TextScript), where adjacent-pure-heights' snapshot-and-stack
+  approximation is order-dependent by construction and the order among equal
+  outside-staff-priority keys is the std::sort class above.  Not attributed on
+  purpose: naming a cause without the A/B is what this board has had refused by
+  measurement three times.
+
+  ⚠ ALSO RECORDED: L17 compared only the 258-bucket VerticalAxisGroup of this
+  file.  There are FOUR, and all four differ -- 31 + 5 + 13 + 18 = 67 values,
+  total 56.165, cold.  The 18 were never the whole of it.
+
+  Evidence: ~/ClaudeHome/STATUS_lilyport_l21_2026-08-29.txt; probes and logs under
+  ~/ClaudeHome/l21-violin2-2026-08-29/.  No source file changed: the
+  AdjacentPureHeights instrumentation used to name the grobs was reverted and its
+  sha256 verified.
+
+THE WIDE MODULE IMPORT IS GONE: LilyPort RUNS GUILE'S NARROW IMPORT (2026-08-29, L20)
+-------------------------------------------------------------------------------------
+
+  WHAT CHANGED.  LilyPondScheme.CreateInterpreter no longer sets
+  `interpreter.NarrowModuleImports = false'.  The line was placed there on
+  2026-08-28 so the L16 pin bump could land the LilyScheme package whose DEFAULT
+  had flipped to Guile's `true' without moving anything under the corpus; it was
+  always meant to survive only until the corpus had been swept under the narrow
+  import.  It has been, and it is gone.
+
+  WHY IT MATTERS.  A use-modules without #:select puts a module's PUBLIC INTERFACE
+  on the use list, which is what Guile does.  The older WIDE import put the whole
+  module there, private names included -- and a name that is only reachable because
+  of that is a name upstream would not have been able to see.  The one narrow-mode
+  defect the project had already found (srfi-1's `:export' spelled as a
+  keyword-like symbol, silently skipped) was a REAL defect the wide import had
+  hidden for the project's whole life, which is the reason this sweep was owed.
+
+  THE MEASUREMENT.  Full §5 battery under narrow imports.  Every corpus figure is
+  byte-identical to the wide-import run made the same day: sweep 2,121 svg / 25
+  no-output / 0 errored over 2,146 files and 2,317 pages; comparator 2,302 MATCH /
+  8 PLACEMENT-DIFFERS / 6 GLYPHS-DIFFER / 0 MISSING of 2,316; ratchet 0
+  regressions; diagnostics 2,146 of 2,146 with 414 / 414 lines; G8 nineteen files
+  BYTE-IDENTICAL to the oracle.  Nothing in the engine, the parser, the backends or
+  the vendored layer depends on the wide import.
+
+  ⚠ THE ONE THING THE SWEEP TURNED UP, AND WHY IT IS A RE-RECORDING RATHER THAN A
+  FIX.  LilyPondOnDemandLoadTests fences the two vendored files that are BLOCKED --
+  they cannot load in a project with no parser -- and it asserts the REASON each
+  fails, so that a blocked file which starts failing somewhere else gets its note
+  rewritten.  `documentation-generate' moved: it used to stop at
+  hyphenation-rules-string and now stops earlier, at `dump-node'.
+
+  MEASURED, not guessed: after that class's fixpoint load the CURRENT MODULE is
+  `(lily to-xml)', not `(lily)'.  documentation-lib.scm carries no define-module,
+  so it loads into whatever module is current when its turn comes; to-xml.scm does
+  carry one, got there first, and never put the current module back.  `dump-node'
+  therefore lands in `(lily to-xml)' -- `(module-variable (resolve-module '(lily))
+  'dump-node)' answers #f -- and the wide import used to expose that module's
+  private names anyway.
+
+  THAT LEAK IS UPSTREAM'S OWN.  ly:load calls primitive-load-path (scm/lily.scm),
+  and Guile's load-from-path is `(start-stack 'load-stack (primitive-load-path
+  name))' (ice-9/boot-9.scm) -- no save-module-excursion anywhere on the path, so a
+  loaded define-module changes the current module for good.  The port reproduces
+  it.  What the TEST does that upstream never does is load the on-demand set in an
+  order upstream does not use (its own note: "alphabetical order inverts the real
+  one"), which is what puts to-xml ahead of documentation-lib.  LoadToFixpoint has
+  no production caller; the shipped path is LoadViaLilyScm, in LilyPond's order.
+
+  AND THE REAL DOCUMENTATION PATH IS UNTOUCHED: G8's nineteen files are
+  byte-identical under narrow imports, because generate-documentation.ly is parsed
+  and ly:loads the pipeline from inside (lily), where dump-node lands in the module
+  that asks for it.
+
+  §2d's "the root module is imported WHOLE" divergence closes with this entry.

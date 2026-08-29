@@ -9,9 +9,16 @@
 #
 # G1 IS GREEN AS OF 2026-08-18, AND THIS FILE IS THE OTHER HALF OF THE CLAIM.  The
 # gate run -- the port engraving with LilyPond's OWN Emmentaler binaries, where any
-# divergence is the ENGINE and is a defect -- MATCHes 2,305 of 2,316, and the
-# remaining eleven are the rows below.  2,305 + 11 = 2,316.  Anyone auditing G1 needs
-# exactly two artifacts: that number and this file.
+# divergence is the ENGINE and is a defect -- MATCHes every page of the corpus except
+# the rows below.  Anyone auditing G1 needs exactly two artifacts: that number and
+# this file.
+#
+# THE NUMBER, RE-RECORDED 2026-08-29: 2,313 + 3 = 2,316.  It was 2,305 + 11 = 2,316
+# when this file was written on 2026-08-18; the eight rows retired on 2026-08-28 (see
+# the note below) moved to MATCH and took the arithmetic with them.  The gate was
+# re-run at that value on 2026-08-28 (L15) and again on 2026-08-29 (L18), and on both
+# runs the three non-MATCH rows were PRECISELY the three rows listed below -- which is
+# the assertion this file exists to make, and is stronger than the count on its own.
 #
 # RETIRED 2026-08-28: EIGHT OF THE ELEVEN.  D31's two rows (markup-diacritic-marks,
 # pdf-copy-paste) and R8(A)'s six (one-line-auto-height-breaking, one-line-breaking,
