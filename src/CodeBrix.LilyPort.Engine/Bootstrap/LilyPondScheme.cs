@@ -394,6 +394,16 @@ public static class LilyPondScheme
     {
         Interpreter interpreter = new Interpreter();
 
+        // THE WIDE MODULE IMPORT, SELECTED EXPLICITLY. LilyScheme imports a module's public
+        // interface by default, as Guile does; LilyPond's scm/ layer and the whole
+        // regression corpus were verified under the older WIDE import (a use-modules
+        // without #:select puts the whole module, private names included, on the use
+        // list), so this port keeps that position until its corpus has been swept under
+        // the narrow one -- CONSOLIDATED_PLAN L20. Set before anything is loaded: the
+        // switch is read at every use-modules. Remove this line, run the full battery, and
+        // either the port runs Guile's way or PORT-COVERAGE names the dependence.
+        interpreter.NarrowModuleImports = false;
+
         // The Scheme error port and the diagnostic writer must be the SAME object, or
         // neither can tell whether the other left a line open — which is how the graphviz
         // digraph's missing final newline came to swallow a graded warning (R17).

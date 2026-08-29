@@ -461,7 +461,26 @@ public static class SidePositionInterface
         if (includeStaff)
         {
             common[(int)Axis.Y] = staffSymbol.CommonRefpoint(common[(int)Axis.Y], Axis.Y);
-            Interval staffExtents = staffSymbol.Extent(common[(int)Axis.Y], Axis.Y);
+
+            // MAYBE-PURE, like every other read in this function. Upstream:
+            // Side_position_interface::aligned_side reads the staff through
+            // maybe_pure_extent (common[Y_AXIS], Y_AXIS, pure, start, end).
+            //
+            //was previously: staffSymbol.Extent(common[(int)Axis.Y], Axis.Y) -- an ORDINARY
+            // extent taken inside the PURE branch. When the side-support common refpoint sits
+            // above the staff's own VerticalAxisGroup (cross-staff writing lifts it there),
+            // the ordinary read walked through the group's Y offset, which forced the UNBROKEN
+            // VerticalAlignment to position before line breaking ("vertical alignment called
+            // before line breaking"), which CACHED a real Y offset on every VerticalAxisGroup,
+            // after which Grob.PureRelativeYCoordinate skipped Align_interface's pure child
+            // translation for the rest of the run. The System's own pure-relevant grobs (a
+            // MetronomeMark above the top staff) were then measured against the top STAFF
+            // instead of the SYSTEM, every system's pure begin-of-line height gained ~4.3
+            // staff-spaces, and BachJS/BWV565 ToccataFugue needed 18 pages where 2.27.2
+            // needs 12. Found 2026-08-28 through the Mutopia probe; the maybe-pure read
+            // reproduces upstream's 12 pages, page geometry and diagnostic counts exactly.
+            Interval staffExtents = staffSymbol.MaybePureExtent(
+                common[(int)Axis.Y], Axis.Y, pure, start, end);
             dim.SetMinimumHeight(staffExtents[dir]);
         }
 

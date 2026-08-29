@@ -608,28 +608,6 @@ public static class BatchRunner
             ? null
             : session.MainInputVersionString;
 
-        // THE FILE IS REFUSED, because 2.27.2 would already be dead. See
-        // MusicFunctionReturnedUnspecified for the whole reasoning; the point here is
-        // only that the refusal happens BEFORE any book is processed, which is where
-        // upstream's own death happens — inside the parse — so nothing is engraved, no
-        // page and no performance is written, and the run reports its errors.
-        if (MusicFunctionReturnedUnspecified(diagnostics))
-        {
-            Flower.Warn.CheckExpectedWarnings();
-            (Flower.Warn.Output as Flower.LineTrackingWriter)?.EndOpenLine();
-
-            return new BatchRunResult(
-                null,
-                books.Count,
-                0,
-                0,
-                errorCount,
-                diagnostics,
-                System.Array.Empty<string>(),
-                System.Array.Empty<string>(),
-                declaredVersion);
-        }
-
         // One stencil per PAGE, as the page breaker chose them.
         // Until this group it was one per SCORE, stacked at a fixed padding into a single
         // document per input file -- which is why every multi-page reference page in the
@@ -1282,65 +1260,6 @@ public static class BatchRunner
 
         return total;
     }
-
-    /// <summary>
-    /// Whether the parse hit a music function whose body evaluated to
-    /// <c>#&lt;unspecified&gt;</c> — the one place where this port is MORE PERMISSIVE
-    /// than 2.27.2 rather than less, and therefore a file 2.27.2 refuses.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// WHAT UPSTREAM DOES. Guile refuses to apply a procedure with fewer arguments than
-    /// its required parameters and raises <c>wrong-number-of-args</c>; nothing in
-    /// LilyPond catches it during a parse, so the error escapes
-    /// <c>Lily_parser::parse_file</c> and the run dies with no output at all and a
-    /// non-zero status. Measured on 2.27.2 with
-    /// <c>\applyMusic #unfold-repeats { c'4 d' e' f' }</c> — <c>unfold-repeats</c> gained
-    /// a leading <c>types</c> argument, so a 2.10-era source calls it one argument short:
-    /// <c>Wrong number of arguments to #&lt;procedure unfold-repeats (types music)&gt;</c>,
-    /// exit 1, not one file written. Three rows of the Mutopia corpus do exactly this
-    /// (ChopinFF/O64, DiabelliA/O149/op149-7, FischerJKF/Fischer_EratoAllemande) and
-    /// convert-ly does not rewrite embedded Scheme on either side.
-    /// </para>
-    /// <para>
-    /// WHAT THE PORT DOES INSTEAD, AND WHY THIS IS NOT THE FIX IT LOOKS LIKE. The Scheme
-    /// interpreter under this port binds a missing required parameter to
-    /// <c>#&lt;unspecified&gt;</c> and applies the procedure anyway — measured directly:
-    /// <c>#(define (needs-two a b) (list a b))</c> then <c>(needs-two 1)</c> answers
-    /// <c>(1 #&lt;unspecified&gt;)</c> where Guile raises. That leniency is the
-    /// INTERPRETER's, not this port's, and it is not this port's to change; until it is
-    /// changed, the arity error the file deserves is never raised and the port cannot see
-    /// the arity mismatch itself.
-    /// </para>
-    /// <para>
-    /// What it CAN see is the consequence, one step later and at a boundary this port
-    /// owns: the music function's body returns <c>#&lt;unspecified&gt;</c>,
-    /// <c>scm/ly-syntax-constructors.scm</c>'s <c>music-function</c> tests the return
-    /// against the signature's predicate, and <c>music-function-call-error</c> reports
-    /// <c>music function cannot return ##&lt;unspecified&gt;</c>. Upstream reaches that
-    /// report only for a body that genuinely evaluates to unspecified — a file that is
-    /// already a failed file there — and never by way of a short call, because Guile
-    /// killed the run first. So treating this diagnostic as fatal refuses exactly the
-    /// files 2.27.2 refuses, plus a class upstream also calls an error and which the
-    /// 2,146-file regression suite does not contain (measured: zero files produce it).
-    /// </para>
-    /// <para>
-    /// ⚠ RETIRE THIS WHEN THE INTERPRETER CHECKS ARITY. The exact-parity fix lives one
-    /// layer down: applying a closure with fewer arguments than its required parameters
-    /// must raise Guile's <c>wrong-number-of-args</c> instead of binding the missing ones
-    /// to <c>#&lt;unspecified&gt;</c>. With that in place the error escapes the parse on
-    /// its own, the existing fatal path carries it (the same one that already refuses
-    /// <c>cannot find music object: MarkEvent</c>), the wording matches upstream's, and
-    /// this proxy has nothing left to catch.
-    /// </para>
-    /// </remarks>
-    /// <param name="diagnostics">Everything the parse reported.</param>
-    /// <returns><see langword="true"/> when the file must produce nothing.</returns>
-    private static bool MusicFunctionReturnedUnspecified(List<string> diagnostics)
-        => diagnostics.Exists(
-            diagnostic => diagnostic != null
-                && diagnostic.Contains("function cannot return", StringComparison.Ordinal)
-                && diagnostic.Contains("#<unspecified>", StringComparison.Ordinal));
 
     /// <summary>
     /// <c>scm/lily-library.scm</c>'s <c>get-outfile-name</c>: the file name one BOOK's

@@ -23,12 +23,29 @@ namespace CodeBrix.LilyPort.Engine.Fonts;
 /// </summary>
 public sealed class TextFace
 {
+    // Pango's own sample string for the language `en-us', which is the language the
+    // corpus's oracle runs report because the machine that made the reference has
+    // LANG=en_US.UTF-8. See ApproximateCharWidth for why a string is baked in here at
+    // all and what the alternative measures.
+    private const string SampleString
+        = "The wizard quickly jinxed the gnomes before they vaporized.";
+
+    // pango_utf8_strwidth of the sample: one per character, because every character in it
+    // is narrow. Spelled out rather than counted so the pairing with the string above is
+    // visible at a glance.
+    private const int SampleStringWidth = 59;
+
     private readonly SfntReader _reader;
     private readonly CffFont _cff;
     private readonly Dictionary<int, int> _cmap;
     private readonly double[] _advances;
     private readonly KerningTable _kerning;
     private readonly SubstitutionTable _substitutions;
+
+    // Pango's approximate_char_width, in Pango units, keyed by the HarfBuzz scale the run
+    // is shaped at. The figure is a per-(face, size) CONSTANT — it depends on nothing the
+    // run carries — and computing it lays out a 59-character string, so it is cached.
+    private readonly Dictionary<int, long> _approximateCharWidths = new Dictionary<int, long>();
 
     private TextFace(string fileName, SfntReader reader)
     {
@@ -39,6 +56,10 @@ public sealed class TextFace
         _advances = reader.ReadAdvances();
         _kerning = KerningTable.Read(reader);
         _substitutions = SubstitutionTable.Read(reader);
+
+        (int ascender, int descender) = reader.ReadHorizontalAscenderDescender();
+        Ascender = ascender;
+        Descender = descender;
 
         byte[] cff = reader.GetTable("CFF ");
         _cff = cff == null ? null : new CffFont(cff);
@@ -117,6 +138,25 @@ public sealed class TextFace
     public int UnitsPerEm { get; }
 
     /// <summary>
+    /// Gets the face's <c>hhea</c> ascender, in design units — the ASCENT half of Pango's
+    /// font metrics, and so the top of the box a character no face covers gets.
+    /// </summary>
+    /// <remarks>
+    /// <c>pango_fc_font_create_base_metrics_for_context</c> takes
+    /// <c>metrics-&gt;ascent</c> from <c>hb_font_get_extents_for_direction</c>, which for
+    /// a horizontal direction is <c>hhea</c>'s ascender scaled by HarfBuzz's
+    /// <c>em_scale_y</c>. See <see cref="SfntReader.ReadHorizontalAscenderDescender"/>
+    /// for why the <c>OS/2</c> typographic pair is NOT this one.
+    /// </remarks>
+    public int Ascender { get; }
+
+    /// <summary>
+    /// Gets the face's <c>hhea</c> descender, in design units and normally NEGATIVE — the
+    /// DESCENT half of Pango's font metrics.
+    /// </summary>
+    public int Descender { get; }
+
+    /// <summary>
     /// Gets the factor a synthesised small capital is set at — the face's x-height over
     /// its cap height, or 1.0 when <c>OS/2</c> does not say.
     /// </summary>
@@ -177,6 +217,76 @@ public sealed class TextFace
     /// <param name="glyph">The glyph index.</param>
     /// <returns>The box.</returns>
     public Box GlyphBox(int glyph) => _cff == null ? default : _cff.GlyphBox(glyph);
+
+    /// <summary>
+    /// Returns Pango's <c>approximate_char_width</c> for this face at one HarfBuzz scale,
+    /// in PANGO UNITS — the LOGICAL width a character no face covers occupies.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>pango_fc_font_get_metrics</c> computes it by laying out the LANGUAGE'S SAMPLE
+    /// STRING in the font and dividing the layout's logical width by
+    /// <c>pango_utf8_strwidth</c> of that string — an INTEGER division, in Pango units.
+    /// The layout is an ordinary one: it kerns, it substitutes, and
+    /// <c>PANGO_SHAPE_ROUND_POSITIONS</c> rounds every glyph's advance to a whole device
+    /// dot, so this is the same arithmetic <see cref="TextFontMetric.TextStencil(string, string, bool)"/> does
+    /// for any other run. It carries NONE of the run's own <c>font-features</c>: the
+    /// figure belongs to the font, not to the run.
+    /// </para>
+    /// <para>
+    /// ⚠ THE SAMPLE STRING IS UPSTREAM'S ONE HOST DEPENDENCE IN THIS FIGURE, and the port
+    /// pins it. <c>pango_language_get_sample_string (NULL)</c> asks
+    /// <c>pango_language_get_default ()</c>, which reads the process's locale, and Pango
+    /// 1.57's table answers the <c>en-us</c> entry above for <c>LANG=en_US.UTF-8</c> and
+    /// its fallback pangram — "The quick brown fox jumps over the lazy dog." — for every
+    /// other locale this was tried under (C, en-gb, de, fr, ja, ru: MEASURED, all seven
+    /// runs of the same file through the pinned oracle). The two differ: at
+    /// <c>\abs-fontsize #60</c> in C059-Roman the box is 166 device dots wide under
+    /// <c>en-us</c> and 165 under the fallback. The port cannot be allowed to render a
+    /// score differently because of a locale (D23's rule), so one of the two is baked in,
+    /// and it is the one the corpus's reference and the calibration were MEASURED under
+    /// (D66: the <c>en-us</c> string stays).
+    /// A locale that changes what upstream draws is upstream's defect, not a contract to
+    /// reproduce.
+    /// </para>
+    /// </remarks>
+    /// <param name="xScale">The HarfBuzz scale the run is shaped at, in Pango units.</param>
+    /// <returns>The approximate character width, in Pango units.</returns>
+    public long ApproximateCharWidth(int xScale)
+    {
+        if (_approximateCharWidths.TryGetValue(xScale, out long cached))
+        {
+            return cached;
+        }
+
+        long multiplier = TextFontMetric.Multiplier(xScale, UnitsPerEm);
+
+        List<int> glyphs = new List<int>(SampleString.Length);
+        foreach (char character in SampleString)
+        {
+            glyphs.Add(GlyphIndex(character));
+        }
+
+        Substitute(glyphs, string.Empty);
+
+        long total = 0;
+        for (int i = 0; i < glyphs.Count; i++)
+        {
+            long step = TextFontMetric.EmMult(
+                TextFontMetric.DesignUnits(Advance(glyphs[i])), multiplier);
+            if (i + 1 < glyphs.Count)
+            {
+                step += TextFontMetric.EmMult(
+                    TextFontMetric.DesignUnits(Kerning(glyphs[i], glyphs[i + 1])), multiplier);
+            }
+
+            total += TextFontMetric.PangoUnitsRound(step);
+        }
+
+        long width = total / SampleStringWidth;
+        _approximateCharWidths[xScale] = width;
+        return width;
+    }
 
     /// <summary>Gets the face's charstring interpreter, or <see langword="null"/>.</summary>
     /// <remarks>

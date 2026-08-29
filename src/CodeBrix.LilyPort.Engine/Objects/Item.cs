@@ -17,6 +17,7 @@
   along with LilyPond.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+using System;
 using CodeBrix.LilyPort.Engine.Music;
 using CodeBrix.LilyPort.Flower;
 using CodeBrix.LilyScheme.Values;
@@ -114,7 +115,17 @@ public class Item : Grob
     /// <para>
     /// Upstream's own comment on the range: "cached_pure_height_ does not notice if
     /// start changes, implicitly assuming that Items' pure_heights do not depend on
-    /// 'start' or 'end'." That assumption is reproduced here rather than corrected.
+    /// 'start' or 'end'." That assumption is HELD TO here, which is what makes the
+    /// window the cache is FILLED from matter: a window that excludes this item
+    /// measures empty, and empty means "not on this line", which is not a height and
+    /// must not become the frozen one. Such a query WIDENS the window until the item
+    /// is strictly inside it before measuring, so the stored value is the item's height
+    /// however the first caller happened to ask. Upstream freezes the empty, and gets away with it only
+    /// because <c>calc_pure_relevant_grobs</c> sorts with <c>std::sort</c>, whose order
+    /// among the equal <c>outside-staff-priority</c> keys is unspecified and happens to
+    /// reach most items before a spanner that spans past them does; the port sorts
+    /// STABLY (deliberately — see AxisGroupInterfacePure) and so reaches them in the
+    /// other order. See the divergence record in PORT-COVERAGE.
     /// </para>
     /// </remarks>
     /// <param name="refp">The reference grob.</param>
@@ -125,9 +136,24 @@ public class Item : Grob
     {
         if (!CachedPureHeightValid)
         {
+            int fillStart = start;
+            int fillEnd = end;
+            Slice ownRank = SpannedColumnRankInterval();
+
+            if (!ownRank.IsEmpty && (ownRank.Left > end || ownRank.Right < start))
+            {
+                // The window EXCLUDES this item, so measuring over it answers "not on
+                // this line" rather than a height. WIDEN it until the item is inside —
+                // and strictly inside, because an item whose rank equals a bound is a
+                // line boundary to `PureFindVisiblePrebrokenPiece', which would answer
+                // for a prebroken piece instead of for the item.
+                fillStart = Math.Min(start, ownRank.Left - 1);
+                fillEnd = Math.Max(end, ownRank.Right + 1);
+            }
+
             // Measured against THIS item, so the stored interval carries no offset and
             // can be re-based for any later reference point.
-            CachePureHeight(base.PureYExtent(this, start, end));
+            CachePureHeight(base.PureYExtent(this, fillStart, fillEnd));
         }
 
         Interval result = CachedPureHeight;

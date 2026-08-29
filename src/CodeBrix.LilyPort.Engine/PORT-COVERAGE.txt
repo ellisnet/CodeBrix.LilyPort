@@ -10694,3 +10694,283 @@ THE `(markup ...)' EvalString QUIRK -- PROMOTED FROM A STATUS FILE (2026-08-27)
 
   DISPOSITION.  Left open, dated 2026-08-27.  Fix only under its own GO, and if
   it is ever taken up, it starts on the LilyScheme side.
+
+
+================================================================================
+TWO PAGE-FILLING DIVERGENCES FOUND BY THE MUTOPIA PROBE, FIXED (2026-08-28)
+================================================================================
+
+  Both were found by tools/mutopia-probe grading the port against the pinned
+  2.27.2 on the SAME converted input (OBSERVATIONS_lilyport_mutopia_2026-08-27.txt
+  A2 and its 2026-08-28 addendum; REPORT_lilyport_A2_systems_2026-08-28.txt,
+  REPORT_lilyport_A2_toccata_2026-08-28.txt, REPORT_lilyport_A2a_unknown_glyph_
+  2026-08-28.txt under ~/ClaudeHome).  Neither was a page-breaking defect, and the
+  2,146-file suite had not caught either: the first needs a header or footer
+  whose vertical extent is set by an UNCOVERED character, the second needs
+  cross-staff writing plus a pure-relevant grob above the top staff.
+
+  (a) AN UNCOVERED CHARACTER MEASURES AS PANGO'S UNKNOWN-GLYPH BOX, AND IS NOT
+      DRAWN.  Fonts/TextFontMetric.cs (TextStencil, UnknownGlyph, ShapedGlyph),
+      Fonts/TextFace.cs (Ascender, Descender, ApproximateCharWidth),
+      Fonts/SfntReader.cs (hhea ascender/descender).
+
+      //was previously: a code point no face in the chain covers fell through to
+      glyph 0, whose outline in the vendored URW / TeX Gyre faces is EMPTY -- zero
+      height, .notdef's advance -- and the character was written into the SVG
+      <tspan> for the viewer's fonts to draw.  Upstream (lily/pango-font.cc,
+      pango_item_string_stencil) takes the extents from Pango, and for a glyph
+      carrying PANGO_GLYPH_UNKNOWN_FLAG pangofc-font.c answers from the FONT:
+      logical width = approximate_char_width; ink Y = [-(descent - 1 unit),
+      +(ascent - 1 unit)].  Mutopia's copyright footer is three U+01C0 DENTAL
+      CLICKs no shipped face covers, so the footer was 3.89 staff-spaces shorter
+      in the port, calc-printable-height (scm/page.scm, identical Scheme on both
+      sides) handed the page breaker that much more room, and the port fit ONE
+      MORE SYSTEM PER PAGE on ~22 corpus rows -- and FEWER PAGES on two.
+
+      DERIVED, NOT FITTED.  The one-unit inset is TextFontMetric.DevicePixel
+      (INCH_TO_BP / (PANGO_RESOLUTION * output_scale) = 0.03414332 units here).
+      Ascent and descent are hhea's ascender/descender through the SAME HarfBuzz
+      integer scaling the port already uses (em_scale: float32 multiplier << 16,
+      (v*m + 32768) >> 16) -- NOT FreeType-rounded size metrics, which the oracle
+      refutes directly (its ascent at 12 pt is 51.8086 device dots, not a whole
+      number), and NOT OS/2's typographic pair (TeX Gyre Schola's hhea (1135,-332)
+      vs typo (798,-202) settles it: only hhea reaches the oracle's 2.690019).
+      approximate_char_width is the language sample string laid out in the face
+      (kerned, PANGO_SHAPE_ROUND_POSITIONS-rounded per glyph), integer-divided by
+      its character count, then PANGO_UNITS_ROUNDed once more as pango_shape does
+      to the unknown glyph's own advance -- the oracle's box is a whole number of
+      device dots wide at all 27 sizes measured from 6 to 600 pt.
+
+      MEASURED EXACT: the four calibration rows (default 11 pt, abs-fontsize 12,
+      13, 60 in C059-Roman) to five decimals; 27 sizes; NimbusSans, NimbusMonoPS,
+      TeX Gyre Schola and C059-Bold at 12 and 60 pt; U+2F92 measures as U+01C0
+      (the box belongs to the font, not the character).
+
+      WHAT IS DRAWN, MEASURED ON THE ORACLE AND FOLLOWED: upstream drops the
+      GLYPH, never the CHARACTER.  A run with at least one drawable glyph emits
+      its whole original text ("Aǀ" -> <tspan>Aǀ</tspan>); a run with NOTHING
+      drawable emits no expression at all (an extent with an empty expression,
+      which ly:stencil-empty? answers #t on and scm/page.scm drops a footer for).
+      "Cleaning" the character out of a mixed string would have been a NEW
+      divergence.  Default-ignorable code points (PANGO_GLYPH_EMPTY: zero wide,
+      no ink) are a THIRD box and are deliberately NOT modelled here.
+
+      /!\ THE SAMPLE STRING IS THE ONE PLACE THIS FIX MAKES A CHOICE.
+      pango_language_get_sample_string(NULL) reads the PROCESS LOCALE.  Measured
+      on the oracle at abs-fontsize 600: LANG=en_US.UTF-8 gives a 1658-dot box,
+      every other locale tried (C, en_GB, de_DE, fr_FR, ja_JP, ru_RU) 1651 --
+      Pango's table has an `en-us' entry ("The wizard quickly jinxed the gnomes
+      before they vaporized.", 59 chars) and every other tag falls through to the
+      pangram.  The port PINS the en-us string (TextFace.ApproximateCharWidth):
+      it is what the committed regression reference and the calibration were
+      measured under (neither generate-reference.sh nor OracleRunner sets a
+      locale, so both inherit this machine's en_US.UTF-8), and D23 forbids the
+      port rendering differently because of the host.  D66 -- RULED (Jeremy,
+      2026-08-28): KEEP THE en-us PIN.  Every committed reference and every
+      calibration was measured under it.  The pangram is documented beside it in
+      TextFace.ApproximateCharWidth; neither is a fit.
+
+      CONSEQUENCES FOR EARLIER RULINGS.  D31 ("tofu stands -- the port emits the
+      <text> run and draws .notdef while the D30-pinned oracle drops the run") is
+      SUPERSEDED AS WRITTEN for the text path: the port now does what the oracle
+      does.  Eight of g1-skip-list.tsv's nine GLYPHS-DIFFER rows (D31's two and
+      R8(A)'s six) grade MATCH; D46's skyline-grob-rotation is a different
+      mechanism and is unchanged.  D31 AS AMENDED's revisit condition ("would
+      need approximate_char_width, which Pango derives from a sample string")
+      is now met on the TEXT path; the MUSIC path's two-space stand-in is
+      untouched and byte-identical.  D40 is intact: 316 "no glyph for character"
+      lines before and after, diagnostics gate 2,146 of 2,146.
+
+  (b) Side_position_interface::aligned_side READS THE STAFF MAYBE-PURE.
+      Objects/SidePositionInterface.cs, AlignedSide, the includeStaff block.
+
+      //was previously: an ORDINARY staffSymbol.Extent inside the PURE branch --
+      the one ordinary read in a function whose every other read is maybe-pure.
+      When cross-staff writing lifts the side-support common refpoint above the
+      staff's own VerticalAxisGroup, that read walked through the group's Y
+      offset, forced the UNBROKEN VerticalAlignment to position ("vertical
+      alignment called before line breaking"), CACHED a real Y offset on every
+      VerticalAxisGroup, and from then on Grob.PureRelativeYCoordinate skipped
+      Align_interface's pure child translation (the same guard upstream has --
+      "only if we don't have a cached offset").  The System's own pure-relevant
+      grobs (a MetronomeMark above the top staff) were then measured against the
+      top STAFF instead of the SYSTEM, every system's pure begin-of-line height
+      gained ~4.3 staff-spaces, min_page_count said 17 instead of 11, and
+      BachJS/BWV565 ToccataFugue needed 18 pages where 2.27.2 needs 12.
+
+      MEASURED after the change: 12 pages, per-page staff counts identical to the
+      oracle's, every staff within 0.05 units, the port-only programming error
+      gone, the cyclic-dependency count 6 = the oracle's.  Probe row PORT-GAP ->
+      DRIFT at o_block_diff 0.004.
+
+  GATES, both fixes together in the main tree: five suites green; the sweep's
+  summary line unchanged (2,146 files: 2,121 svg, 25 no output, 0 errored, 2,317
+  pages); ratchet 0 regressions, 8 improvements (recorded with ratchet.py
+  update); diagnostics 2,146 of 2,146 MATCH, 414/414 lines.
+
+  A CONSEQUENCE OF (a) THAT ITS OWN ENTRY DID NOT REACH, FOUND 2026-08-28 BY THE
+  Lily.Docs GATE.  The unknown-glyph-box fix also removed the Notation Reference's
+  twenty-two "irreducible Hebrew drops", and they were not what the record beside
+  them said they were.
+
+      tools/Lily.Docs/expected-warnings/notation-pdf.tsv recorded 22 DROP rows,
+      U+05D0-U+05EA, under warning code font.svg-text.notdef, as an ACCEPTED D47
+      coverage gap.  They were a PORT DEFECT wearing D47's clothes: the engine
+      emitted an uncovered character into the SVG text -- which 2.27.2 does not
+      emit at all -- and the Html2Pdf chain then found no font for it and dropped
+      it once per occurrence.  That drop count is what the baseline was counting.
+
+  MEASURED on the same lyric (Documentation/en/notation/input.itely, engraved as
+  snippet-01161; the regression corpus carries it as utf-8.ly), under the corpus's
+  own font pinning, by restoring HEAD's three font files and re-rendering:
+
+      pinned oracle 2.27.2    0 Hebrew characters in the SVG, 24 `no glyph for
+                              character' warnings
+      port WITH the fix       0 Hebrew characters, the SAME 24 warnings, in
+                              upstream's wording and naming upstream's font
+      port WITHOUT the fix    24 Hebrew characters emitted -- the divergence
+
+  So the loss did not become silent, which is the thing that baseline's header has
+  always been careful about: it MOVED to the engine stage, where upstream puts it,
+  and it is louder there -- 24 occurrences each named with its code point and font
+  against 22 code points counted at the PDF stage.  utf-8.svg agrees independently
+  (GLYPHS-DIFFER -> MATCH at this fix), and the diagnostics gate grades those
+  warnings 2,146 of 2,146.
+
+  The baseline is RE-FROZEN to PDF_ITEMS 0, PDF_WARNINGS 0 and no DROP rows, with
+  PAGES unchanged at 1,280 and the header rewritten to carry the measurement
+  rather than the old explanation.  D47 still covers the coverage gap itself.
+  ⚠ THE DROP SECTION IS NOW EMPTY, so any DROP row appearing there at all is a
+  finding -- and it still works as the control it was built to be for the four
+  PdfTextFallback AddFallbackFamily registrations, because the Greek and the arrow
+  ARE covered by the port's own faces and it is the PDF chain's fallback that
+  rescues them.
+
+  ⚠ AND THE FONT-DELTA LEDGER OWED A RE-FREEZE THAT (a) DID NOT DO.  The eight
+  rows (a) moved to MATCH were carried in font-delta-ledger.tsv as zero-delta
+  SAME-FONTS rows, present only because the gate did not certify them; the gate
+  now does.  Re-frozen 155 -> 147 rows, 12 -> 4 drift hashes.  NO recorded number
+  changed: worst markup-with-true-dimensions 0.044635 mm, median 0.004393, p90
+  0.014937, ceiling 0.050.  Nothing was loosened -- eight rows left because they
+  stopped differing, which is the ledger's own self-maintaining rule.
+
+================================================================================
+THE SLUR PURE-HEIGHT SHORTFALL, AND THE ITEM PURE-HEIGHT CACHE UNDER IT
+(L17, 2026-08-28)
+================================================================================
+
+  The last page-assignment divergence the Mutopia probe showed.  Five rows put
+  more systems on a page than 2.27.2 does -- HallRB/TenthRegimentMarch/
+  TenthRegClar2 (13 systems where the oracle uses 12), MussorgskyM/pictures-at-
+  an-exhibition/il-vecchio-castello (12,14,10 against 12,12,12) and the
+  Mendelssohn Octet's Cello_2, Violin_2 and Viola_2 -- every one of them because
+  the page breaker's estimated rod height for a line carrying SLURS came out
+  about 0.9 staff-spaces short (REPORT_lilyport_A2c_octet_2026-08-28.txt,
+  A2d_clar2, A2e_viola2, all under ~/ClaudeHome).
+
+  IT IS NOT IN Slur::pure_height.  Objects/Slur.cs PureHeight transcribes
+  lily/slur.cc line for line and MEASURES identical to the oracle: asked over a
+  window that spans the whole score, all 35 slurs of TenthRegClar2, every
+  encompassed NoteColumn's pure extent and every element inside those columns
+  agree with 2.27.2 to the last digit.  Nor is it the note columns, nor the
+  slur's direction at pure time -- the same measurement clears both.
+
+  WHERE IT IS.  Item::pure_y_extent (lily/item.cc:242) caches its answer and
+  never looks at the range again; upstream's own comment states the assumption
+  it rests on -- "cached_pure_height_ does not notice if start changes,
+  implicitly assuming that Items' pure_heights do not depend on 'start' or
+  'end'."  But an item measured over a window that EXCLUDES it answers EMPTY,
+  because Axis_group_interface::relative_pure_height filters its children by
+  rank; and empty is not a height, it is "not on this line".  Freezing it makes
+  the item report no height for the rest of the run -- including in the measure
+  where it actually lives.
+
+  Slur::pure_height is what triggers it: it asks EVERY encompassed note column,
+  including columns beyond the measure it was handed.  MEASURED on the bar-13
+  slur of TenthRegClar2 (g,4.( fis | e4. d), direction -1, four columns at
+  ranks 93, 95, 97, 99):
+
+      column       pure Y extent (identical on BOTH engines)
+      rank 93      [-1.545, 2.50]
+      rank 95      [-2.045, 2.00]
+      rank 97      [-2.545, 1.50]
+      rank 99      [-3.045, 1.00]
+
+      slur pure height over the whole score   port [-3.545,-2.045]  oracle same
+      slur pure height over measure [92, 96]  port [-2.545,-2.045]
+                                              oracle [-3.545,-2.045]
+
+  and in the port's own adjacent-pure-heights, measure 13's bucket -- window
+  [96, 100] -- had LOST THE NOTE COLUMNS THAT LIVE IN IT:
+
+      j=13 start=96 end=100 name=NoteColumn rank=[97,97] dims=EMPTY
+      j=13 start=96 end=100 name=NoteColumn rank=[99,99] dims=EMPTY
+
+  Of the 104 measure buckets exactly three differed from the oracle's by more
+  than the text-metric noise floor, all on the downward side, all short:
+  measure 12 by 1.000, measure 13 by 0.820, measure 50 by 0.950.
+
+  WHY UPSTREAM DOES NOT SHOW IT, AND WHY THAT IS NOT REPRODUCIBLE.  The two
+  engines run the same algorithm over the SAME list: the VerticalAxisGroup's
+  raw `elements' grob set is 2,062 grobs in byte-identical order on both sides.
+  What differs is Axis_group_interface::internal_calc_pure_relevant_grobs, which
+  sorts that list by outside-staff-priority.  Upstream sorts with std::sort, and
+  every grob without a priority carries the same -infinity sentinel, so the order
+  within that block is whatever libstdc++'s introsort leaves behind -- unspecified
+  by the standard, and a function of the library version and the array length.
+  It happens to reach most note columns before a spanner that spans past them.
+  The port sorts STABLY, deliberately and for a stated reason (see
+  Objects/AxisGroupInterfacePure.cs), and so reaches them in the other order.
+
+  THE A/B, BOTH WAYS.  A before-line-breaking probe that warms every encompassed
+  column's cache at a wide window makes THE PORT produce 12 systems -- the
+  oracle's page.  A probe that asks the same columns over measure [92, 96] first
+  makes THE ORACLE produce 13 -- the port's.  Same algorithm; the visit order is
+  the whole of it.
+
+  THE DIVERGENCE, AND WHY IT IS ONE.  Reproducing introsort's tie permutation is
+  not faithfulness -- it would pin the port's page breaking to the C++ standard
+  library the oracle binary happened to be built against, and rule 2 cannot ask
+  for a behaviour that is unspecified at its source.  So the port HOLDS TO the
+  assumption upstream's comment states instead of inheriting the accident: when
+  the cache is cold and the query window EXCLUDES the item, the window is WIDENED
+  until the item is strictly inside it before measuring, so the frozen value is
+  the item's height however the first caller happened to ask.  Widened strictly,
+  and on both sides, because an item whose rank equals a bound reads as a line
+  boundary to Item::pure_find_visible_prebroken_piece, which then answers for a
+  prebroken piece and drops the children again -- [rank, rank] measures EMPTY for
+  exactly that reason (MEASURED, and it is why the fill window is
+  [min(start, rank-1), max(end, rank+1)] and not the item's own column).
+
+  An item the window already contains is untouched, so nothing about the cache's
+  other job changes: it still freezes on first read, and Note_collision's fa
+  merge is still invisible to the spacing that read the stem before it (see
+  tests/ItemPureHeightCacheTests.cs, all five of whose cases use column-less
+  items and are unaffected by construction).
+
+  Objects/Item.cs PureYExtent.  Fenced by tests/SlurPureHeightTests.cs: the
+  oracle's own [-3.545, -2.045] for that slur with a direction control and a
+  cross-staff control, plus a recorder that reads back the window the cache was
+  filled from -- (92 . 98) for an item at rank 97 asked over [92, 96], and
+  (92 . 96), unchanged, for the control at rank 94.  With the widening
+  short-circuited the first records (92 . 96) and fails; the control still passes.
+
+  WHAT MOVED, MEASURED.  The whole Phase-4 battery reproduced EVERY corpus figure
+  exactly -- sweep 2,121 svg / 25 no-output / 0 errored at 2,317 pages, comparator
+  2,302 MATCH / 8 PLACEMENT-DIFFERS / 6 GLYPHS-DIFFER, R10 post-pass 0 of 4,
+  ratchet 0/0/0, diagnostics 2,146 of 2,146 at 414/414 lines, font gate
+  2,313 + 3 = 2,316, ledger 147 rows with no recorded number changed, MIDI 90/90,
+  G8 19 of 19.  The only number that moved is the suite count, by the five cases
+  added.  Four of the five Mutopia rows are now PAGES-EQUAL and SVG-STAVES-EQUAL
+  against the oracle: TenthRegClar2 12, il-vecchio-castello 12,12,12, Octet
+  Cello_2 and Octet Viola_2 page for page.
+
+  ⚠ THE FIFTH ROW IS NOT THIS DEFECT.  Mendelssohn_Octet_-_Violin_2 is
+  BYTE-IDENTICAL before and after the fix (port 11,13,15,16,16,16,16,13 against
+  the oracle's 11,13,15,15,16,16,17,13; PAGES-EQUAL, SVG-STAVES-DIFFER on pages 4
+  and 7, same 116 systems either way).  A2c had grouped it with Cello_2 under one
+  cause; the measurement separates them.  Its residue also has the OPPOSITE SIGN:
+  of its 636 adjacent-pure-heights buckets 18 differ by more than the noise floor
+  and the PORT IS TALLER in most of them (mHi +1.49453 where the oracle reports a
+  bare staff 2.05821, mLo -0.94179), where this defect made the port shorter.  It
+  is its own item and is NOT closed by L17.

@@ -1126,7 +1126,7 @@ markup-conditionals-single-page.svg	MATCH
 markup-cyclic-reference.svg	MATCH
 markup-default-duration.svg	MATCH
 markup-depth-non-terminating.svg	MATCH
-markup-diacritic-marks.svg	GLYPHS-DIFFER
+markup-diacritic-marks.svg	MATCH
 markup-eps.svg	MATCH
 markup-eyeglasses.svg	MATCH
 markup-finger-figuredbass-fontsize.svg	MATCH
@@ -1318,9 +1318,9 @@ nullvoice-change.svg	MATCH
 nullvoice-slur.svg	MATCH
 number-staff-lines.svg	MATCH
 offsets.svg	MATCH
-one-line-auto-height-breaking.svg	GLYPHS-DIFFER
-one-line-breaking.svg	GLYPHS-DIFFER
-one-page-breaking.svg	GLYPHS-DIFFER
+one-line-auto-height-breaking.svg	MATCH
+one-line-breaking.svg	MATCH
+one-page-breaking.svg	MATCH
 one-staff.svg	MATCH
 optimal-page-breaking-hstretch-1.svg	MATCH
 optimal-page-breaking-hstretch-2.svg	MATCH
@@ -1575,7 +1575,7 @@ path-exercise.svg	MATCH
 path-extents-consecutive-movetos.svg	MATCH
 path-extents-curve.svg	MATCH
 pattern-markup-evaluation.svg	MATCH
-pdf-copy-paste.svg	GLYPHS-DIFFER
+pdf-copy-paste.svg	MATCH
 pdf-metadata-fromproperty.svg	MATCH
 pdfmark-metadata-unicode.svg	MATCH
 pdfmark-metadata.svg	MATCH
@@ -1633,7 +1633,7 @@ premeasure-warning-bar-check.svg	MATCH
 premeasure-warning-duration.svg	MATCH
 premeasure.svg	MATCH
 print-initial-repeat-bar.svg	MATCH
-profile-property-access.svg	GLYPHS-DIFFER
+profile-property-access.svg	MATCH
 property-grace-polyphony.svg	MATCH
 property-nested-override.svg	MATCH
 property-nested-revert.svg	MATCH
@@ -2247,14 +2247,14 @@ tuplet-text-note-appended.svg	MATCH
 tuplets.svg	MATCH
 turkish-makam-accidental-glyphs.svg	MATCH
 tweaks-as-overrides.svg	MATCH
-typography-demo.svg	GLYPHS-DIFFER
+typography-demo.svg	MATCH
 unfolded-spec.svg	MATCH
 unpure-pure-container.svg	MATCH
 unset-once.svg	MATCH
 unspecified-music-at-top-level.svg	MATCH
 utf-8-mixed-text.svg	MATCH
 utf-8-scheme.svg	MATCH
-utf-8.svg	GLYPHS-DIFFER
+utf-8.svg	MATCH
 vertical-alignment-spanner-only.svg	MATCH
 voice-follower-broken-several-systems.svg	MATCH
 voice-follower-broken.svg	MATCH

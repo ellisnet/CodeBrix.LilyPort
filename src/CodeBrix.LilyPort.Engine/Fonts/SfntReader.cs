@@ -231,6 +231,42 @@ public sealed class SfntReader
     }
 
     /// <summary>
+    /// Gets the font's HORIZONTAL ascender and descender in DESIGN UNITS, from
+    /// <c>hhea</c>, or <c>(0, 0)</c> when the table is absent or too short.
+    /// <para>
+    /// This is the pair HarfBuzz answers <c>hb_font_get_extents_for_direction</c> with
+    /// for a horizontal direction — <c>hb_ot_metrics_get_position</c> takes
+    /// <c>HB_OT_METRICS_TAG_HORIZONTAL_ASCENDER</c> from <c>hhea</c> unless the face sets
+    /// <c>OS/2</c>'s USE_TYPO_METRICS bit, which none of the vendored faces does — and
+    /// therefore the pair Pango's font metrics carry as <c>ascent</c> and
+    /// <c>descent</c>. <see cref="ReadTypoAscenderDescender"/> answers a DIFFERENT pair
+    /// and the two disagree: TeX Gyre Schola's <c>hhea</c> is <c>(1135, -332)</c> against
+    /// <c>OS/2</c>'s <c>(798, -202)</c>, and the oracle's unknown-glyph box measures the
+    /// former.
+    /// </para>
+    /// <para>
+    /// The descender is signed and is normally NEGATIVE. C059-Roman answers
+    /// <c>(737, -263)</c>.
+    /// </para>
+    /// </summary>
+    /// <returns>The horizontal ascender and descender, in design units.</returns>
+    public (int Ascender, int Descender) ReadHorizontalAscenderDescender()
+    {
+        if (!_tables.TryGetValue("hhea", out (uint Offset, uint Length) hhea))
+        {
+            return (0, 0);
+        }
+
+        if (hhea.Length < 10)
+        {
+            return (0, 0);
+        }
+
+        // hhea: version(4) ascender(2) descender(2) lineGap(2), the last three signed.
+        return (ReadInt16((int)hhea.Offset + 4), ReadInt16((int)hhea.Offset + 6));
+    }
+
+    /// <summary>
     /// Returns the glyph names in glyph-index order, read from the CFF charset.
     /// <para>
     /// Index 0 is always <c>.notdef</c> and is not listed in the charset itself, so it

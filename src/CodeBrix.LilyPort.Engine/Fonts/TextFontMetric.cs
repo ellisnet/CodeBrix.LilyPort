@@ -460,6 +460,7 @@ public sealed class TextFontMetric : FontMetric
 
         double advance = 0.0;
         bool haveInk = false;
+        bool drawable = false;
         double bottom = 0.0;
         double top = 0.0;
 
@@ -537,14 +538,36 @@ public sealed class TextFontMetric : FontMetric
                 }
             }
 
-            // A code point no face in the chain covers deliberately draws .notdef —
-            // D23's tofu — and .notdef still occupies its own advance, so it is
-            // measured like any other glyph rather than skipped. Upstream cannot draw
-            // it either, and SAYS SO (Pango_font::get_glyph_desc), naming the face it
-            // asked: the tofu is the picture and this is the sentence.
+            //was previously: a code point no face in the chain covers fell through to
+            // `face.GlyphIndex (codePoint)', which is .notdef, and was measured like any
+            // other glyph. In the URW and TeX Gyre faces the port vendors, .notdef's
+            // charstring DRAWS NOTHING, so the character contributed ZERO HEIGHT and
+            // .notdef's advance instead of Pango's unknown box — 3.89 staff-spaces short
+            // on the Mutopia footer, which is enough room for one more system per page
+            // (A2, 2026-08-28). The tofu D23 asks for was never what upstream draws
+            // either; upstream draws NOTHING and reserves the box.
+            //
+            // Upstream reaches this through Pango: a code point no face covers arrives at
+            // pango_glyph_string_extents carrying PANGO_GLYPH_UNKNOWN_FLAG, and
+            // pango_fc_font_get_glyph_extents answers for it out of the FONT's metrics
+            // rather than out of any glyph. See UnknownGlyph for the box, and the warning
+            // stays exactly where it was — upstream's own sentence, from
+            // Pango_font::get_glyph_desc (D40).
             if (!face.Covers(codePoint) && !MusicFontCovers(codePoint))
             {
                 MissingGlyphWarning.Warn(codePoint, face.FileName);
+
+                // A DEFAULT-IGNORABLE character is a THIRD case and not this one.
+                // Upstream answers PANGO_GLYPH_EMPTY for it — zero wide, no ink, nothing
+                // drawn — which is neither the unknown box nor .notdef, and the warning
+                // above already returns without a word for it. It keeps the .notdef the
+                // port has always given it; closing THAT gap is its own question and its
+                // own measurement, and is deliberately not opened here.
+                if (!MissingGlyphWarning.IsZeroWidth(codePoint))
+                {
+                    shaped.Add(UnknownGlyph(face, glyphSize, glyphXScale));
+                    continue;
+                }
             }
 
             shaped.Add(new ShapedGlyph(
@@ -613,7 +636,12 @@ public sealed class TextFontMetric : FontMetric
             // grouping gives 333.
             long rounded = PangoUnitsRound(step);
 
-            if (current.Face.Cff != null)
+            // AN UNKNOWN GLYPH CONTRIBUTES NO NODE AT ALL, which is upstream's own list:
+            // Pango_font::get_glyph_desc answers false for a glyph carrying
+            // PANGO_GLYPH_UNKNOWN_FLAG and the caller drops it, so it reaches neither the
+            // drawing nor the skyline walk — only the box. The next glyph still lands
+            // where it should, because each node carries its own absolute translation.
+            if (!current.IsUnknown && current.Face.Cff != null)
             {
                 // THE GLYPH'S OWN ADVANCE RIDES ALONG, because the skyline walker owes
                 // upstream's whitespace FILLER and cannot derive the advance from a face:
@@ -633,6 +661,18 @@ public sealed class TextFontMetric : FontMetric
 
             advanceUnits += rounded;
             advance = advanceUnits * pixel / PangoScale;
+
+            if (current.IsUnknown)
+            {
+                // Pango's unknown box, ALREADY in output units — it comes from the font's
+                // metrics rather than from a charstring, so it never meets current.Scale.
+                bottom = haveInk ? Math.Min(bottom, current.UnknownInk.Left) : current.UnknownInk.Left;
+                top = haveInk ? Math.Max(top, current.UnknownInk.Right) : current.UnknownInk.Right;
+                haveInk = true;
+                continue;
+            }
+
+            drawable = true;
 
             Box ink = current.Face.GlyphBox(current.Glyph);
             if (!ink.Y.IsEmpty)
@@ -655,18 +695,102 @@ public sealed class TextFontMetric : FontMetric
             inner = Pair.List(CombineSymbol, run[i], inner);
         }
 
+        // A RUN WITH NOTHING DRAWABLE IN IT EMITS NOTHING, box and all — the stencil keeps
+        // its extents and carries an empty expression, which is what ly:stencil-empty?
+        // then answers on. MEASURED against the pinned oracle, which writes no <text>
+        // element at all for `\markup \abs-fontsize #12 "ǀ"' or for a string of two
+        // uncovered characters, and DOES write `<tspan>AǀB</tspan>' — the whole string,
+        // uncovered character included — for `\markup \abs-fontsize #12 "AǀB"'. So the
+        // encapsulation carries the ORIGINAL TEXT unchanged whenever it is emitted at
+        // all; what upstream drops is the glyph, not the character in the text.
+        //
         // pango-font.cc:574 — the encapsulation is a SHORT-CUT for backends that also
         // use Pango, and upstream skips it for a music string when the backend turns
         // music strings into paths. See this method's note.
-        object expression = musicString
-            ? inner
-            : Pair.List(
+        object expression;
+        if (musicString)
+        {
+            expression = inner;
+        }
+        else if (!drawable)
+        {
+            expression = Nil.Instance;
+        }
+        else
+        {
+            expression = Pair.List(
                 Utf8StringSymbol,
                 new MutableString(DescriptionString),
                 new MutableString(text),
                 inner);
+        }
 
         return new Stencil(box, expression);
+    }
+
+    /// <summary>
+    /// Builds the run entry for a code point NO FACE IN THE CHAIN COVERS: Pango's
+    /// UNKNOWN-GLYPH BOX, taken from the face's metrics rather than from any glyph.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>pango_fc_font_get_glyph_extents</c> (pangofc-font.c), the
+    /// <c>glyph &amp; PANGO_GLYPH_UNKNOWN_FLAG</c> branch, with
+    /// <c>metrics = pango_font_get_metrics (font, NULL)</c>:
+    /// </para>
+    /// <code>
+    ///   ink_rect-&gt;x      = PANGO_SCALE;
+    ///   ink_rect-&gt;width  = metrics-&gt;approximate_char_width - 2 * PANGO_SCALE;
+    ///   ink_rect-&gt;y      = -(metrics-&gt;ascent - PANGO_SCALE);
+    ///   ink_rect-&gt;height = metrics-&gt;ascent + metrics-&gt;descent - 2 * PANGO_SCALE;
+    ///   logical_rect-&gt;x  = 0;  logical_rect-&gt;width = metrics-&gt;approximate_char_width;
+    ///   logical_rect-&gt;y  = -metrics-&gt;ascent;
+    ///   logical_rect-&gt;height = metrics-&gt;ascent + metrics-&gt;descent;
+    /// </code>
+    /// <para>
+    /// The stencil takes the LOGICAL rectangle for X and the INK one for Y (this class's
+    /// own note), so the box is <c>approximate_char_width</c> wide and runs from
+    /// <c>ascent - PANGO_SCALE</c> above the baseline to <c>descent - PANGO_SCALE</c>
+    /// below it. ONE DEVICE DOT is what is taken off each side — PANGO_SCALE is a dot in
+    /// Pango units, and <see cref="DevicePixel"/> is that dot in output units — so the
+    /// inset is not a constant of the size and is not fitted; it falls out of the same
+    /// division every other metric here goes through.
+    /// </para>
+    /// <para>
+    /// The width goes in as a SYNTHESISED ADVANCE, so the caller rounds it to a whole
+    /// device dot with everything else. That rounding is not cosmetic: MEASURED on the
+    /// pinned oracle across 27 sizes from 6 to 600 pt, C059-Roman's unknown box is an
+    /// exact whole number of dots wide at every one of them, and reproducing all 27 needs
+    /// the rounding to happen HERE rather than on the accumulated run.
+    /// </para>
+    /// <para>
+    /// CALIBRATION, all MEASURED against the pinned oracle and all reproduced to the
+    /// printed digit: C059-Roman gives X <c>[0, 1.12673]</c>, Y <c>[-0.59711, 1.73474]</c>
+    /// at <c>\abs-fontsize #12</c>; NimbusSans-Regular gives X <c>[0, 1.09259]</c>,
+    /// Y <c>[-0.61628, 1.71557]</c>; NimbusMonoPS-Regular X <c>[0, 1.43402]</c>,
+    /// Y <c>[-0.91870, 1.41315]</c>; texgyreschola-regular X <c>[0, 1.12673]</c>,
+    /// Y <c>[-0.76269, 2.69002]</c>. The box is a per-FONT constant and not a
+    /// per-character one — U+2F92 measures the same as U+01C0.
+    /// </para>
+    /// </remarks>
+    /// <param name="face">The face the run resolved to, which supplies the metrics.</param>
+    /// <param name="glyphSize">The size this code point is set at.</param>
+    /// <param name="glyphXScale">The HarfBuzz scale for that size, in Pango units.</param>
+    /// <returns>The run entry.</returns>
+    private ShapedGlyph UnknownGlyph(TextFace face, double glyphSize, int glyphXScale)
+    {
+        long multiplier = Multiplier(glyphXScale, face.UnitsPerEm);
+        long ascent = EmMult(face.Ascender, multiplier);
+        long descent = -EmMult(face.Descender, multiplier);
+
+        double dot = DevicePixel / PangoScale;
+        Interval ink = new Interval(
+            -((descent - PangoScale) * dot),
+            (ascent - PangoScale) * dot);
+
+        return new ShapedGlyph(
+            face, ink, ScaleFor(face, glyphSize), glyphXScale,
+            face.ApproximateCharWidth(glyphXScale));
     }
 
     /// <summary>
@@ -689,6 +813,16 @@ public sealed class TextFontMetric : FontMetric
 
         for (int start = 0; start < shaped.Count;)
         {
+            // AN UNKNOWN GLYPH ENDS THE STRETCH TOO, and is passed through untouched. It
+            // has no glyph index to substitute — it carries a box and a synthesised width
+            // — and a ligature that shortened the stretch around it would drop both.
+            if (shaped[start].IsUnknown)
+            {
+                result?.Add(shaped[start]);
+                start++;
+                continue;
+            }
+
             TextFace face = shaped[start].Face;
 
             // A SIZE CHANGE ENDS THE STRETCH as surely as a face change does — Pango
@@ -698,6 +832,7 @@ public sealed class TextFontMetric : FontMetric
             int xScaleUnits = shaped[start].XScaleUnits;
             int end = start + 1;
             while (end < shaped.Count
+                   && !shaped[end].IsUnknown
                    && ReferenceEquals(shaped[end].Face, face)
                    && shaped[end].XScaleUnits == xScaleUnits)
             {
@@ -826,6 +961,16 @@ public sealed class TextFontMetric : FontMetric
         {
         }
 
+        // The UNKNOWN-GLYPH entry: no glyph index at all, a box the font supplied rather
+        // than a charstring, and Pango's approximate char width as the advance.
+        public ShapedGlyph(
+            TextFace face, Interval ink, double scale, int xScale, long synthesizedAdvance)
+            : this(face, 0, scale, xScale, true, synthesizedAdvance)
+        {
+            IsUnknown = true;
+            UnknownInk = ink;
+        }
+
         public ShapedGlyph(
             TextFace face,
             int glyph,
@@ -840,6 +985,8 @@ public sealed class TextFontMetric : FontMetric
             XScaleUnits = xScale;
             HasSynthesizedAdvance = hasSynthesizedAdvance;
             SynthesizedAdvance = synthesizedAdvance;
+            IsUnknown = false;
+            UnknownInk = Interval.Empty;
         }
 
         public TextFace Face { get; }
@@ -862,6 +1009,17 @@ public sealed class TextFontMetric : FontMetric
         public long SynthesizedAdvance { get; }
 
         public bool HasSynthesizedAdvance { get; }
+
+        // Whether this entry stands for a code point NO FACE IN THE CHAIN COVERS. Such an
+        // entry occupies its box and its advance and is drawn by nobody — it reaches
+        // neither the stencil expression nor the skyline, which is upstream's own
+        // treatment (Pango_font::get_glyph_desc drops it).
+        public bool IsUnknown { get; }
+
+        // The unknown box's vertical extent, in OUTPUT units — already through the scale
+        // every other metric here is divided by, because it comes from the font's metrics
+        // in Pango units and never from a charstring in design units.
+        public Interval UnknownInk { get; }
     }
 
     private static readonly object MusicCoverageGate = new object();
@@ -925,9 +1083,12 @@ public sealed class TextFontMetric : FontMetric
             }
         }
 
-        // Nothing covers it. The FIRST face still supplies the advance and the .notdef
-        // box, which is what makes the tofu take up room instead of collapsing the
-        // line — deliberately NOT a system-font lookup (D23).
+        //was previously: "The FIRST face still supplies the advance and the .notdef box,
+        // which is what makes the tofu take up room instead of collapsing the line."
+        // The first face is still the answer — Pango itemizes an uncovered run onto the
+        // first font of the fontset too — but what it supplies is now its METRICS, not
+        // its .notdef: see UnknownGlyph. Still deliberately NOT a system-font lookup
+        // (D23).
         return _chain.Count > 0 ? _chain[0] : null;
     }
 }

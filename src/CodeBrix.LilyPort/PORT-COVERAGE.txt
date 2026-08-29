@@ -520,3 +520,77 @@ figure reproduces EXACTLY.
   (MusicXmlProbe) and the parity suite (MusicXmlImporterParityTests, 206 cases
   plus four fences) grade the same corpus by two independent readings of the
   recorded argument lists, which is what says they grade the same thing.
+
+--------------------------------------------------------------------------------
+9. THE WRONG-ARITY REFUSAL -- THE B1 PROXY, RETIRED (2026-08-28)
+--------------------------------------------------------------------------------
+
+  WHAT UPSTREAM DOES.  Guile refuses to apply a procedure with fewer arguments
+  than its required parameters and raises wrong-number-of-args; nothing in
+  LilyPond catches it during a parse, so the error escapes Lily_parser::parse_file
+  and the run dies with NO output at all and a non-zero status.  Measured on the
+  pinned 2.27.2 with `\applyMusic #unfold-repeats { c'4 d' e' f' }' --
+  unfold-repeats gained a leading `types' argument, so a 2.10-era source calls it
+  one argument short:
+
+      Wrong number of arguments to #<procedure unfold-repeats (types music)>
+
+  exit 1, and not one file written -- not the offending score's page, and not the
+  page or the .midi of a perfectly good score beside it in the same file.  Three
+  Mutopia entry points do exactly this (ChopinFF/O64, DiabelliA/O149/op149-7,
+  FischerJKF/Fischer_EratoAllemande) and convert-ly rewrites embedded Scheme on
+  neither side.
+
+  WHAT THE PORT DID UNTIL THIS ENTRY, AND WHY IT IS GONE.  CodeBrix.LilyScheme up
+  to 1.0.238.240 bound a missing required parameter to #<unspecified> and applied
+  the procedure anyway, so the arity error the file deserved was never raised and
+  the port could not see the mismatch itself.  What it COULD see was the
+  consequence one step later -- the music function's body returning #<unspecified>
+  and scm/ly-syntax-constructors.scm reporting `music function cannot return
+  ##<unspecified>' -- and BatchRunner carried a proxy
+  (MusicFunctionReturnedUnspecified) that treated that diagnostic as fatal and
+  answered a result with no output.  Jeremy ruled the proxy must not outlive the
+  real fix.
+
+  IT DOES NOT.  LilyScheme 1.0.241.10 raises the VM's own wrong-number-of-args on
+  every path, including the Tree-IL one that psyntax expands into, so the throw
+  escapes the parse by itself and the existing fatal path carries it -- the same
+  one that already refuses `cannot find music object: MarkEvent'.  The proxy and
+  its call site are DELETED; nothing replaced them.
+
+  MEASURED at the pin bump, on the shape above:
+
+      pinned oracle 2.27.2   0 files written, exit 1
+      port                   0 files written, the run reports its error
+
+  and the three Mutopia rows re-probed --oracle: INPUT-REFUSED 3 of 3, with
+  oracle:FAIL 3 -- both engines refuse the same three inputs.
+
+  ⚠ THE ERROR LINE'S WORDING IS A DELIBERATE DIVERGENCE, DECIDED 2026-08-28 AND
+  NOT BUILT.  Upstream prints the rendered sentence above; the port's harness line
+  reads
+
+      ERROR SchemeThrow: Scheme error: wrong-number-of-args
+            (#f "Wrong number of arguments to ~A" (#<procedure unfold-repeats
+            (types music)>) #f)
+
+  because BatchDriver's Describe (Program.cs) is a GENERIC exception describer --
+  `cause.GetType().Name + ": " + FirstLine(cause.Message)' -- and the text is
+  SchemeThrow.Message, produced inside the CodeBrix.LilyScheme package rather than
+  here.  Making this one line read like upstream's would mean special-casing every
+  fatal Scheme error in the port, the MarkEvent case included, to prettify a line
+  NO gate grades and NO corpus file reaches (the 2,146-file sweep measures zero
+  hits).  Rule 15 lets a port-only diagnostic say whatever is clearest, and the
+  raw condition carries strictly more than the sentence does: the key, the format
+  string and the arguments, which is what a developer bisecting a failure reads.
+  If it is ever to be rendered, the place is SchemeThrow.Message in LilyScheme,
+  not a special case here.  REVISIT if a user-facing host ever surfaces this line
+  verbatim.
+
+  THE FENCE.  MusicFunctionArityParityTests, three cases.  The refusal case now
+  REQUIRES the throw and asserts the cost on the DISK (no file anywhere under the
+  scratch directory) rather than on a result object that no longer comes back; it
+  accepted either shape while the proxy existed, and a test that still tolerated
+  the proxy's shape would go on passing if the arity check regressed.  Its two
+  controls are unchanged: \applyMusic with the declared arity engraves, and an
+  ordinary hand-written music function called correctly still prints.

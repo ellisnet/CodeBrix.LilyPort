@@ -97,7 +97,6 @@ lyric-volta-alternative.svg	MOVED	1	61	0.0000	0.0025	0.004393	MATCH	-
 lyrics-spanbar.svg	MOVED	4	125	0.0000	0.0085	0.014937	MATCH	-
 magnifyStaff-time-signature.svg	MOVED	38	59	0.0000	0.0046	0.008084	MATCH	-
 markup-compound-meter-denominator-style.svg	SAME-FONTS	0	0	0.0000	0.0000	0.000000	PLACEMENT-DIFFERS	77af5deed4593d9bb24081aa7e511df655b8a6ae36f6ac9dcc02acc6a1fc5826
-markup-diacritic-marks.svg	SAME-FONTS	0	0	0.0000	0.0000	0.000000	GLYPHS-DIFFER	5f0117d213cbf3cc7a21d7d844cbe031164239b1c18da44ab1e7f171653f2c7b
 markup-note-dot.svg	MOVED	22	27	0.0000	0.0040	0.007029	MATCH	-
 markup-note-sizes.svg	MOVED	210	363	0.0000	0.0075	0.016475	MATCH	-
 markup-with-true-dimensions.svg	MOVED	15	22	0.0254	0.0000	0.044635	MATCH	-
@@ -114,15 +113,10 @@ mozart-hrn-3-4.svg	MOVED	2	1096	0.0000	0.0013	0.002284	MATCH	-
 multi-measure-rest-create-context.svg	MOVED	1	20	0.0000	0.0025	0.004393	MATCH	-
 multi-measure-rest-text-spanned.svg	MOVED	1	57	0.0000	0.0025	0.004393	MATCH	-
 multi-measure-rest-text.svg	MOVED	1	48	0.0000	0.0077	0.013531	MATCH	-
-one-line-auto-height-breaking.svg	SAME-FONTS	0	0	0.0000	0.0000	0.000000	GLYPHS-DIFFER	4dd046845068c507794cf6dda1ce8d696f7ec1fe274143aecbd09f3a9f0aa052
-one-line-breaking.svg	SAME-FONTS	0	0	0.0000	0.0000	0.000000	GLYPHS-DIFFER	be7ec5a4443b49b61a63ad94aa64064054ad8038ab3d98d262356705636e3248
-one-page-breaking.svg	SAME-FONTS	0	0	0.0000	0.0000	0.000000	GLYPHS-DIFFER	c914ede151d6dbd2a7ab6406c572900f0fa695f824cff49c59e31934bd558938
 page-layout-bottom-padding.svg	MOVED	249	375	0.0000	0.0083	0.008022	MATCH	-
 parenthesize-singlenotes-chords-rests.svg	MOVED	7	71	0.0000	0.0013	0.002284	MATCH	-
-pdf-copy-paste.svg	SAME-FONTS	0	0	0.0000	0.0000	0.000000	GLYPHS-DIFFER	5f0f94c6e10c3a2d399c926cec5d71343e3f4baf90f2c13eb33370efd2645e32
 polymeter-ossia.svg	MOVED	2	68	0.0000	0.0047	0.008259	MATCH	-
 polymetric-time-repeat.svg	MOVED	1	278	0.0000	0.0025	0.004393	MATCH	-
-profile-property-access.svg	SAME-FONTS	0	0	0.0000	0.0000	0.000000	GLYPHS-DIFFER	50498eb4cdc72ff090908f282385e679c29f065a1b1de88cfa5f0d20ef7c7d19
 repeat-bar-number-engraver-order.svg	MOVED	2	86	0.0000	0.0025	0.004393	MATCH	-
 repeat-dc-one-alternative.svg	MOVED	1	39	0.0000	0.0026	0.004569	MATCH	-
 repeat-ds-body-empty.svg	MOVED	5	146	0.0000	0.0025	0.004393	MATCH	-
@@ -164,8 +158,6 @@ ssaattbb-template-with-men-women-and-descant.svg	MOVED	210	415	0.0000	0.0049	0.0
 tablature-full-notation.svg	MOVED	1	343	0.0000	0.0001	0.000158	MATCH	-
 tablature-repeat-tie.svg	MOVED	1	245	0.0000	0.0025	0.004393	MATCH	-
 tablature-tie-behaviour.svg	MOVED	3	474	0.0000	0.0025	0.004393	MATCH	-
-typography-demo.svg	SAME-FONTS	0	0	0.0000	0.0000	0.000000	GLYPHS-DIFFER	50498eb4cdc72ff090908f282385e679c29f065a1b1de88cfa5f0d20ef7c7d19
-utf-8.svg	SAME-FONTS	0	0	0.0000	0.0000	0.000000	GLYPHS-DIFFER	a4e8b29534ab7f18a86467de60282dc99485a0659a4e7d2dfd6c2ea59bb6e661
 volta-bracket-add-volta-hook.svg	MOVED	1	30	0.0000	0.0025	0.004393	MATCH	-
 volta-bracket-grace-synchronization-negative.svg	MOVED	4	199	0.0000	0.0025	0.004393	MATCH	-
 volta-bracket-grace-synchronization.svg	MOVED	14	210	0.0000	0.0026	0.004569	MATCH	-

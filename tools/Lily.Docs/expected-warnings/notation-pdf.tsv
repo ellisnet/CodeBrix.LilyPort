@@ -16,8 +16,9 @@
 #                    139.04mm x 99.5707mm and lands 1052 x 752 px at 192 ppi).
 # KEEP_UNCOVERED     TRUE as of wave LD5 -- decision D56, RULED. It was false here through
 #                    wave LD4, and the change moved NOTHING in this manual: the switch
-#                    governs HTML TEXT and every drop below is in SVG text, where the face's
-#                    own notdef is already drawn and warned about.
+#                    governs HTML TEXT, and every drop this file ever recorded was in SVG
+#                    text instead. ⚠ Since 2026-08-28 there are no drops here at all (see
+#                    below), so this row records a setting rather than an explanation.
 #                    ⚠ AND THE MANUAL IT WAS PARKED FOR DID NOT DECIDE IT EITHER.
 #                    music-glossary -- the one manual carrying music symbols in PROSE, which
 #                    LD4 named as the place this switch would finally matter -- drops
@@ -33,23 +34,45 @@
 # the surface TexinfoPdfWarnings.PdfItems was added to this repository's chain to provide.
 # A total would go on passing while one character stopped dropping and another started.
 #
-# ⚠ ALL 22 ARE HEBREW, ALL IN ONE ENGRAVED SNIPPET, AND THE DROP IS IRREDUCIBLE.
-# U+05D0-U+05EA is carried by NONE of the twelve font families reachable through the
-# Html2Pdf chain -- Roboto, Roboto Mono, Merriweather, Noto Serif, Noto Sans Mono,
-# Iosevka, the Armenian and Georgian Notos, and Noto Music -- checked cmap by cmap at
-# wave LD4 rather than inherited from a note. They are the Hebrew half of a
-# Hebrew/Bulgarian lyric example (input.itely, engraved as snippet-01161); the Bulgarian
-# beside them renders, because Merriweather carries Cyrillic. Decision D47 covers this
-# and Phase 5 does not chase it.
+# ⚠ THE 22 HEBREW DROP ROWS ARE GONE AS OF 2026-08-28, AND THE CAUSE IS AN ENGINE FIX.
+# They were U+05D0-U+05EA, the Hebrew half of a Hebrew/Bulgarian lyric example
+# (input.itely, engraved as snippet-01161), and this file recorded them as an accepted
+# D47 coverage gap. THEY WERE NOT ONE. They were a PORT DEFECT wearing D47's clothes:
+# the engine emitted an uncovered character into the SVG text, which 2.27.2 does not
+# emit at all, and the Html2Pdf chain then found no font for it and dropped it once per
+# occurrence -- which is what this file was counting. The A2a fix (2026-08-28, the
+# Mutopia round) made an uncovered character measure as Pango's unknown-glyph box
+# instead of .notdef's empty box, and with it the engine stopped emitting the character.
+#
+# MEASURED on that same lyric, under the regression corpus's own font pinning, rather
+# than argued:
+#
+#     pinned oracle 2.27.2    0 Hebrew characters in the SVG, and 24 `no glyph for
+#                             character' warnings
+#     port WITH the fix       0 Hebrew characters, and the SAME 24 warnings -- upstream's
+#                             wording and font name, character for character
+#     port WITHOUT the fix    24 Hebrew characters emitted into the SVG: the divergence
+#
+# So the loss did not become invisible, which is the thing this header has always been
+# careful about. It MOVED to the engine stage, where upstream puts it, and it is louder
+# there: 24 occurrences each named with its code point and font against 22 code points
+# counted here. The corpus agrees independently -- utf-8.svg carries this same lyric and
+# moved from GLYPHS-DIFFER to MATCH at that fix, and the diagnostics gate grades those
+# warnings 2,146 of 2,146. D47 still covers the coverage gap itself; what this file no
+# longer records is the port defect that was hiding inside it.
 #
 # ⚠ WHAT IS *NOT* HERE IS THE POINT OF PdfTextFallback. The first LD4 render dropped 26
-# code points / 29 occurrences: these 22 plus Greek Psi/alpha/omega and U+2192 RIGHTWARDS
-# ARROW twice. The SVG text path's per-glyph fallback chain contains only Noto Music
-# unless a consumer says otherwise -- so the flat in snippet-01349 was rescued while the
-# arrow beside it was not, and a Greek run styled `serif' dropped in the SVG while the
-# identical run renders in HTML. Four AddFallbackFamily calls closed it. If those four
-# ever stop being registered, the Greek and the arrow reappear as extra DROP rows here,
-# which makes this baseline the control for that registration.
+# code points / 29 occurrences: the 22 Hebrew rows described above, since removed, plus
+# Greek Psi/alpha/omega and U+2192 RIGHTWARDS ARROW twice. The SVG text path's per-glyph
+# fallback chain contains only Noto Music unless a consumer says otherwise -- so the flat
+# in snippet-01349 was rescued while the arrow beside it was not, and a Greek run styled
+# `serif' dropped in the SVG while the identical run renders in HTML. Four
+# AddFallbackFamily calls closed it. If those four ever stop being registered, the Greek
+# and the arrow reappear as DROP rows here, which makes this baseline the control for
+# that registration. ⚠ AS OF 2026-08-28 THAT IS THE ONLY THING THE DROP SECTION WATCHES,
+# and the section is empty -- so any DROP row appearing here at all is now a finding.
+# It still works for its purpose: the Greek and the arrow ARE covered by the port's own
+# faces, so the engine emits them and it is the PDF chain's fallback that rescues them.
 # SVG_PLACEMENT      Vector -- decision D51 AMENDED 2026-08-26 (Texinfo2Pdf 1.0.238.626 ->
 #                    Html2Pdf 1.0.238.580): every engraved picture is placed as PDF VECTOR
 #                    content, its text as embedded-font text, through a fully managed
@@ -62,29 +85,7 @@ KEEP_UNCOVERED	true
 PAGES	1280
 PAGE_HEIGHT_PT	842
 PAGE_WIDTH_PT	595
-PDF_ITEMS	22
-PDF_WARNINGS	22
+PDF_ITEMS	0
+PDF_WARNINGS	0
 SVG_PLACEMENT	Vector
 SVG_RASTER_SCALE	2
-DROP	font.svg-text.notdef	U+05D0	1
-DROP	font.svg-text.notdef	U+05D3	1
-DROP	font.svg-text.notdef	U+05D4	1
-DROP	font.svg-text.notdef	U+05D5	1
-DROP	font.svg-text.notdef	U+05D6	1
-DROP	font.svg-text.notdef	U+05D7	1
-DROP	font.svg-text.notdef	U+05D9	2
-DROP	font.svg-text.notdef	U+05DA	1
-DROP	font.svg-text.notdef	U+05DB	1
-DROP	font.svg-text.notdef	U+05DC	1
-DROP	font.svg-text.notdef	U+05DD	1
-DROP	font.svg-text.notdef	U+05DE	1
-DROP	font.svg-text.notdef	U+05E0	1
-DROP	font.svg-text.notdef	U+05E1	1
-DROP	font.svg-text.notdef	U+05E2	1
-DROP	font.svg-text.notdef	U+05E3	1
-DROP	font.svg-text.notdef	U+05E4	1
-DROP	font.svg-text.notdef	U+05E6	1
-DROP	font.svg-text.notdef	U+05E7	1
-DROP	font.svg-text.notdef	U+05E8	1
-DROP	font.svg-text.notdef	U+05E9	1
-DROP	font.svg-text.notdef	U+05EA	2
