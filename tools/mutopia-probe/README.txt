@@ -152,7 +152,7 @@ WHAT ONE ENTRY POINT GOES THROUGH
         ink          SIMILAR | LAYOUT-DIFFERS | VERY-DIFFERENT | INK-SKIPPED
                      -- both PDFs rasterised by PDFium (page pairs up to the shorter
                      document); per page: ink ratio, ink IoU when the pixel sizes match, and
-                     the BLOCK DIFFERENCE -- ink density on a 24-cell-wide grid, sum|a-b| /
+                     the BLOCK DIFFERENCE -- ink density on an 8-COLUMN grid, sum|a-b| /
                      max(sum a, sum b), 0 = identically distributed, ~1 = nothing in common.
                      block_diff is the number the verdict is cut on. The first two page
                      pairs are saved as compare/port-N.png and compare/ref-N.png.

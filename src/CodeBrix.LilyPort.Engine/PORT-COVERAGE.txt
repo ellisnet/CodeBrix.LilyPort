@@ -11124,3 +11124,70 @@ THE WIDE MODULE IMPORT IS GONE: LilyPort RUNS GUILE'S NARROW IMPORT (2026-08-29,
   that asks for it.
 
   §2d's "the root module is imported WHOLE" divergence closes with this entry.
+
+D69'S REVISIT CONDITION HAS FIRED: FOUR ROWS WHERE THE PORT IS TALLER
+(L19, 2026-08-29 -- measured, not fixed; the decision is open)
+================================================================================
+
+  The section "AN ITEM'S PURE HEIGHT IS NEVER FROZEN FROM A WINDOW THAT EXCLUDES
+  THE ITEM" records its own revisit condition: "REVISIT if a corpus row ever
+  shows the port taller than the oracle for this reason."  The full 227-row
+  Mutopia re-sweep of 2026-08-29 shows four, and the A/B names the cause.
+
+  THE ROWS.  All four are small piano or guitar works -- a population no A2
+  investigation sampled, because A2 was chasing orchestral parts.  Staves are
+  port/oracle, counted off the SVG per page:
+
+      AndreJ/O34/andre-sonatine          20/20   p1:14/16  p2:6/4
+      LisztF/liszt-consolation-no3       40/40   p1:10/12  p4:8/6
+      MozartWA/KV331_3_RondoAllaTurca    56/54   p4:12/14  p5:8/4
+      SchumannR/SchumannOp15No07         10/12   p1:6/8
+
+  Each was PAGES-EQUAL and SVG-STAVES-EQUAL against the oracle before the fix
+  round, at o_block_diff 0.027-0.042.
+
+  THE A/B, WITH CONTROLS.  One lever -- this file's own widening in
+  Objects/Item.cs PureYExtent, short-circuited and then restored, the source
+  sha256-verified back to a72723ab... afterwards.  A1, A2a, A2b, L18 and L20 are
+  IN on both legs, so nothing else moves between them.
+
+      row                     HEAD (widening in)              widening REVERTED
+      andre-sonatine          PORT-GAP 20/20 0.399 p1:14/16   CLEAN    20/20 0.001
+      liszt-consolation-no3   PORT-GAP 40/40 0.323 p1:10/12   DRIFT    40/40 0.005
+      KV331_3_RondoAllaTurca  PORT-GAP 56/54 0.247 p4:12/14   DRIFT    54/54 0.003
+      SchumannOp15No07        PORT-GAP 10/12 0.532 p1:6/8     DRIFT    12/12 0.027
+      -- controls ---------------------------------------------------------------
+      TenthRegClar2           DRIFT    12/12 0.009            PORT-GAP 13/12 0.326
+      il-vecchio-castello     DRIFT    36/36 0.001            PORT-GAP 36/36 0.259
+      ToccataFugue            DRIFT   162/162 0.004           DRIFT   162/162 0.004
+
+  The two rows the widening was built to close REGRESS when it is reverted, and
+  A2b's Toccata row does not move on either leg: the instrument is not blunt and
+  the attribution is not an artefact of rebuilding.
+
+  THE DIRECTION.  On all four the port fits FEWER staves per page -- the port's
+  pure estimate is TALLER than the oracle's.  That is the exact wording of the
+  revisit condition, and it is the OPPOSITE sign from the defect the widening was
+  written for (there the port was short by 0.820-1.000).
+
+  WHAT IS NOT KNOWN.  Whether the taller value is the ACCIDENT-FREE one -- as the
+  section above measured for Violin_2, where warming BOTH engines brought the
+  ORACLE to the PORT's answer -- or whether the widening reaches further than
+  Item::pure_y_extent's own stated assumption warrants.  Those are opposite
+  conclusions and the sweep cannot separate them.  The instrument that can is the
+  one L21 built: warm every pure-relevant grob on both engines over a window that
+  contains it, written in Scheme so it runs identically on either, and read which
+  value the two converge on.  DELIBERATELY NOT ATTRIBUTED FURTHER: three causes
+  this board named have since been refused by measurement, and a fourth guess
+  would be worth less than the paragraph.
+
+  NOTHING GRADED IS AFFECTED.  The 2,146-file regression corpus, the ratchet, the
+  diagnostics gate, the font-parity gate and G8 were green when the widening
+  landed and are green now; these four rows exist only in the Mutopia corpus,
+  which carries no skip or accept list -- it reports, and the OBSERVATIONS
+  document sorts.
+
+  NO CODE CHANGED BY THE SESSION THAT FOUND THIS.  Evidence:
+  ~/ClaudeHome/STATUS_lilyport_l19_2026-08-29.txt, the closing section of
+  ~/ClaudeHome/OBSERVATIONS_lilyport_mutopia_2026-08-27.txt, and the A/B run
+  ~/ClaudeHome/l19-ab-noL17-2026-08-29/.
