@@ -43,7 +43,30 @@ public sealed class CommandInterpreter : ILineInterpreter
         }
 
         var arguments = tokens.GetRange(1, tokens.Count - 1);
-        var context = new ShellCommandContext(session, arguments, cancellationToken);
+        var context = new ShellCommandContext(
+            session, arguments, RawArgumentsOf(line), cancellationToken);
         await command.ExecuteAsync(context).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Returns the line with its leading whitespace and its command word removed, and
+    /// nothing else changed — <see cref="ShellCommandContext.RawArguments"/>.
+    /// </summary>
+    /// <param name="line">The line as typed.</param>
+    /// <returns>The verbatim remainder of the line.</returns>
+    /// <remarks>
+    /// The command word is taken as the first run of non-whitespace, NOT looked up in
+    /// the token list: a token may differ from the text it was read from (the tokenizer
+    /// drops quotes), so searching for it would fail on text this has no trouble with.
+    /// Every registered command name is a plain word, so the two agree wherever a
+    /// command was actually found.
+    /// </remarks>
+    private static string RawArgumentsOf(string line)
+    {
+        var index = 0;
+        while (index < line.Length && char.IsWhiteSpace(line[index])) { index++; }
+        while (index < line.Length && !char.IsWhiteSpace(line[index])) { index++; }
+
+        return line.Substring(index).Trim();
     }
 }

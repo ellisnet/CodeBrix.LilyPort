@@ -71,6 +71,36 @@ public sealed class BatchRunOptions
     public IList<string> Options { get; set; }
 
     /// <summary>
+    /// Gets or sets the base name of the file this run's text CAME FROM, without
+    /// extension, or <see langword="null"/> to take the output base name for it.
+    /// <para>
+    /// It is the output base name that usually answers for both, and for a run with no
+    /// <c>-o</c> the two ARE the same name. They come apart the moment a caller renames
+    /// the output: upstream's <c>output_name_global</c> is consulted for what to WRITE
+    /// (<c>lily-parser-scheme.cc:37-60</c>) and never for what was read, so the file it
+    /// reports processing, the <c>input-file-name</c> a document can look up, and the
+    /// file named in every diagnostic's location and every music object's
+    /// <c>origin</c> all stay the INPUT's. MEASURED on the pinned 2.27.2:
+    /// <c>lilypond -o out/renamed origname.ly</c> reports
+    /// <c>Processing `…/origname.ly'</c> and an <c>input-file-name</c> of
+    /// <c>…/origname.ly</c>, while <c>ly:parser-output-name</c> answers
+    /// <c>renamed</c>.
+    /// </para>
+    /// <para>
+    /// //was previously: nothing carried the input's name, so the output base name
+    /// answered for it everywhere and <c>-o</c> renamed the INPUT as well — a document
+    /// engraved as <c>renamed</c> reported processing a <c>renamed.ly</c> that does not
+    /// exist, and its warnings pointed at that file.
+    /// <c>BatchRunner.RunFile</c> fills this in from the path it was handed, so a
+    /// caller that names a file gets it right without asking; <c>BatchRunner.RunText</c>
+    /// has no file to take it from and its callers pass the input's own base name as the
+    /// output one, so
+    /// leaving this unset is right for them.
+    /// </para>
+    /// </summary>
+    public string InputName { get; set; }
+
+    /// <summary>
     /// Gets or sets where this run's progress and diagnostics are written, or
     /// <see langword="null"/> to leave the process-wide writer in place.
     /// <para>

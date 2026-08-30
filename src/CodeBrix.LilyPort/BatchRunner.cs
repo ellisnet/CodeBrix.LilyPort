@@ -156,10 +156,18 @@ public static class BatchRunner
             }
 
             List<string> diagnostics = new List<string>();
+
+            // Output name and input name are the SAME name here, and the repetition is
+            // upstream's: ly:parse-file names its output from the input it was handed
+            // (output_file_name_for_input_file_name), and the port has no command line
+            // for a -o to have come from. The two only come apart when a HOST renames
+            // an output, which is BatchRunOptions.InputName's job.
+            string parsedName = Path.GetFileNameWithoutExtension(path);
             int errors = RunLifecycle(
                 session,
                 File.ReadAllText(path),
-                Path.GetFileNameWithoutExtension(path),
+                parsedName,
+                parsedName,
                 Path.GetDirectoryName(Path.GetFullPath(path)),
                 diagnostics);
             if (errors > 0)
@@ -368,15 +376,47 @@ public static class BatchRunner
             throw new ArgumentNullException(nameof(filePath));
         }
 
+        // THE INPUT'S OWN NAME, WHICH IS NOT THE OUTPUT'S once -o renames. Filled in
+        // here because this is the overload that HAS a file to take it from; RunText's
+        // callers hand it text and one name, and for them the two are the same name.
+        // Upstream keeps output_name_global out of everything that reports what was
+        // READ (BatchRunOptions.InputName carries the measurement).
+        string inputName = Path.GetFileNameWithoutExtension(filePath);
+        BatchRunOptions options = runOptions;
+        if (!string.IsNullOrEmpty(outputBaseName) && outputBaseName != inputName)
+        {
+            // The caller's own options object is not written to: a host may reuse one
+            // across runs of different files, and the name belongs to THIS run.
+            options = CopyWithInputName(runOptions, inputName);
+        }
+
         return RunText(
             File.ReadAllText(filePath),
             string.IsNullOrEmpty(outputBaseName)
-                ? Path.GetFileNameWithoutExtension(filePath)
+                ? inputName
                 : outputBaseName,
             Path.GetDirectoryName(Path.GetFullPath(filePath)),
             outputDirectory,
-            runOptions);
+            options);
     }
+
+    /// <summary>
+    /// Copies a caller's run options with <see cref="BatchRunOptions.InputName"/> filled
+    /// in, leaving the caller's own object untouched.
+    /// </summary>
+    /// <param name="runOptions">The caller's options, or <see langword="null"/>.</param>
+    /// <param name="inputName">The input file's base name, without extension.</param>
+    /// <returns>The options to run with.</returns>
+    private static BatchRunOptions CopyWithInputName(
+        BatchRunOptions runOptions, string inputName)
+        => new BatchRunOptions
+        {
+            InputName = inputName,
+            PointAndClick = runOptions?.PointAndClick,
+            Options = runOptions?.Options,
+            MessageWriter = runOptions?.MessageWriter,
+            CancellationToken = runOptions?.CancellationToken ?? CancellationToken.None,
+        };
 
     /// <summary>
     /// Splits one <c>--output</c>/<c>-o</c> value into the directory the run writes into
@@ -563,7 +603,9 @@ public static class BatchRunner
         try
         {
             return RunConfigured(
-                defaultLayout, text, baseName, includeDirectory, outputDirectory,
+                defaultLayout, text, baseName,
+                string.IsNullOrEmpty(runOptions?.InputName) ? baseName : runOptions.InputName,
+                includeDirectory, outputDirectory,
                 cancellationToken, orphansDiscarded);
         }
         finally
@@ -580,6 +622,7 @@ public static class BatchRunner
         OutputDef defaultLayout,
         string text,
         string baseName,
+        string inputName,
         string includeDirectory,
         string outputDirectory,
         CancellationToken cancellationToken,
@@ -678,7 +721,7 @@ public static class BatchRunner
         // (`lily-parser-scheme.cc:112,116'): the file it opened, at BASIC, and "Parsing..."
         // at INFO. This runner replaces that driver (trap 17f), so it owes them; until the
         // log level was upstream's they could not have been seen anyway.
-        Flower.Warn.BasicProgress("Processing `" + ResolvedInputName(baseName, includeDirectory)
+        Flower.Warn.BasicProgress("Processing `" + ResolvedInputName(inputName, includeDirectory)
             + "'");
         Flower.Warn.Message("Parsing...");
 
@@ -695,7 +738,8 @@ public static class BatchRunner
                 + " \\midi, \\paper or \\with block");
         }
 
-        int errorCount = RunLifecycle(session, text, baseName, includeDirectory, diagnostics);
+        int errorCount = RunLifecycle(
+            session, text, baseName, inputName, includeDirectory, diagnostics);
 
         // What the lexer recorded off the MAIN input's \version statement, for the
         // host: an editor decides whether to offer convert-ly from exactly this
@@ -997,13 +1041,13 @@ public static class BatchRunner
     /// resolved it, which is a full path when the caller supplied a directory to resolve
     /// against and a bare name when it did not.
     /// </summary>
-    /// <param name="baseName">The output base name, without extension.</param>
+    /// <param name="inputName">The INPUT file's base name, without extension.</param>
     /// <param name="includeDirectory">The directory the file came from, or null.</param>
     /// <returns>The name to report.</returns>
-    private static string ResolvedInputName(string baseName, string includeDirectory)
+    private static string ResolvedInputName(string inputName, string includeDirectory)
         => string.IsNullOrEmpty(includeDirectory)
-            ? baseName + ".ly"
-            : Path.Combine(includeDirectory, baseName + ".ly");
+            ? inputName + ".ly"
+            : Path.Combine(includeDirectory, inputName + ".ly");
 
     /// <summary>
     /// Writes one page per stencil, into the CURRENT working directory and under BARE
@@ -1229,6 +1273,7 @@ public static class BatchRunner
         LilyParserSession session,
         string text,
         string baseName,
+        string inputName,
         string includeDirectory,
         List<string> diagnostics)
     {
@@ -1252,7 +1297,9 @@ public static class BatchRunner
 
         try
         {
-            session.SetIdentifier("input-file-name", new MutableString(baseName + ".ly"));
+            // The INPUT's name, never the output's: `-o' renames what is written and
+            // upstream leaves what was read alone (see BatchRunOptions.InputName).
+            session.SetIdentifier("input-file-name", new MutableString(inputName + ".ly"));
 
             // ly:parser-output-name, which upstream's Lily_parser::parse_file sets from
             // output_file_name_for_input_file_name. The port's ly:parse-file primitive
@@ -1269,7 +1316,10 @@ public static class BatchRunner
             ParseOutcome prologue = session.ParseText(ProloguelLy, "<batch-prologue>");
             diagnostics.AddRange(prologue.AllDiagnostics());
 
-            ParseOutcome parsed = session.ParseText(text, baseName + ".ly");
+            // The name every diagnostic's location and every music object's `origin'
+            // carries, so it is the INPUT's too — a warning about a file has to name the
+            // file a reader can open.
+            ParseOutcome parsed = session.ParseText(text, inputName + ".ly");
             diagnostics.AddRange(parsed.AllDiagnostics());
 
             // WHAT THE LEXER RECORDED, HANDED TO THE EPILOGUE'S VERSION CHECK.

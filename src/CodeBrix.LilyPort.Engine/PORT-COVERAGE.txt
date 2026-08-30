@@ -9833,9 +9833,14 @@ file's SIDE files out of the output directory -- the oracle gets that isolation 
 fresh temp directory per process, and this is the port's equivalent.  Recorded as a
 deliberate divergence in placement, not in the names the engine sees.
 
-/!\ Lily.Shell owes the same split for its own -o (rule 14) -- EngraveCommand accepts a
-path and does no split, so `lily.shell engrave x.ly -o out/dir/name' still does not
-behave like lilypond's.  Sized: no corpus row, no gate; it is a shell-surface item.
+/!\ RETIRED 2026-08-30 (L9), VERIFIED LIVE BEFORE IT WAS TOUCHED (trap 18).  This note
+said Lily.Shell owed the same split for its own -o and did no split.  It does:
+EngraveCommand calls BatchRunner.SplitOutputName and carries the `//was previously:'
+note recording that the whole value used to be taken as a directory.  MEASURED on the
+running X11 shell against the pinned oracle: `engrave smoke.ly -o <dir>/mysmoke' writes
+<dir>/mysmoke.svg, and `lilypond -o <dir>/mysmoke smoke.ly' writes the same name.  The
+note outlived its fix by two waves; recording an interactive engrave run -- L9's own
+acceptance item -- is what found it.
 
 
 A DIAGNOSTIC MUST START ITS OWN LINE -- FIXED (R17)
@@ -10548,7 +10553,8 @@ THE AMBIENT INTERPRETER IS PUBLISHED BY THE LAYER LOAD, NOT BY THE BOOTSTRAP.
   MEASURED BEFORE THE CHANGE, because the blast radius is what decides whether
   this is safe: 56 sites read LilyPondScheme.Current, and EVERY PRODUCTION
   CALLER already pairs the two calls back to back (LilyPondInit.cs:452-453,
-  Lily.Shell's LilyPortHost.cs:232-233), so nothing outside a test ever holds an
+  Lily.Shell's LilyPortHost.cs -- 232-233 when this was written, 416-417 since L9
+  grew the host), so nothing outside a test ever holds an
   unpublished interpreter.  Of 32 test files that build an interpreter, 16 never
   load the layer -- and all 16 still pass, which says none of them was relying
   on a half-built interpreter being ambient.
@@ -10856,7 +10862,7 @@ TWO PAGE-FILLING DIVERGENCES FOUND BY THE MUTOPIA PROBE, FIXED (2026-08-28)
 
 ================================================================================
 THE SLUR PURE-HEIGHT SHORTFALL, AND THE ITEM PURE-HEIGHT CACHE UNDER IT
-(L17, 2026-08-28)
+(L17, 2026-08-28 -- D69, RULED by Jeremy 2026-08-29)
 ================================================================================
 
   The last page-assignment divergence the Mutopia probe showed.  Five rows put
@@ -10978,7 +10984,7 @@ THE SLUR PURE-HEIGHT SHORTFALL, AND THE ITEM PURE-HEIGHT CACHE UNDER IT
 
 ================================================================================
 THE SAME CACHE, ON THE OTHER ENGINE: Mendelssohn_Octet_-_Violin_2
-(L21, 2026-08-29 -- proposed D70, Jeremy rules)
+(L21, 2026-08-29 -- D70, RULED by Jeremy 2026-08-29)
 ================================================================================
 
   The fifth Mutopia row the section above left open.  The port puts 16 systems on
@@ -11126,7 +11132,8 @@ THE WIDE MODULE IMPORT IS GONE: LilyPort RUNS GUILE'S NARROW IMPORT (2026-08-29,
   §2d's "the root module is imported WHOLE" divergence closes with this entry.
 
 D69'S REVISIT CONDITION HAS FIRED: FOUR ROWS WHERE THE PORT IS TALLER
-(L19, 2026-08-29 -- measured, not fixed; the decision is open)
+(L19, 2026-08-29 -- measured, not fixed; ANSWERED BELOW -- D71 for three of the
+ four rows, L23 for the fourth)
 ================================================================================
 
   The section "AN ITEM'S PURE HEIGHT IS NEVER FROZEN FROM A WINDOW THAT EXCLUDES
@@ -11194,7 +11201,8 @@ D69'S REVISIT CONDITION HAS FIRED: FOUR ROWS WHERE THE PORT IS TALLER
 
 L22 ANSWERS THE QUESTION ABOVE: THREE OF THE FOUR ROWS CLOSE BY RULING,
 THE FOURTH DOES NOT
-(L22, 2026-08-29 -- measured; D71 proposed for three rows; the fourth is unfixed)
+(L22, 2026-08-29 -- measured; D71 RULED by Jeremy 2026-08-29 for three rows;
+ the fourth is unfixed)
 ================================================================================
 
   L21's instrument -- warm every pure-relevant grob on both engines over a
@@ -11261,3 +11269,254 @@ THE FOURTH DOES NOT
 
   Evidence: ~/ClaudeHome/STATUS_lilyport_l22_2026-08-29.txt,
   ~/ClaudeHome/l22-2026-08-29/.
+
+================================================================================
+L23 ANSWERS THE FOURTH ROW, AND REFUTES THE PREMISE IT WAS CARRIED ON
+(L23, 2026-08-29 -- measured; D72, RULED by Jeremy 2026-08-30; NO CODE CHANGED)
+================================================================================
+
+  MozartWA/KV331_3_RondoAllaTurca, the one D69-revisit row L22 could not close.
+  L22 carried it forward on the finding that under its warming instrument the row
+  converges to 12,14,12,14,4 -- a value matching NEITHER engine's own cold output
+  (port 10,14,12,12,8, oracle 10,14,12,14,4) -- and concluded that the port's own
+  production sort must carry an unruled instance of D69's visit-order mechanism,
+  needing a principled reordering of internal_calc_pure_relevant_grobs.
+
+  BOTH HALVES OF THAT ARE REFUTED BY MEASUREMENT.
+
+  1. THE THIRD VALUE IS THE INSTRUMENT, NOT THE ENGINES.  L22's probe registers a
+  before-line-breaking callback that reads 'adjacent-pure-heights.  Reading it
+  THERE computes it EARLIER than production does, and Fingering -- an outside-staff
+  grob -- does not have a time-independent pure height: at production it measures
+  3.20000..4.33593 and 4.83593..5.95839 for the pair at rank 95, asked early
+  2.55000..3.67246 and 2.55000..3.68593.  A minimal probe that forces the property
+  and does NOTHING else -- no warming, no dumping (l23force.ily) -- already moves
+  the port from 10,14,12,12,8 to 12,14,12,14,4, and moves the ORACLE from
+  10,14,12,14,4 to the same 12,14,12,14,4.  So 12,14,12,14,4 is what the probe DOES
+  TO both engines, not a third answer either of them holds.  Warming adds nothing
+  to it.  CONTROL: TenthRegClar2, a row the engines already agree on, reads 12 on
+  both engines both cold and early-forced -- the artifact does not move a row that
+  has nothing to move.
+
+  2. THE PORT IS ORDER-SAFE HERE, AND EVERYWHERE.  The board's premise was that the
+  production sort "does not happen to visit this file's grobs in an order that
+  avoids the freeze".  Perturbing ONLY the order and not the timing -- a temporary
+  secondary key in InternalCalcPureRelevantGrobs, reversed index and L22's own
+  narrowest-rank-span-first rule -- leaves the row at 10,14,12,12,8 on all three
+  orders.  Corpus-wide: the full 2,146-file sweep run under the REVERSED order
+  produces all 2,317 pages BYTE-IDENTICAL to the ordinary sweep (the only two files
+  the directory comparison flags are point-and-click-types.svg, whose textedit://
+  URIs embed the output directory, and a stale swing-test-2.midi dated 8 August
+  that neither sweep wrote).  D69's widening already made the port's pure heights
+  independent of visit order; that is what it was for, and no reordering rule can
+  move anything.  The four already-ruled rows are likewise unmoved under the
+  reversed order: andre-sonatine 14,6; liszt-consolation-no3 10,10,12,8;
+  SchumannOp15No07 6,4; Mendelssohn_Octet_-_Violin_2 11,13,15,16,16,16,16,13.
+
+  WHAT THE ROW ACTUALLY IS: D70/D71's SHAPE.  The honest single-lever A/B -- D69's
+  widening short-circuited in one binary by an env gate, everything else identical
+  -- makes the port print 10,14,12,14,4, THE ORACLE'S OUTPUT EXACTLY.  Dumping the
+  per-grob contributions to the first bucket that differs (VerticalAxisGroup 1,
+  measure 1, window [8,20]) names the accident:
+
+      grob                     D69 widening ON      D69 widening OFF
+      NoteColumn rank [9,9]    -3.02500..1.04500    dropped (EMPTY)
+      Slur       rank [1,9]     1.54500..3.87500    3.87500..3.87500 (a point)
+      Fingering  rank [9,9]     3.13250..4.25496    2.55000..3.67246
+
+  and the per-grob probe reads the same thing off the two real engines: that slur,
+  asked cold over [8,20], answers (1.545 . 3.875) on the PORT and (1.545 . 1.545)
+  on the ORACLE, whose column 0 at rank 1 answers (+inf.0 . -inf.0) -- EMPTY, the
+  frozen accident.  Warm that slur's five note columns first and the ORACLE returns
+  the PORT's (1.545 . 3.875), column 0 identical to the digit, direction 1 on both.
+  The port is unmoved by the same warming.  The Fingering above it is then carried
+  up by the outside-staff stacking, which is why the port's estimate is taller and
+  its page breaker chooses 28 systems where the oracle chooses 27.
+
+  So the port is TALLER because it refuses an EMPTY that upstream freezes -- which
+  is D69 doing exactly what it is ruled to do, and is the same finding as D70
+  (Violin_2) and D71 (three rows).  D72, RULED by Jeremy 2026-08-30, the same
+  ruling as D70/D71: this row closes by the same
+  ruling, and D69's revisit condition is fully discharged.  Nothing is rebaselined;
+  the Mutopia probe carries no skip or accept list.
+
+  NO CODE CHANGED.  Three temporary env-gated levers (a freeze log in
+  Item.PureYExtent, a bucket/contribution dump in AdjacentPureHeights, and the sort
+  perturbation) were reverted; both files sha256-verify back to
+  Item.cs                    a72723abef1e7e6fac28d731debff60a4f833e2a675a85c813165ea3c2101322
+  AxisGroupInterfacePure.cs  c274799c35c18c33c10bc3dfc01a312f1022fadce686fbeb2e58c46d37eb209a
+
+  ONE CANDIDATE FIX WAS TRIED AND REFUTED, recorded so it is not tried again:
+  making D69's widening UNCONDITIONAL (strictly containing the item on every cold
+  measurement, not only when the window excludes it) is a real gap in the letter of
+  the rule -- pure_find_visible_prebroken_piece treats rank == start and rank == end
+  as line boundaries, so an item sitting ON a bound is not "excluded" yet can still
+  measure short.  Applied, it takes the widened fills on this file from 197 to
+  2,947 and changes NOT ONE frozen value, and the row does not move.  The letter of
+  D69's rule can be tightened; on this evidence there is nothing for it to fix.
+
+  Evidence: ~/ClaudeHome/STATUS_lilyport_l23_2026-08-29.txt,
+  ~/ClaudeHome/l23-2026-08-29/.
+
+================================================================================
+`-o' RENAMED THE INPUT AS WELL AS THE OUTPUT
+(L9, 2026-08-30)
+================================================================================
+
+  FOUND BY RECORDING AN INTERACTIVE `engrave' RUN, which is what L9 owed for a
+  hand-off that was never answered (STATUS_lilyport_carryforward_2026-08-08.txt
+  :217) and whose surface PARITY 26 had since changed.  The run itself was
+  correct -- `-o <dir>/<name>' writes <dir>/<name>.svg, upstream's own rule --
+  and the LOG beside it was not.
+
+  MEASURED ON THE PINNED 2.27.2 FIRST, with
+  `lilypond -o out/renamed origname.ly':
+
+      Processing `...'          .../origname.ly     the INPUT
+      input-file-name           .../origname.ly     the INPUT
+      an error's location       .../origname.ly:4:7 the INPUT
+      failed files:             "origname.ly"       the INPUT
+      ly:parser-output-name     renamed             the OUTPUT
+
+  Upstream consults `output_name_global' for what to WRITE
+  (lily-parser-scheme.cc:37-60) and never for what was read.  THE PORT HAD ONLY
+  ONE NAME.  BatchRunner.RunText takes `text' plus a base name, and that base
+  name -- which RunFile sets from `-o' when a caller renames the output -- was
+  used for all five.  So a document engraved as `renamed' reported
+
+      Processing `.../renamed.ly'                   a file that does not exist
+      input-file-name  renamed.ly
+      warnings located in renamed.ly
+
+  WHY NOTHING GRADED CAUGHT IT.  Every graded caller passes NO output rename:
+  BatchDriver calls RunFile(file, dir, null, ...) and DocsDriver calls RunText,
+  so input name and output name are the same string there and the sweep, the
+  diagnostics gate and G8 could not see it.  The two callers that DO rename are
+  the Mutopia probe and Lily.Shell's `engrave -o' -- neither of them graded on
+  log text.  VERIFIED by the battery: not one corpus figure moved.
+
+  THE FIX.  BatchRunOptions grows `InputName', the base name of the file the text
+  came from; RunFile fills it in from the path it was handed, onto a COPY of the
+  caller's options (a host may hold one options object across several files, and
+  the name belongs to the run).  RunConfigured and RunLifecycle carry it beside
+  the output base name, and the three input-naming sites read it: the `Processing'
+  line, the `input-file-name' identifier, and the source name handed to
+  ParseText -- which is the one a reader acts on, because it is what every
+  diagnostic's location and every music object's `origin' carries.
+  ly:parser-output-name still reads the OUTPUT name; that half was already right.
+  `ly:parse-file' passes the same name twice, deliberately and with a note: it
+  names its output from the input it was handed, and the port has no command line
+  for a -o to have come from.
+
+  FENCED by three cases in OutputFileNamingEndToEndTests, every expectation read
+  off the oracle before the port was run: the rename does not rename the input
+  (with the OUTPUT half as its control -- the file on disk is still renamed.svg
+  and ly:parser-output-name still answers `renamed'); a diagnostic's location
+  names the input (control: the same file with no rename, whose locations must be
+  identical); and the input name belongs to the run, not to the caller's options
+  object (control: two files through ONE options object report their own names,
+  and the caller's object comes back with InputName still null).  A/B: short-
+  circuiting the fix fails 3 of 3 and leaves the file's six older cases green;
+  BatchRunner.cs sha256-verified back to
+  94db8c8ec503a00f0107af18cd67baeee27bb59ada35057cbb10e0591ee1ff37 afterwards.
+
+  TWO OLDER DIFFERENCES SEEN WHILE MEASURING AND DELIBERATELY NOT TOUCHED, both
+  about how much of a location is printed rather than about which file it names,
+  and both already outside what the diagnostics gate keys on (compare-
+  diagnostics.py reduces an absolute path in a message to its basename and does
+  not grade location at all):
+
+    * the port names these by BASENAME where upstream names them by full path;
+    * the port locates `unknown command' at 4:23 where upstream locates it at
+      4:7 -- within the line, not within the file.
+
+  Neither is L9's, neither is graded, and each would need its own measurement and
+  its own battery.  Recorded here so a later session reads them as known.
+
+================================================================================
+LILY.SHELL v1 IS FINISHED: `set' AND `display-music' BUILT, `render' AND THE
+`regression' COCKPIT DROPPED
+(L9, 2026-08-30 -- D65's work, ruled 2026-08-27)
+================================================================================
+
+  The 2026-08-02 command sketch named six commands beyond the eleven that
+  shipped.  D65 ruled four IN -- `convert-ly' and `import' (landed at L3,
+  2026-08-27), `set' and `display-music' -- and two OUT.  THE TWO ABSENCES ARE
+  RECORDED RATHER THAN IMPLIED, here and in tools/Lily.Shell/README.txt, so that a
+  completeness audit reads them as decisions:
+
+    `render'  -- no backend to render THROUGH.  It was gated on the master plan's
+        Milestone 7 (`output-skia'), which D61 closed as SUPERSEDED, never to be
+        built.  What consumes the SVG is downstream (Fresco.Brix's Music View for
+        the screen, Html2Pdf's vector route for PDF), so `render' has nothing left
+        to do that `engrave' does not do.
+
+    `regression next|sweep|status'  -- dropped as UNWANTED, not as blocked.  Phase
+        4 ran twenty-six sessions without it; what a session reaches for is
+        tools/regression-harness/, which is scriptable and is what every gate is
+        defined in terms of.
+
+  `set' IS lilypond's -d, as `include' is its --include -- the sketch's own
+  pairing.  Every spelling that sets goes through Engine.Bootstrap.
+  CommandLineOptions, so `set NAME', `set no-NAME' and `set NAME=VALUE' mean what
+  -dNAME, -dno-NAME and -dNAME=VALUE mean, value text turned into a value by the
+  option's declared type.  Reading is `--doc', deliberately not a bare name: -dNAME
+  already means "set it to #t".  Two things a command line does not need are
+  added -- the value BEFORE the change is reported, and the engine's warnings are
+  CAPTURED to the terminal, because `no such program option: foo' (which upstream
+  emits and then sets the option anyway) would otherwise go to a console a windowed
+  application does not have.
+
+  ⚠ AND A SETTING IS REPLAYED INTO EVERY ENGRAVE, because it would not survive one.
+  Every run opens with LilyPondInit.RestoreDefaults, which puts the option table
+  back to the init layer's values -- the TENTH LEAK's fix, and the promise that one
+  file cannot leak an option into the next.  A `set' that only wrote the live table
+  would be silently dropped by the command it was most likely made for.  The
+  session's settings are therefore carried into each run through
+  BatchRunOptions.Options -- the same -d road -- and re-applied to the live table
+  afterwards.  MEASURED as an A/B on the running X11 shell: the same file engraved
+  by the same command carries 8 textedit:// anchors before `set
+  no-point-and-click' and 0 after it, and `set --doc point-and-click' still reads
+  #f once the run is over.
+
+  `display-music' pairs with `parse' -- parse says whether the reading worked, this
+  says what was read.  It calls the engine's own displayers: the default is
+  display-scheme-music (what \displayMusic calls), --lily is display-lily-music
+  (\displayLilyMusic) and --tree is the procedure literally named display-music.
+  ⚠ SO THE COMMAND'S NAME IS THE SKETCH'S AND ITS DEFAULT IS UPSTREAM'S, which are
+  two different procedures.  The expression is READ FROM THE RAW LINE, through a
+  new ShellCommandContext.RawArguments: a shell tokenizer eats the characters
+  LilyPond spells with, and `c'4^"text"' arriving as `c'4^text' is not an error, it
+  is different music.  And it is ASSIGNED rather than evaluated, because a music
+  expression at toplevel is collected into a book and engraved.
+
+  MEASURED against the pinned 2.27.2 on the running X11 shell, all three:
+  --lily prints `{ c'4 d'8 }', BYTE-IDENTICAL to \displayLilyMusic's; --tree
+  prints the same Prob dump as (display-music ...) with the same properties in the
+  same order; and the default prints the same S-expression as \displayMusic --
+  same forms, same (ly:make-duration 2) and (ly:make-pitch 0 0) values -- with ONE
+  difference, which is not LilyPort's:
+
+  ⚠ LILYSCHEME'S `pretty-print' DOES NOT BREAK LINES, AND DROPS THE SEPARATOR WHERE
+  THE BREAK SHOULD BE.  display-scheme-music is `(pretty-print (music->make-music
+  obj) port)'.  The oracle prints
+
+      (make-music
+       'SequentialMusic
+       'elements
+       (list (make-music ...
+
+  and the port prints `(make-music'SequentialMusic'elements(list (make-music...' --
+  one line, and with NO space where the newline-and-indent belongs, so the text is
+  not readable back, which is what the procedure's own docstring promises.  Spaces
+  inside a form the non-breaking writer handles are correct ((ly:make-duration 2)),
+  which localises it to the line-breaking path.  (ice-9 pretty-print) is
+  LilyScheme's vendored copy of Guile's own, NOT vendored here, so by rule 7 this
+  is not LilyPort's to fix and reaches us as a pin bump; it is recorded on the
+  board under §2e for a LilyScheme GO.  Nothing in the corpus reaches
+  display-scheme-music, so no figure moves either way.
+
+  Fences: 15 new Lily.Shell.Core.Tests cases over the two command lines (49 in that
+  project now) and 2 new Kernel cases over RawArguments (43), whose A/B is the
+  token list from the very same line -- `{ c'4^"text" }' raw against `{',
+  `c'4^text', `}' tokenized.  All six heads build 0W/0E.

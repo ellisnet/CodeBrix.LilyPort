@@ -920,15 +920,27 @@ WHAT IT IS
                                         CodeBrix.Platform.TerminalView add-in,
                                         and this csproj only flows that
                                         package to the app and the tests
-      tests/Lily.Shell.Core.Tests/      the `docs` command surface and the
-                                        once-per-process generation contract
+      tests/Lily.Shell.Core.Tests/      the command SURFACES: `docs` and the
+                                        once-per-process generation contract,
+                                        the two text converters, and `set` and
+                                        `display-music`
       tests/libs/Lily.Shell.Kernel.Tests/, tests/libs/Lily.Shell.TerminalView.Tests/
 
-    Commands: help, clear, version, usage, parse, engrave, demo, include,
-    scheme (the LilyScheme REPL), docs (renders one of the nine manuals to
-    HTML and PDF, default output /tmp/lily-shell-docs/), convert-ly, import
-    (abc | midi | musicxml, switches named after each upstream script's long
-    options), exit.
+    Commands (fifteen, and v1 is COMPLETE as of 2026-08-30): help, clear,
+    version, usage, parse, engrave, demo, include, set (lilypond's -d: bare
+    name, no-NAME and NAME=VALUE all mean what -d means, `--doc` reads, and a
+    setting is replayed into every engrave because each run's restore would
+    otherwise drop it), display-music (--scheme | --lily | --tree over the
+    engine's own displayers; reads the RAW line, because tokenizing eats the
+    quotes LilyPond spells with), scheme (the LilyScheme REPL), docs (renders
+    one of the nine manuals to HTML and PDF, default output
+    /tmp/lily-shell-docs/), convert-ly, import (abc | midi | musicxml,
+    switches named after each upstream script's long options), exit.
+    ⚠ TWO SKETCHED COMMANDS ARE DELIBERATELY ABSENT and D65 records why:
+    `render` has no backend to render through (D61 closed Milestone 7's
+    output-skia as superseded), and the `regression next|sweep|status` cockpit
+    is dropped as unwanted -- tools/regression-harness/ is what a session
+    reaches for.
 
 HOW TO RUN
         cd tools/Lily.Shell
@@ -936,7 +948,7 @@ HOW TO RUN
 
     Substitute the head for the platform in use. Tests:
 
-        dotnet test --solution Lily.Shell.slnx -c Release      # 86 tests
+        dotnet test --solution Lily.Shell.slnx -c Release      # 120 tests
 
 NOTES
     * Not in CodeBrix.LilyPort.slnx; has its own Lily.Shell.slnx.

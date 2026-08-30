@@ -47,11 +47,17 @@ COMMANDS
     engrave    Engraves a .ly file to SVG (and .midi when the score has \midi).
     demo       Engraves the first-light demo (quarter-note c'4) to SVG.
     include    Lists or adds parser include directories.
+    set        Lists or sets the engine's program options (lilypond's -d).
+    display-music
+               Shows the internal representation of a music expression.
     scheme     Enters the LilyScheme REPL (the engine's Scheme sandbox).
     docs       Renders one of the port's nine manuals to HTML and PDF.
     convert-ly Converts an old .ly file to the current syntax.
     import     Converts ABC, MIDI or MusicXML to LilyPond source.
     exit       Closes Lily.Shell.
+
+That is fifteen commands, and it is the WHOLE of the v1 sketch that is going to be
+built -- see THE TWO COMMANDS THAT WERE DROPPED, below.
 
 `usage' prints the engine's own UsageText.Text -- the SAME string the ly:usage
 Scheme binding prints. One string, two callers, deliberately.
@@ -60,6 +66,90 @@ Scheme binding prints. One string, two callers, deliberately.
 (BatchRunner.SplitOutputName, ported from main.cc:729-761). It lists EVERY page it
 wrote plus any MIDI, because a multi-page book reported by its first page is a
 book three quarters lost.
+
+--------------------------------------------------------------------------------
+`set' AND `display-music' -- THE SKETCH'S LAST TWO
+--------------------------------------------------------------------------------
+
+The v1 command sketch paired these with two commands that already existed:
+`set' with `include', and `display-music' with `parse'. Both pairings are the
+point of them.
+
+`set' IS lilypond's -d, and `include' is lilypond's --include.
+
+    lily> set                          every option and its value, then whatever
+                                       this session has set
+    lily> set --doc                    what every option is for -- upstream's -dhelp
+    lily> set --doc point-and-click    what one option is for, and its value now
+    lily> set debug-voices             -ddebug-voices        (set it to #t)
+    lily> set no-point-and-click       -dno-point-and-click  (set it to #f)
+    lily> set resolution=150           -dresolution=150
+    lily> set resolution 150           the same, with the = spelled as a space
+    lily> set --clear                  forget everything this session set
+
+Every spelling that SETS something is the command line's own, and goes through the
+command line's own code (Engine.Bootstrap.CommandLineOptions), so the value TEXT is
+turned into a value by the option's declared type exactly as -d would turn it. What
+`set' adds is the two things a command line does not need: it says what the value
+WAS, and it prints the engine's warnings -- `no such program option: foo', which
+upstream emits and then sets the option anyway -- which would otherwise go to a
+console a windowed application does not have.
+
+⚠ READING AN OPTION IS `--doc', NOT A BARE NAME. `-dfoo' already means "set foo to
+#t", so `set foo' cannot also mean "show me foo" without one of the two being a
+surprise. The bare name sets, like -d; `--doc' reads.
+
+⚠ AND A SETTING IS REPLAYED INTO EVERY `engrave', because it would not survive one
+otherwise. Every run opens with LilyPondInit.RestoreDefaults, which puts the whole
+option table back to what the init layer left -- upstream engraves one file per
+process and cannot leak an option between files, and the port keeps that promise by
+restoring. So the settings this session made are carried into each run through
+BatchRunOptions.Options, the same -d road, and put back on the live table
+afterwards. `set' therefore means one thing before an engrave and the same thing
+after it.
+
+⚠ `docs' IS THE ONE COMMAND `set' DOES NOT REACH, and deliberately. Lily.Docs
+renders the manuals against frozen expected-warnings and page-count baselines; a
+session option injected into that render would move them, and a manual is not the
+place to find out that -ddebug-skylines was still on from an hour ago.
+
+`display-music' says what `parse' just read.
+
+    lily> display-music { c'4 d'8 }           the internal representation
+    lily> display-music --lily { c'4 d'8 }    back into LilyPond syntax
+    lily> display-music --tree { c'4 d'8 }    the terse property dump
+
+The three are upstream's own displayers, called through the engine: the default is
+`display-scheme-music', which is what \displayMusic calls, `--lily' is
+`display-lily-music' behind \displayLilyMusic, and `--tree' is the procedure
+literally called `display-music'. ⚠ SO THE COMMAND AND ITS DEFAULT ARE NAMED AFTER
+DIFFERENT THINGS: the NAME is the sketch's, the DEFAULT is upstream's user-visible
+one. MEASURED against the pinned 2.27.2 in the session that built it, on
+{ c'4 d'8 }: `--lily' prints `{ c'4 d'8 }', BYTE-IDENTICAL to \displayLilyMusic's;
+`--tree' prints the same Prob dump as `(display-music ...)', same properties in the
+same order; and the default prints the same S-expression as \displayMusic -- same
+forms, same (ly:make-duration 2) and (ly:make-pitch 0 0) values. Origin locations
+differ on all three, and should: they name the input.
+
+⚠ THE DEFAULT IS NOT LINE-BROKEN THE WAY THE ORACLE'S IS, AND THAT IS NOT
+LilyPort's. display-scheme-music is `(pretty-print (music->make-music obj) port)',
+and LilyScheme's (ice-9 pretty-print) does not break lines -- worse, it emits
+NOTHING where the newline-and-indent belongs, so the port prints
+`(make-music'SequentialMusic'elements(list ...' on one line, which does not read
+back. That copy is LilyScheme's, not vendored here; rule 7 makes it a pin-bump item
+and it is on the board under 2e. Nothing else in the port reaches that procedure.
+
+⚠ THE EXPRESSION IS READ FROM THE RAW LINE, NOT FROM THE TOKENS. A shell tokenizer
+eats the characters LilyPond spells with: `c'4^"text"' comes back from the token
+list as `c'4^text', which is not an error, it is DIFFERENT MUSIC. The kernel's
+ShellCommandContext.RawArguments exists for exactly this, and this is the only
+command that reads it.
+
+⚠ AND IT ASSIGNS RATHER THAN EVALUATES. A music expression written at toplevel is
+collected into a book and engraved, which is the opposite of what this command is
+for, so the expression is assigned to an identifier nobody would type and the
+displayer is handed the value. The assignment stays in the session's parser scope,
+as a `parse'd file's definitions do.
 
 --------------------------------------------------------------------------------
 THE TEXT CONVERTERS -- `convert-ly' AND `import'
@@ -105,6 +195,39 @@ a zip container and is opened as one, following its own manifest to the score
 inside; anything else is read as the XML itself. That is upstream's `-z' option,
 which is a statement about the INPUT rather than about the conversion, so it is
 not a switch here.
+
+--------------------------------------------------------------------------------
+THE TWO COMMANDS THAT WERE DROPPED, AND WHY
+--------------------------------------------------------------------------------
+
+The 2026-08-02 v1 command sketch named six commands beyond the eleven that
+shipped. Four were built -- `convert-ly' and `import' (2026-08-27), `set' and
+`display-music' (2026-08-30). TWO ARE DELIBERATELY NOT GOING TO BE, ruled by
+Jeremy on 2026-08-27 as decision D65, and the reasons are written down HERE
+rather than left to be inferred, so that a completeness audit reads the two
+absences as decisions instead of as gaps.
+
+  `render' -- inline rendered pages in the terminal.
+      DROPPED because there is no backend to render THROUGH. It was gated on the
+      master plan's Milestone 7, `output-skia', and decision D61 (2026-08-27)
+      closed Milestone 7 as SUPERSEDED, never to be built: "LilyPond does not
+      need Skia output capability. SVG output is good enough." What consumes the
+      SVG is downstream -- screen rendering is Fresco.Brix's Music View, PDF is
+      the Html2Pdf vector route -- so `render' has nothing left to do that
+      `engrave' does not already do.
+
+  `regression next|sweep|status' -- the Phase 4 cockpit over the internal runner.
+      DROPPED as UNWANTED rather than as blocked; it could be built today. Phase
+      4 ran twenty-six sessions without it, and what a session actually reaches
+      for is the harness under tools/regression-harness/ -- BatchDriver,
+      compare-output.py, ratchet.py -- which is scriptable, greppable and already
+      the thing every gate is defined in terms of. A second way to start a sweep,
+      inside a GUI, with its own idea of what a run is, would be a second thing to
+      keep true.
+
+With those two ruled out, `set' and `display-music' were the sketch's remainder,
+and Lily.Shell v1 IS FINISHED as of 2026-08-30. What it acquires from here is
+whatever standing rule 14 brings it -- see THE STANDING EXPECTATION below.
 
 --------------------------------------------------------------------------------
 THE `docs' COMMAND -- PHASE 5's CAPABILITY, IN THE SHELL
@@ -184,8 +307,12 @@ LAYOUT
                                        packs them PrivateAssets="all", so an
                                        in-repo consumer must name each one).
     src/Lily.Shell.<head>/             one Program.cs per platform head.
-    tests/Lily.Shell.Core.Tests/       the `docs' command surface and the
-                                       once-per-process generation contract.
+    tests/Lily.Shell.Core.Tests/       the command SURFACES -- `docs' and the
+                                       once-per-process generation contract, the two
+                                       text converters, and `set' and `display-music'.
+                                       Gated at the command line, because a path
+                                       through any of these commands reaches the engine
+                                       or the file system.
     tests/libs/*.Tests/                Kernel and TerminalView.
 
 The Emmentaler faces are copied to <appdir>/fonts/otf from Core, because the
@@ -195,11 +322,11 @@ engine's font layer probes there.
 TESTS -- THE MTP DIALECT, AND WHY PLAIN `dotnet test' IS REFUSED
 --------------------------------------------------------------------------------
 
-    dotnet test --solution Lily.Shell.slnx -c Release      86 tests
+    dotnet test --solution Lily.Shell.slnx -c Release      120 tests
 
-    41  Lily.Shell.Kernel.Tests
+    43  Lily.Shell.Kernel.Tests
     28  Lily.Shell.TerminalView.Tests
-    17  Lily.Shell.Core.Tests
+    49  Lily.Shell.Core.Tests
 
 This solution is the Microsoft.Testing.Platform dialect. xunit.v3 4.0 brings MTP
 2.3.3, which removed the legacy VSTest-mode bridge, so on the .NET 10 SDK a plain
@@ -257,7 +384,8 @@ carry it as rule 14). A session that lands user-visible engine capability reflec
 it here in the same session, even when the answer is a recorded "nothing owed" --
 so this finishes as the full shell, sandbox and REPL for LilyPort with no catch-up
 project at the end. `engrave' reaching the real batch pipeline and `docs' reaching
-the manuals are both that rule being paid.
+the manuals are both that rule being paid, as are `convert-ly', `import', `set'
+and `display-music'.
 
 MIDI PLAYBACK IS OUT OF SCOPE -- not just out of Lily.Shell's, but out of
 LilyPort's entirely (decision D27). The port generates MIDI files and compares

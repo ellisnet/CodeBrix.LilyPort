@@ -65,6 +65,14 @@ public class MainViewModel : SimpleViewModel
         registry.Register(new DemoCommand(_host));
         registry.Register(new IncludeCommand(_host));
 
+        // The v1 sketch's last two, ruled in (D65, 2026-08-27) while `render' and the
+        // `regression' cockpit were ruled out. `set' pairs with `include' the way the
+        // sketch paired them — one is lilypond's -d, the other its --include — and
+        // `display-music' pairs with `parse': parse says whether the reading worked,
+        // display-music says what was read.
+        registry.Register(new DisplayMusicCommand(_host));
+        registry.Register(new SetCommand(_host));
+
         // The text converters, which the package has carried since convert-ly landed
         // and Phase 6 widened (standing rule 14: a user-visible capability is reflected
         // in the shell the same session it lands). Neither touches the engine.

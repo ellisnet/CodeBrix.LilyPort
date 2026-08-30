@@ -19,10 +19,11 @@ namespace Lily.Shell.Kernel.Commands;
 public sealed class ShellCommandContext
 {
     internal ShellCommandContext(ShellSession session, IReadOnlyList<string> arguments,
-        CancellationToken cancellationToken)
+        string rawArguments, CancellationToken cancellationToken)
     {
         Session = session;
         Arguments = arguments;
+        RawArguments = rawArguments ?? string.Empty;
         CancellationToken = cancellationToken;
     }
 
@@ -31,6 +32,21 @@ public sealed class ShellCommandContext
 
     /// <summary>The arguments after the command name, tokenized.</summary>
     public IReadOnlyList<string> Arguments { get; }
+
+    /// <summary>
+    /// The text after the command name, exactly as it was typed — quotes, backslashes
+    /// and runs of whitespace all still in it.
+    /// </summary>
+    /// <remarks>
+    /// TOKENIZING LOSES CHARACTERS THAT MATTER TO A LANGUAGE THAT IS NOT THIS ONE.
+    /// <see cref="CommandLineTokenizer"/> treats a double quote as grouping and drops
+    /// it, which is right for a file name and wrong for LilyPond source: the music
+    /// <c>c'4^"text"</c> comes back through <see cref="Arguments"/> as
+    /// <c>c'4^text</c>, which parses as something else entirely rather than failing.
+    /// A command whose argument is source code in another language reads it from here
+    /// and never from the tokens.
+    /// </remarks>
+    public string RawArguments { get; }
 
     /// <summary>Signalled when the user cancels the running command with Ctrl+C.</summary>
     public CancellationToken CancellationToken { get; }

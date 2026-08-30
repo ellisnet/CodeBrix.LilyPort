@@ -204,4 +204,113 @@ public class OutputFileNamingEndToEndTests
         names.Should().Equal(
             new List<string> { "naming-onebookmidi.midi", "naming-onebookmidi-1.midi" });
     }
+
+    /// <summary>
+    /// A file on disk, so that <see cref="BatchRunner.RunFile"/> — the overload that has
+    /// an input file to take a name from — is the one under test.
+    /// </summary>
+    /// <param name="source">The LilyPond source.</param>
+    /// <param name="inputBaseName">What to call the file, without extension.</param>
+    /// <returns>The file's full path.</returns>
+    private static string WriteInput(string source, string inputBaseName)
+    {
+        string path = Path.Combine(ScratchDirectory(), inputBaseName + ".ly");
+        File.WriteAllText(path, source);
+        return path;
+    }
+
+    /// <summary>
+    /// A document that reports the two names the engine holds, and then makes an error
+    /// so that a LOCATION is reported as well.
+    /// </summary>
+    private const string NameProbe =
+        "#(ly:warning \"probe input-file-name is ~a\" (ly:parser-lookup 'input-file-name))\n"
+        + "#(ly:warning \"probe output-name is ~a\" (ly:parser-output-name))\n"
+        + "{ c'4 \\nosuchidentifier d'4 }\n";
+
+    [Fact]
+    public void renaming_the_output_does_not_rename_the_input()
+    {
+        //Arrange
+        //⚠ EVERY EXPECTATION HERE WAS READ OFF THE PINNED 2.27.2 FIRST, not off the port:
+        //`lilypond -o <dir>/renamed badname.ly' reports `Processing `…/badname.ly'', an
+        //input-file-name of `…/badname.ly', an output-name of `renamed', an error located
+        //in `…/badname.ly', and `failed files: "badname.ly"'. Upstream consults
+        //output_name_global for what to WRITE and never for what was read.
+        //⚠ The port names these BY BASENAME where upstream names them by full path — a
+        //separate, older divergence that compare-diagnostics.py normalises away by
+        //design (it reduces an absolute path in a message to its basename). This fence is
+        //about WHICH FILE is named, not about how much of its path is printed.
+        string path = WriteInput(Version + NameProbe, "originalname");
+        StringWriter log = new StringWriter();
+
+        //Act
+        BatchRunResult renamed = BatchRunner.RunFile(
+            path, ScratchDirectory(), "renamed",
+            new BatchRunOptions { MessageWriter = log });
+
+        //Assert
+        string text = log.ToString();
+        text.Should().Contain("Processing `");
+        text.Should().Contain("originalname.ly");
+        text.Should().Contain("probe input-file-name is originalname.ly");
+        text.Should().NotContain("renamed.ly");
+
+        //The CONTROL, and the half that must not have regressed: the OUTPUT name did
+        //change, and it is what the file on disk is called.
+        text.Should().Contain("probe output-name is renamed");
+        renamed.SvgPaths.Select(Path.GetFileName).Should().Equal("renamed.svg");
+    }
+
+    [Fact]
+    public void a_diagnostics_location_names_the_input_after_a_rename()
+    {
+        //Arrange
+        //The location is the parse SOURCE name, which is the third place the output name
+        //used to stand in for the input's — and the one a reader acts on, because a
+        //warning that names a file nobody can open is worse than no location at all.
+        string path = WriteInput(Version + NameProbe, "originalname");
+
+        //Act
+        BatchRunResult renamed = BatchRunner.RunFile(path, ScratchDirectory(), "renamed", null);
+        BatchRunResult plain = BatchRunner.RunFile(path, ScratchDirectory(), null, null);
+
+        //Assert
+        //The CONTROL is the same file with no rename, whose locations must be identical:
+        //what -o changes is the output, so the two runs' diagnostics must agree.
+        //⚠ THE FILE AND THE LINE, NOT THE COLUMN. The oracle reports this error at 4:7
+        //and the port at 4:23 — an older, separate difference in where a location points
+        //within the line, which compare-diagnostics.py does not grade (location is not
+        //part of its key) and which this fence has no business asserting either way.
+        //What it asserts is WHICH FILE the location names.
+        string located = renamed.Diagnostics.First(d => d.Contains("unknown command"));
+        located.Should().StartWith("originalname.ly:4:");
+        plain.Diagnostics.First(d => d.Contains("unknown command"))
+            .Should().StartWith("originalname.ly:4:");
+    }
+
+    [Fact]
+    public void the_input_name_belongs_to_the_run_and_not_to_the_callers_options()
+    {
+        //Arrange
+        //A host may hold ONE options object and engrave several files through it. If the
+        //runner wrote the input name into the caller's object, the second file would
+        //report the first one's name.
+        string first = WriteInput(Version + NameProbe, "firstfile");
+        string second = WriteInput(Version + NameProbe, "secondfile");
+        BatchRunOptions shared = new BatchRunOptions();
+        StringWriter firstLog = new StringWriter();
+        StringWriter secondLog = new StringWriter();
+
+        //Act
+        shared.MessageWriter = firstLog;
+        BatchRunner.RunFile(first, ScratchDirectory(), "renamed", shared);
+        shared.MessageWriter = secondLog;
+        BatchRunner.RunFile(second, ScratchDirectory(), "renamed", shared);
+
+        //Assert
+        firstLog.ToString().Should().Contain("probe input-file-name is firstfile.ly");
+        secondLog.ToString().Should().Contain("probe input-file-name is secondfile.ly");
+        shared.InputName.Should().BeNull();
+    }
 }

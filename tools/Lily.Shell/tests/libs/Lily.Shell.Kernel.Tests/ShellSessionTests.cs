@@ -21,6 +21,7 @@ public class ShellSessionTests
     private sealed class ProbeCommand : IShellCommand
     {
         public List<IReadOnlyList<string>> Calls { get; } = [];
+        public List<string> RawCalls { get; } = [];
         public string Name => "probe";
         public string Summary => "Test probe.";
         public string Usage => "probe [args]";
@@ -28,6 +29,7 @@ public class ShellSessionTests
         public Task ExecuteAsync(ShellCommandContext context)
         {
             Calls.Add(context.Arguments);
+            RawCalls.Add(context.RawArguments);
             context.IO.WriteLine("probed");
             return Task.CompletedTask;
         }
@@ -299,5 +301,42 @@ public class ShellSessionTests
         //Assert - the recalled line is "probe x", not the blank
         probe.Calls.Should().HaveCount(2);
         probe.Calls[1].Should().Equal("x");
+    }
+
+    [Fact]
+    public async Task raw_arguments_keep_what_tokenizing_throws_away()
+    {
+        //Arrange
+        var probe = new ProbeCommand();
+        var (session, _, _) = CreateSession(probe);
+
+        //Act
+        //The music `c'4^"text"' is the case this exists for: the quotes are LilyPond's,
+        //not the shell's, and a token list cannot tell the shell that.
+        session.SendInput("probe { c'4^\"text\" }\r");
+        await session.ExecutionChain;
+
+        //Assert
+        //The control is the token list from the very same line, which lost them.
+        probe.RawCalls.Should().Equal("{ c'4^\"text\" }");
+        probe.Calls[0].Should().Equal("{", "c'4^text", "}");
+    }
+
+    [Fact]
+    public async Task raw_arguments_are_the_line_after_the_command_word()
+    {
+        //Arrange
+        var probe = new ProbeCommand();
+        var (session, _, _) = CreateSession(probe);
+
+        //Act
+        //Leading and trailing whitespace is not an argument; the whitespace BETWEEN
+        //arguments is part of what was typed and stays.
+        session.SendInput("   probe   one    two   \r");
+        session.SendInput("probe\r");
+        await session.ExecutionChain;
+
+        //Assert
+        probe.RawCalls.Should().Equal("one    two", string.Empty);
     }
 }
