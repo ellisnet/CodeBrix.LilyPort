@@ -11191,3 +11191,73 @@ D69'S REVISIT CONDITION HAS FIRED: FOUR ROWS WHERE THE PORT IS TALLER
   ~/ClaudeHome/STATUS_lilyport_l19_2026-08-29.txt, the closing section of
   ~/ClaudeHome/OBSERVATIONS_lilyport_mutopia_2026-08-27.txt, and the A/B run
   ~/ClaudeHome/l19-ab-noL17-2026-08-29/.
+
+L22 ANSWERS THE QUESTION ABOVE: THREE OF THE FOUR ROWS CLOSE BY RULING,
+THE FOURTH DOES NOT
+(L22, 2026-08-29 -- measured; D71 proposed for three rows; the fourth is unfixed)
+================================================================================
+
+  L21's instrument -- warm every pure-relevant grob on both engines over a
+  window containing it, in Scheme, reading only -- answers the question the
+  section above left open, but not uniformly across the four rows.
+
+  THE INSTRUMENT NEEDED ONE REFINEMENT TO GIVE A CLEAN ANSWER AT ALL.  Applied
+  exactly as L21 wrote it (warm each pure-relevant grob in ITS OWN
+  pure-relevant-grobs order, one VerticalAxisGroup-level pass), only
+  andre-sonatine converged: the oracle moved onto the port's 14/6 and stayed
+  there.  liszt-consolation-no3, KV331_3_RondoAllaTurca and SchumannOp15No07 did
+  NOT converge -- their warmed bucket dumps still differed between engines by
+  9-32 units of |err|, and the page counts stayed apart.  Naming the grob
+  behind the largest liszt residual (a PhrasingSlur spanning ranks [363,439],
+  76 ranks -- six times Violin_2's [547,559]) and asking it directly showed
+  why: warming its 25 note-columns FIRST, then asking the slur, converges the
+  slur's own pure-height to the digit on both engines (2.045..5.545); warming
+  the SLUR FIRST (its own +/-1-rank window, which is what the one-pass VAG-level
+  loop does) can freeze one of ITS note-columns from inside the slur's own
+  internal query before the top-level loop ever reaches that column
+  individually -- the same visit-order sensitivity D69 names, one level
+  deeper, and more exposed on a slur six times as wide.  FIX TO THE
+  INSTRUMENT, NOT TO THE ENGINE: warm pure-relevant grobs NARROWEST RANK SPAN
+  FIRST within each VerticalAxisGroup, so a wide spanner is only asked after
+  everything it will itself ask about is already settled.  Re-run under this
+  order, Violin_2 (L21's own case) reproduces exactly (11,13,15,16,16,16,16,13
+  on both engines) -- the refinement does not disturb an already-answered row.
+  Kept at ~/ClaudeHome/l22-2026-08-29/src/warm2.ily.
+
+  UNDER THE REFINED INSTRUMENT, THREE ROWS CONVERGE ONTO THE PORT'S OWN
+  CURRENT OUTPUT, EXACTLY LIKE VIOLIN_2/D70:
+
+      row                     warmed (both engines)   matches port's own output
+      andre-sonatine          14,6                    YES (port cold = 14,6)
+      liszt-consolation-no3   10,10,12,8              YES (port cold = 10,10,12,8)
+      SchumannOp15No07        6,4                     YES (port cold = 6,4)
+
+  Four controls re-verified UNMOVED under the refined instrument, on both
+  engines: TenthRegClar2 (12), il-vecchio-castello (12,12,12), Octet Cello_2
+  and Viola_2 (identical page-for-page to their own cold renders). The
+  instrument is not blunt.
+
+  THE FOURTH ROW DOES NOT CONVERGE ONTO THE PORT'S OUTPUT, AND CANNOT CLOSE BY
+  THIS RULING.  KV331_3_RondoAllaTurca warms (both engines, identically) to
+  12,14,12,14,4 -- a THIRD value, distinct from both the port's cold
+  10,14,12,12,8 (same total, 56, but three of five pages differ) and the
+  oracle's cold 10,14,12,14,4 (differs only on page 1, by 2 staves). The
+  warmed value is order-independent -- forcing the SAME explicit Scheme order
+  onto both engines makes them agree, which is what this instrument is FOR --
+  but it is not the order the port's own production code produces
+  (Objects/AxisGroupInterfacePure.cs InternalCalcPureRelevantGrobs sorts
+  stably by outside-staff-priority, which is not span-width). So for this one
+  row, "the port's estimate is accident-free" is FALSE: the port's own current
+  render carries its own instance of D69's mechanism, not just the oracle's.
+  Closing it would need the PRODUCTION sort itself to change, which is a
+  broader algorithmic move than D69's own minimal widening, needs its own
+  fidelity case against upstream and its own A/B, and owes the full battery --
+  not something this session's GO covered. Carried forward as L23.
+
+  NO CODE CHANGED.  A temporary print was added to
+  AxisGroupInterfacePure.AdjacentPureHeights to name the grob behind a bucket
+  (the same class of instrumentation L17/L21 used), reverted afterward and the
+  file sha256-verified back to c274799c35c18c33c10bc3dfc01a312f1022fadce686fbeb2e58c46d37eb209a.
+
+  Evidence: ~/ClaudeHome/STATUS_lilyport_l22_2026-08-29.txt,
+  ~/ClaudeHome/l22-2026-08-29/.
