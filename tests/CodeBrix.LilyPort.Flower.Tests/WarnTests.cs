@@ -28,6 +28,10 @@ using Xunit;
 
 namespace CodeBrix.LilyPort.Flower.Tests;
 
+// Turns Warn.RecordMessages on for the whole class and asserts on the shared list by
+// index, so it must not run beside anything that could add to it. See
+// WarnGlobalStateCollection.
+[Collection(WarnGlobalStateCollection.Name)]
 public class WarnTests : IDisposable
 {
     private readonly LogLevel _savedLevel = Warn.Level;

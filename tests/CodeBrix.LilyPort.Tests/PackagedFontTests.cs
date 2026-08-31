@@ -37,6 +37,11 @@ namespace CodeBrix.LilyPort.Tests;
 /// </summary>
 public class PackagedFontTests
 {
+    //IMPORTANT NOTE:
+    //  The following the_package_ships_the_ports_own_music_fonts_and_none_of_lilyponds() test
+    //  will fail in a fresh clone of the CodeBrix.LilyPort repo - to fix it, just run this once:
+    //  dotnet pack src/CodeBrix.LilyPort/CodeBrix.LilyPort.csproj -c Release
+
     [Fact]
     public void the_package_ships_the_ports_own_music_fonts_and_none_of_lilyponds()
     {

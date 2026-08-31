@@ -28,6 +28,9 @@ namespace CodeBrix.LilyPort.Parsing.Tests;
 /// <c>EMBEDDED_LILY</c> start that RAG1 opened, and direct invocation for the rules
 /// whose neighbours (post events, music lists, function arglists) are not ported yet.
 /// </summary>
+// Captures diagnostics by switching Warn.RecordMessages on and clearing the shared
+// list, both process-global. See WarnGlobalStateCollection.
+[Collection(WarnGlobalStateCollection.Name)]
 public class RuleActionRag2Tests
 {
     private static readonly ParseTables Tables = LalrGenerator.GenerateFromMirror();
