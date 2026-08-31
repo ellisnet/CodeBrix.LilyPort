@@ -245,6 +245,94 @@ public class CommandLineOptionsTests
         log.ToString().Should().Contain("due to read error");
     }
 
+    /// <summary>
+    /// The WORDING of the read-error warning, read off the pinned 2.27.2 rather than off
+    /// the port.
+    /// <para>
+    /// ⚠ THE CASE ABOVE PASSES WITHOUT THE STRIPPING lily.scm:531-540 DOES, WHICH IS WHY
+    /// THIS ONE EXISTS. It asserts only that the message CONTAINS "due to read error",
+    /// so a message carrying the string port's own name and position — or, once the
+    /// reader became a <c>SchemeThrow</c>, the whole condition — went on satisfying it.
+    /// Measured on the oracle, <c>-dresolution="(1 2"</c> reports
+    /// </para>
+    /// <code>
+    /// warning: Ignoring option -dresolution="(1 2" due to read error: unexpected end of input while searching for: ~A
+    /// </code>
+    /// <para>
+    /// and the trailing <c>~A</c> is upstream's own: its handler keeps the condition's
+    /// message TEXT and never formats it against the condition's arguments, so the
+    /// format directive reaches the user unfilled. Reproducing that is parity, not a
+    /// defect to tidy.
+    /// </para>
+    /// </summary>
+    [Theory]
+    [InlineData("resolution=(1 2", "-dresolution=\"(1 2\"",
+        "unexpected end of input while searching for: ~A")]
+    [InlineData("resolution=\"abc", "-dresolution=\"\"abc\"",
+        "unexpected end of input while reading string")]
+    public void the_read_error_warning_reads_as_the_oracles_does(string entry,
+        string expectedOption, string expectedReason)
+    {
+        //Arrange
+        ProgramOptions options = Store();
+        TextWriter previous = Warn.Output;
+        StringWriter log = new StringWriter();
+        Warn.Output = log;
+
+        //Act
+        try
+        {
+            CommandLineOptions.Apply(options, entry);
+        }
+        finally
+        {
+            Warn.Output = previous;
+        }
+
+        //Assert
+        string warning = log.ToString().Trim();
+        warning.Should().Be(
+            "warning: Ignoring option " + expectedOption + " due to read error: "
+            + expectedReason,
+            "the oracle's own line for this option, character for character");
+
+        // The two things the stripping is FOR, asserted as absences so a future reader
+        // sees what the regexes are buying rather than only the happy string.
+        warning.Should().NotContain("#<unknown port>",
+            "lily.scm:531's err-regex drops the string port's name and coordinates");
+        warning.Should().NotContain("Scheme error:",
+            "upstream keeps the condition's message text, never its wrapping");
+    }
+
+    /// <summary>
+    /// The CONTROL for the case above: text the reader CAN finish takes no warning path
+    /// at all and sets the option, so the assertions there are about the unreadable
+    /// branch rather than about anything every <c>-d</c> does.
+    /// </summary>
+    [Fact]
+    public void readable_text_warns_about_nothing_and_sets_the_option()
+    {
+        //Arrange
+        ProgramOptions options = Store();
+        TextWriter previous = Warn.Output;
+        StringWriter log = new StringWriter();
+        Warn.Output = log;
+
+        //Act
+        try
+        {
+            CommandLineOptions.Apply(options, "resolution=200");
+        }
+        finally
+        {
+            Warn.Output = previous;
+        }
+
+        //Assert
+        options.Get("resolution").Should().Be(200L, "readable text is applied");
+        log.ToString().Should().NotContain("due to read error");
+    }
+
     [Fact]
     public void a_blank_entry_is_ignored()
     {

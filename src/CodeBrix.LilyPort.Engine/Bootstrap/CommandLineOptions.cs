@@ -6,6 +6,7 @@
 // (at your option) any later version.
 
 using System;
+using System.Text.RegularExpressions;
 using CodeBrix.LilyPort.Flower;
 using CodeBrix.LilyScheme.Reader;
 using CodeBrix.LilyScheme.Values;
@@ -42,6 +43,21 @@ namespace CodeBrix.LilyPort.Engine.Bootstrap; //was previously: lily/main.cc + s
 /// </summary>
 public static class CommandLineOptions
 {
+    /// <summary>
+    /// <c>lily.scm:531</c>'s <c>err-regex</c>, verbatim. A read error names the string
+    /// port it came from and where in it the reader stopped; upstream drops that and
+    /// keeps the text, because the port is one it made itself out of the option's value
+    /// and its coordinates mean nothing to whoever typed the option.
+    /// </summary>
+    private static readonly Regex UnknownPortPrefix =
+        new Regex(@"#<unknown port>:\d+:\d+: (.*)$", RegexOptions.Compiled);
+
+    /// <summary>
+    /// <c>lily.scm:532</c>'s <c>eof-regex</c>, verbatim: what the reader calls the end of
+    /// a FILE is, for a string port, the end of a STRING.
+    /// </summary>
+    private static readonly Regex EndOfFile = new Regex("end of file$", RegexOptions.Compiled);
+
     /// <summary>
     /// Applies one <c>-d</c> option, given as the text that FOLLOWS the <c>-d</c>:
     /// <c>debug-voices</c>, <c>no-point-and-click</c>,
@@ -140,10 +156,24 @@ public static class CommandLineOptions
     /// the EOF OBJECT for text with no datum in it (<c>-dfoo=</c>) and raises only for
     /// text it cannot finish (<c>-dfoo=(1 2</c>) — so an empty value sets the option to
     /// the eof object here exactly as it does upstream, and only the unfinishable text
-    /// is warned about. Upstream also strips the string port's name, line and column
-    /// out of the message with two regexes and rewrites "end of file" as "end of
-    /// string"; the port's reader reports neither a port name nor a position, so the
-    /// message already arrives in the shape those regexes leave behind.
+    /// is warned about. Upstream strips the string port's name, line and column out of
+    /// the message with <see cref="UnknownPortPrefix"/> and rewrites "end of file" as
+    /// "end of string" with <see cref="EndOfFile"/>, and BOTH are ported here.
+    /// <para>
+    /// ⚠ THE MESSAGE IS TAKEN FROM <c>ReaderMessage</c>, NOT FROM <c>Message</c>.
+    /// Upstream's handler is <c>(lambda (err-key . err-args) (cons #f (second
+    /// err-args)))</c> — it keeps the condition's MESSAGE TEXT and nothing else, and it
+    /// does not format the text against the condition's arguments, which is why an
+    /// unterminated list reports a literal <c>~A</c> on both engines.
+    /// <c>SchemeReaderException.ReaderMessage</c> is that text; <c>Message</c> is the
+    /// whole <c>SchemeThrow</c> wrapping around it.
+    /// </para>
+    /// <para>
+    /// A NON-read error is still reported through <c>Message</c>. Upstream catches
+    /// <c>'read-error</c> alone and lets anything else escape; the port's wider catch
+    /// predates this method and is left as it stands, because narrowing it is a
+    /// behaviour change of its own and not part of reporting the message correctly.
+    /// </para>
     /// </remarks>
     private static bool TryRead(string text, out object value, out string error)
     {
@@ -157,7 +187,15 @@ public static class CommandLineOptions
         }
         catch (Exception failure)
         {
-            error = failure.Message;
+            // lily.scm:536-540. //was previously: error = failure.Message; which spliced
+            // the reader's position prefix -- and, since the reader became a SchemeThrow,
+            // the whole condition -- into a warning upstream reports without either.
+            string reported = failure is SchemeReaderException readFailure
+                ? readFailure.ReaderMessage
+                : failure.Message;
+
+            error = EndOfFile.Replace(
+                UnknownPortPrefix.Replace(reported, "$1"), "end of string");
             return false;
         }
     }

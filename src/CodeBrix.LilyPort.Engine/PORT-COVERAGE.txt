@@ -11520,3 +11520,92 @@ LILY.SHELL v1 IS FINISHED: `set' AND `display-music' BUILT, `render' AND THE
   project now) and 2 new Kernel cases over RawArguments (43), whose A/B is the
   token list from the very same line -- `{ c'4^"text" }' raw against `{',
   `c'4^text', `}' tokenized.  All six heads build 0W/0E.
+
+
+================================================================================
+2026-08-30 (L24) -- THE LILYSCHEME 1.0.243.217 PIN BUMP, AND THE -d READ-ERROR
+WARNING IT LET US REPAIR
+================================================================================
+
+Both pins moved together from 1.0.241.10 to 1.0.243.217 (the 1.0.242.1306
+release in between could not be taken -- it did not boot the engine at all, and
+is recorded on the board under L24).  The full battery was run because the pin-
+bump bar's step 1 found the changed surface reachable from engraving: a datum's
+source-properties ARE the port's line and column, and those print into
+internals.texi.  Every corpus figure reproduced EXACTLY; the only figures that
+moved are suite counts.
+
+TWO THINGS THIS RELEASE CLOSED, BOTH MEASURED AGAINST THE PINNED 2.27.2 FIRST:
+
+(1) `pretty-print' NOW BREAKS LINES.  The finding recorded in the L9 section
+    above -- one line, no separator where the newline-and-indent belongs -- is
+    GONE.  \displayMusic { c'4 d'8 } through the port is now BYTE-IDENTICAL to
+    the oracle's fifteen indented lines (diffed, not read).  No LilyPort change
+    was needed or made; the published LilyScheme carries it.
+
+(2) THE -d READ-ERROR WARNING NOW READS AS UPSTREAM'S.
+    Bootstrap/CommandLineOptions.cs.
+
+    ⚠ THE DOC COMMENT THAT STOOD HERE WAS FALSE, AND HAD BEEN FALSE LONGER THAN
+    THE BOARD'S PREDICTION SAID.  It claimed "the port's reader reports neither
+    a port name nor a position, so the message already arrives in the shape
+    those regexes leave behind", so TryRead passed Exception.Message straight
+    into the warning.  Measured out of the two nupkgs, for the text "(1 2":
+
+        1.0.241.10   <unknown>:1:4: unterminated list
+        1.0.243.217  Scheme error: read-error (#f "#<unknown port>:1:5:
+                     unexpected end of input while searching for: ~A" (#\)) #f)
+
+    The OLD pin also carried a port name and a position; it simply spelled it
+    "<unknown>:", which upstream's "#<unknown port>"-keyed regex would not have
+    matched either.  So this was a PRE-EXISTING divergence that the comment
+    described incorrectly -- not something 1.0.243.217 introduced.  What that
+    release changed is that it is the FIRST version able to fix it:
+    SchemeReaderException.ReaderMessage is new in it and is documented as "the
+    message text, position prefix included, without the wrapping", which is
+    precisely upstream's (second err-args).
+
+    THE FIX transcribes lily.scm:531-540: two regexes held as static readonly
+    fields, "#<unknown port>:\d+:\d+: (.*)$" replaced by its group 1 and then
+    "end of file$" replaced by "end of string", applied in upstream's order to
+    ReaderMessage rather than to Message.
+
+    ⚠ THE SECOND REGEX IS INERT WITH TODAY'S READER AND IS PORTED ANYWAY.
+    Neither engine currently produces a message ending in "end of file" -- both
+    say "unexpected end of input while ..." -- so eof-regex changes nothing that
+    can be measured now.  It is carried because it is upstream's, and because a
+    reader wording change would otherwise reopen the same divergence silently.
+
+    ⚠ ONE DIVERGENCE KEPT, DELIBERATELY.  Upstream catches 'read-error alone and
+    lets any other condition escape; the port's catch is `catch (Exception)' and
+    reports non-read failures through .Message.  That wider catch PREDATES this
+    work and is left as it stands: narrowing it is a behaviour change of its own
+    and is not part of reporting the message correctly.  Recorded, not done.
+
+    EXPECTATIONS READ OFF THE ORACLE, NOT THE PORT:
+        warning: Ignoring option -dresolution="(1 2" due to read error:
+                 unexpected end of input while searching for: ~A
+        warning: Ignoring option -dresolution=""abc" due to read error:
+                 unexpected end of input while reading string
+    The trailing ~A is upstream's own: its handler keeps the condition's message
+    TEXT and never formats it against the condition's arguments, so the format
+    directive reaches the user unfilled.  That is parity, not a defect to tidy.
+    After the fix the port's two lines are byte-identical to these.
+
+    FENCE, AND WHY THE OLD ONE MISSED IT: CommandLineOptionsTests'
+    unreadable_text_warns_and_changes_nothing asserts only
+    Contain("due to read error"), which a message carrying the port name, the
+    position and the whole SchemeThrow wrapping satisfies -- it would have gone
+    on passing forever.  It is kept, and
+    the_read_error_warning_reads_as_the_oracles_does now asserts the FULL line
+    character for character over both shapes, with two absence assertions naming
+    what the stripping buys, and
+    readable_text_warns_about_nothing_and_sets_the_option as its control.
+    A/B by short-circuiting the fix: 2 of 2 Theory cases FAIL, the control still
+    passes; restored and sha256-verified.
+
+    NO CORPUS ROW MOVES, AND THAT WAS VERIFIED AGAINST reference/diagnostics
+    BEFORE the change rather than assumed: no graded diagnostics file carries a
+    "due to read error" line, and no graded caller passes an unreadable -d value
+    -- BatchDriver takes no -d at all.  The reachable callers are Lily.Shell's
+    `set' command and any host that forwards a -d.

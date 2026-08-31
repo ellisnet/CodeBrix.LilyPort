@@ -59,7 +59,7 @@
       reference; package references are the only permitted external edge.
     -->
     <!--was previously: <ProjectReference Include="..\..\..\..\CodeBrix.LilyScheme\src\CodeBrix.LilyScheme\CodeBrix.LilyScheme.csproj" />-->
-    <PackageReference Include="CodeBrix.LilyScheme.LgplLicenseForever" Version="1.0.241.10" />
+    <PackageReference Include="CodeBrix.LilyScheme.LgplLicenseForever" Version="1.0.243.217" />
   </ItemGroup>
 
 </Project>
