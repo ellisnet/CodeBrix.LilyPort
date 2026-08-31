@@ -10,6 +10,7 @@ using CodeBrix.LilyPort.Flower;
 using CodeBrix.LilyScheme.Values;
 using SilverAssertions;
 using System.IO;
+using System.Linq;
 using Xunit;
 
 namespace CodeBrix.LilyPort.Engine.Tests;
@@ -27,8 +28,78 @@ namespace CodeBrix.LilyPort.Engine.Tests;
 /// read.
 /// </para>
 /// </summary>
+// Warn.Output IS process-global state, so this class belongs in the collection for the
+// reason the collection exists. Three tests here redirect it to read what a -d entry
+// warned, and xUnit runs test classes in parallel: a class engraving something in
+// another collection writes its own diagnostics down whatever Warn.Output currently is,
+// which during the redirect window is THIS class's buffer. Measured on Windows
+// 2026-08-31, where the interleaving lands reliably -- SimpleSpacer's "ignoring weird
+// minimum distance" and Spring's "insane spring distance requested" arrived inside the
+// capture and the wording fence below, which compares the WHOLE buffer, read them as
+// part of the warning. The same race is latent on Linux; it is scheduling, not
+// platform, that decides whether it fires.
+[Collection(EngineGlobalStateCollection.Name)]
 public class CommandLineOptionsTests
 {
+    /// <summary>
+    /// Redirects <see cref="Warn.Output"/> the way a host does, runs <paramref name="act"/>,
+    /// and returns what was written.
+    /// <para>
+    /// Through a <see cref="LineTrackingWriter"/>, not a bare <see cref="StringWriter"/>,
+    /// because that is what <c>Emit</c> checks for before it calls <c>EndOpenLine</c>:
+    /// capturing through a plain writer switches OFF the "a diagnostic always starts its
+    /// own line" guard for the duration of the capture, and a message that arrives with a
+    /// line still open is then glued onto the front of the next one. BatchRunner.cs:599
+    /// wraps the host's writer for the same reason, so this also captures through the
+    /// arrangement the port actually ships.
+    /// </para>
+    /// </summary>
+    /// <param name="act">The call whose diagnostics are wanted.</param>
+    /// <returns>The captured text.</returns>
+    private static string Capture(System.Action act)
+    {
+        TextWriter previous = Warn.Output;
+        StringWriter log = new StringWriter();
+        Warn.Output = new LineTrackingWriter(log);
+
+        try
+        {
+            act();
+        }
+        finally
+        {
+            Warn.Output = previous;
+        }
+
+        return log.ToString();
+    }
+
+    /// <summary>
+    /// Picks the one captured line that reports <paramref name="option"/>.
+    /// <para>
+    /// The fence is on the WORDING of that line, so it reads that line rather than the
+    /// whole buffer. Asserting over everything captured made the test depend on nothing
+    /// else in the process having warned meanwhile, which is not a property this class
+    /// can hold -- and not one it needs, since a stray line from elsewhere says nothing
+    /// about how the -d reader words its own.
+    /// </para>
+    /// </summary>
+    /// <param name="captured">The captured text.</param>
+    /// <param name="option">The option spelling the line must name.</param>
+    /// <returns>The single matching line, trimmed.</returns>
+    private static string LineReporting(string captured, string option)
+    {
+        string[] matches = captured
+            .Split('\n')
+            .Select(line => line.TrimEnd('\r').Trim())
+            .Where(line => line.Contains("Ignoring option " + option))
+            .ToArray();
+
+        matches.Length.Should().Be(
+            1, "exactly one captured line reports {0}", option);
+        return matches[0];
+    }
+
     /// <summary>
     /// A store holding one option of each declared shape the decode branches on, plus
     /// the accumulative one that matters in practice.
@@ -225,24 +296,14 @@ public class CommandLineOptionsTests
         // lily.scm:533-540 warns and falls through without setting anything -- a host
         // that asks for something unreadable is told, not quietly obeyed.
         ProgramOptions options = Store();
-        TextWriter previous = Warn.Output;
-        StringWriter log = new StringWriter();
-        Warn.Output = log;
 
         //Act
-        try
-        {
-            CommandLineOptions.Apply(options, "resolution=(1 2");
-        }
-        finally
-        {
-            Warn.Output = previous;
-        }
+        string captured = Capture(() => CommandLineOptions.Apply(options, "resolution=(1 2"));
 
         //Assert
         options.Get("resolution").Should().Be(101, "the default is untouched");
-        log.ToString().Should().Contain("Ignoring option -dresolution=\"(1 2\"");
-        log.ToString().Should().Contain("due to read error");
+        captured.Should().Contain("Ignoring option -dresolution=\"(1 2\"");
+        captured.Should().Contain("due to read error");
     }
 
     /// <summary>
@@ -275,22 +336,12 @@ public class CommandLineOptionsTests
     {
         //Arrange
         ProgramOptions options = Store();
-        TextWriter previous = Warn.Output;
-        StringWriter log = new StringWriter();
-        Warn.Output = log;
 
         //Act
-        try
-        {
-            CommandLineOptions.Apply(options, entry);
-        }
-        finally
-        {
-            Warn.Output = previous;
-        }
+        string captured = Capture(() => CommandLineOptions.Apply(options, entry));
 
         //Assert
-        string warning = log.ToString().Trim();
+        string warning = LineReporting(captured, expectedOption);
         warning.Should().Be(
             "warning: Ignoring option " + expectedOption + " due to read error: "
             + expectedReason,
@@ -314,23 +365,13 @@ public class CommandLineOptionsTests
     {
         //Arrange
         ProgramOptions options = Store();
-        TextWriter previous = Warn.Output;
-        StringWriter log = new StringWriter();
-        Warn.Output = log;
 
         //Act
-        try
-        {
-            CommandLineOptions.Apply(options, "resolution=200");
-        }
-        finally
-        {
-            Warn.Output = previous;
-        }
+        string captured = Capture(() => CommandLineOptions.Apply(options, "resolution=200"));
 
         //Assert
         options.Get("resolution").Should().Be(200L, "readable text is applied");
-        log.ToString().Should().NotContain("due to read error");
+        captured.Should().NotContain("due to read error");
     }
 
     [Fact]

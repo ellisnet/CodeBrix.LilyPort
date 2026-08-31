@@ -1,0 +1,112 @@
+# Line endings. LF, everywhere, on every platform.
+#
+# This file is the guard CodeBrix.LilyScheme already carries and this repository was
+# missing. Without it, a Windows clone under `core.autocrlf=true` expands 4,545 of the
+# 5,328 tracked files to CRLF on the way out, and the port does not work at all:
+#
+#   Scheme error: read-error
+#     (#f "lily/lily.scm:430:1: invalid character in escape sequence: ~S" (#\return) #f)
+#
+# scm/lily.scm:430 ends a string with a backslash line continuation, the CR lands where
+# an escape character is expected, and lily.scm dies on its first form. The 55-file
+# startup layer never loads, so `markup?', `ly:load' and `lyric-event' are unbound and
+# 312 of the 2,608 tests fail. Measured 2026-08-31: a CRLF checkout fails 314, an LF
+# checkout of the same commit on the same machine fails 2.
+#
+# It is not only a local inconvenience. Everything under Scheme/ and the parser mirror
+# is an <EmbeddedResource>, so whatever bytes are on disk at build time are baked into
+# the assembly and shipped in the NuGet package -- packing on a CRLF checkout produces
+# a .nupkg that is broken for every consumer, on every platform.
+#
+# The committed blobs are already LF. These rules only stop a checkout from expanding
+# them, which also keeps the vendored and mirrored files byte-identical to their
+# upstream originals so a re-sync stays a straight copy plus cmp.
+
+# ---------------------------------------------------------------------------
+# Baked into the assembly: src/CodeBrix.LilyPort.Engine/Scheme/** is embedded
+# wholesale, and CRLF here is a broken shipped artifact rather than a test failure.
+# ---------------------------------------------------------------------------
+*.scm   text eol=lf
+*.ly    text eol=lf
+*.ily   text eol=lf
+*.tsv   text eol=lf
+
+# The SVG music fonts are embedded too, and SvgFontOutlines parses their glyph paths.
+*.svg   text eol=lf
+
+# ---------------------------------------------------------------------------
+# The mirrors, kept byte-identical to the pinned LilyPond 2.27.2 sources.
+# parser.yy and lexer.ll are embedded AND pinned by SHA-256: GrammarShapeTests
+# hashes them, and the recorded digests are over LF bytes.
+# ---------------------------------------------------------------------------
+*.yy    text eol=lf
+*.ll    text eol=lf
+*.mf    text eol=lf
+*.mp    text eol=lf
+
+# Documentation/MANIFEST.sha256 records a digest for each of 690 mirrored files, and
+# Lily.Docs' CorpusMirrorTests checks every one of them.
+*.itely text eol=lf
+*.itexi text eol=lf
+*.tely  text eol=lf
+*.texi  text eol=lf
+*.bib   text eol=lf
+*.bst   text eol=lf
+*.sha256 text eol=lf
+Documentation/**/README text eol=lf
+
+# ---------------------------------------------------------------------------
+# Test fixtures. The parity suites replay recorded inputs and compare the output
+# character for character, so a stray CR is a diff.
+# ---------------------------------------------------------------------------
+*.json  text eol=lf
+*.xml   text eol=lf
+*.abc   text eol=lf
+*.eps   text eol=lf
+*.snippet-list text eol=lf
+
+# ---------------------------------------------------------------------------
+# Sources and scripts. Not load-bearing for the suites, but a repository with one
+# convention has no second convention to get wrong.
+# ---------------------------------------------------------------------------
+*.cs      text eol=lf
+*.csproj  text eol=lf
+*.slnx    text eol=lf
+*.shproj  text eol=lf
+*.projitems text eol=lf
+*.xaml    text eol=lf
+*.sh      text eol=lf
+*.py      text eol=lf
+*.pl      text eol=lf
+*.md      text eol=lf
+*.txt     text eol=lf
+*.conf    text eol=lf
+*.in      text eol=lf
+*.mdc     text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+.gitignore     text eol=lf
+.gitattributes text eol=lf
+.clinerules    text eol=lf
+.cursorrules   text eol=lf
+.windsurfrules text eol=lf
+LICENSE        text eol=lf
+LICENSE.OFL    text eol=lf
+COPYING.FDL    text eol=lf
+*.LICENSE      text eol=lf
+*.COPYING      text eol=lf
+tools/parser-baseline/parser.output text eol=lf
+mf/GNUmakefile text eol=lf
+tools/Lily.Docs/assets/staged/ROADMAP text eol=lf
+tests/CodeBrix.LilyPort.Tests/fixtures/musicxml/inputs/LICENSE text eol=lf
+
+# ---------------------------------------------------------------------------
+# Never touched. Declared rather than left to git's heuristic, because a font or a
+# MIDI file that gets newline translation applied to it is silently corrupt.
+# ---------------------------------------------------------------------------
+*.otf   binary
+*.png   binary
+*.PNG   binary
+*.jpg   binary
+*.midi  binary
+*.mxl   binary

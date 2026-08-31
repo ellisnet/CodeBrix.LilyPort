@@ -1,9 +1,11 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path=".gitattributes" />
     <File Path=".gitignore" />
     <File Path="AGENT-README.txt" />
     <File Path="COPYING.FDL" />
     <File Path="EXTRAS-README.txt" />
+    <File Path="global.json" />
     <File Path="icon-codebrix-128.png" />
     <File Path="LICENSE" />
     <File Path="LICENSE.OFL" />
