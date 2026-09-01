@@ -27,6 +27,10 @@
   <Folder Name="/Tools/">
     <Project Path="tools/regression-harness/BatchDriver/CodeBrix.LilyPort.BatchDriver.csproj" />
     <Project Path="tools/regression-harness/DocsDriver/CodeBrix.LilyPort.DocsDriver.csproj" />
+    <Project Path="tools/abcprobe/AbcProbe/AbcProbe.csproj" />
+    <Project Path="tools/midi2lyprobe/MidiProbe/MidiProbe.csproj" />
+    <Project Path="tools/musicxml2lyprobe/MusicXmlProbe/MusicXmlProbe.csproj" />
+    <Project Path="tools/mutopia-probe/MutopiaProbe/MutopiaProbe.csproj" />
   </Folder>
   <Project Path="src/CodeBrix.LilyPort/CodeBrix.LilyPort.csproj" />
   <Project Path="src/CodeBrix.LilyPort.Flower/CodeBrix.LilyPort.Flower.csproj" />
