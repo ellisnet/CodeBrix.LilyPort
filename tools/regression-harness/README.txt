@@ -950,6 +950,10 @@ G1 when it goes green would have been false about eight of its rows.
                             are deleted)
   compare-output.py's R10 post-pass
                             R12 -- four rows graded WITH a stated bound
+                            (RETIRED 2026-09-01, board L14: the divergence was
+                            fixed by measurement on 2026-08-27, the post-pass
+                            read "0 of 4" on every run afterwards, and its code
+                            is now DELETED from compare-output.py)
 
 THEY ARE THREE DIFFERENT THINGS AND MUST NOT BE MERGED.
 
@@ -983,16 +987,21 @@ THEY ARE THREE DIFFERENT THINGS AND MUST NOT BE MERGED.
     still right for any port-against-port comparison; there is simply no
     committed baseline any more.)
 
-  * The R10 POST-PASS grades normally and then, on four named files only, asks
-    whether the ENTIRE inventory difference is text elements identical in family
-    and content whose font-size differs by no more than 0.0005 -- and if so
-    re-grades the reconciled inventory and REPORTS the upgrade, per row and as a
-    count. It does not touch D29's identity function, which stays byte-exact, and
-    it does not assert MATCH: a placement difference on those four files still
-    reads PLACEMENT-DIFFERS. Fenced by --selftest cases (ix) through (xiii), whose
-    controls are a file R10 does not name, a size beyond the bound, a second
-    difference alongside the size, and a page whose own sizes sit within the
-    bound.
+  * The R10 POST-PASS is RETIRED -- /!\ ITS CODE WAS DELETED FROM
+    compare-output.py ON 2026-09-01 (board L14). The last-decimal font-size
+    divergence it reconciled was fixed by measurement on 2026-08-27, after
+    which the post-pass reported "R10 post-pass: 0 of 4" on every run: it was
+    inert, not load-bearing, when it was removed. Deleting it left all 2,316
+    verdicts byte-for-byte identical (the --tsv written before and after the
+    deletion is the same file by md5, and the ratchet reads 0 regressions /
+    0 improvements), and --selftest dropped from thirteen numbered cases to
+    eight by losing exactly (ix) through (xiii), which fenced it.
+    WHAT IT USED TO DO, for the record: grade normally and then, on four named
+    files only, ask whether the ENTIRE inventory difference was text elements
+    identical in family and content whose font-size differed by no more than
+    0.0005 -- and if so re-grade the reconciled inventory and REPORT the
+    upgrade, per row and as a count. It never touched D29's identity function,
+    which stays byte-exact, and it never asserted MATCH.
 
 WHY NOT ONE MECHANISM FOR ALL THREE. Because they make different claims, and a
 row that stops matching has to be distinguishable from a row that was never

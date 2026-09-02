@@ -524,15 +524,19 @@ and appends every change to pass-manifest-decisions.tsv (committed,
 append-only), so an earned floor can always be told from an unearned one.
 Advance the manifest only through ratchet.py, never by hand.
 
-THREE FILES THAT MUST NOT BE MERGED. g1-skip-list.tsv holds the rows RULED OUT
-of the "everything matches" gate (G1), each with its date and reason; it is
-read by nothing automatically and exists so the exception list is answerable
-from the repository. font-delta-ledger.tsv PRICES, per page in millimetres
-against a 0.05 mm ceiling, what the port's own font build costs relative to
-LilyPond's build (see THE FONT-PARITY PAIR). compare-output.py's R10 post-pass
-re-grades four named files whose only difference is a bounded text font-size
-skew, and reports the upgrade. They make different claims; a row that stops
-matching must stay distinguishable from a row that was never required to.
+THREE FILES THAT MUST NOT BE MERGED (the third is RETIRED). g1-skip-list.tsv
+holds the rows RULED OUT of the "everything matches" gate (G1), each with its
+date and reason; it is read by nothing automatically and exists so the
+exception list is answerable from the repository. font-delta-ledger.tsv PRICES,
+per page in millimetres against a 0.05 mm ceiling, what the port's own font
+build costs relative to LilyPond's build (see THE FONT-PARITY PAIR).
+compare-output.py's R10 post-pass re-graded four named files whose only
+difference was a bounded text font-size skew, and reported the upgrade --
+RETIRED 2026-09-01 (L14): the skew was fixed by measurement on 2026-08-27, the
+post-pass read "0 of 4" on every run from then on, and its code is now DELETED
+from compare-output.py, with all 2,316 verdicts proven byte-for-byte identical
+across the removal. They make different claims; a row that stops matching must
+stay distinguishable from a row that was never required to.
 
 THE FONT-PARITY PAIR. Every graded run goes both ways:
 

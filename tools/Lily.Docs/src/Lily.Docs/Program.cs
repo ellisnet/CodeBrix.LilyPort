@@ -240,10 +240,12 @@ public static class Program
                 pdfRender.Settings.PageWidthPoints, pdfRender.Settings.PageHeightPoints,
                 pdfRender.TexinfoWarnings.Count, pdfRender.PdfWarnings.Count));
             Console.WriteLine(string.Format(CultureInfo.InvariantCulture,
-                "    svg placement {0}, fallback raster scale {1:0.##}, uncovered characters {2}",
+                "    svg placement {0}, fallback raster scale {1:0.##}, uncovered characters {2},"
+                    + " cff subsetting {3}",
                 pdfRender.Settings.SvgPlacement,
                 pdfRender.Settings.SvgRasterScale,
-                pdfRender.Settings.KeepUncoveredCharacters ? "KEPT as boxes" : "removed"));
+                pdfRender.Settings.KeepUncoveredCharacters ? "KEPT as boxes" : "removed",
+                pdfRender.Settings.CffSubsetMode));
             WriteCategories(pdfRender.PdfWarnings);
             WriteDropItems(pdfRender);
             if (listWarnings)

@@ -19,9 +19,21 @@
     place and so neither can drift.
   -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Texinfo2Html.MitLicenseForever" Version="1.0.240.201" />
-    <PackageReference Include="CodeBrix.Texinfo2Pdf.MitLicenseForever" Version="1.0.240.201" />
+    <PackageReference Include="CodeBrix.Texinfo2Html.MitLicenseForever" Version="1.0.243.66" />
+    <PackageReference Include="CodeBrix.Texinfo2Pdf.MitLicenseForever" Version="1.0.243.66" />
   </ItemGroup>
+
+  <!--
+    WHAT THE 1.0.240.201 -> 1.0.243.66 BUMP ACTUALLY MOVES: exactly one dependency.
+    CodeBrix.PdfDocCreate.Html2Pdf 1.0.243.38 (and with it PdfDocCreate and
+    PdfDocuments at the same version); the other seven packages the pair carries are
+    byte-for-byte the ones 1.0.240.201 already brought. What 1.0.243.38 adds is a
+    THIRD member of PdfCffSubsetMode - Compact, which prunes a subset CFF face's
+    unreached subroutines and strings - beside None and Sparse, which
+    HtmlRenderOptions.CffSubsetMode has carried since Html2Pdf 1.0.240.106.
+    ManualRenderer.ApplyPdfOptions now sets that mode explicitly and reads it back as
+    CFF_SUBSET; the comment there records why it is INERT for today's nine manuals.
+  -->
 
   <!--
     NO NATIVE PACKAGE, AND NONE MAY RETURN. The whole chain - Texinfo2Pdf ->
@@ -31,7 +43,8 @@
     default, set and read back in ManualRenderer.ApplyPdfOptions and frozen as
     SVG_PLACEMENT in every expected-warnings/*-pdf.tsv). Decision D52 - the shipped
     CodeBrix.LilyPort package must never carry a native reference - is satisfied by
-    construction.
+    construction, and was RE-VERIFIED against project.assets.json at the 1.0.243.66
+    bump: zero SkiaSharp, zero runtime.* native packages.
     //was previously: a SkiaSharp.NativeAssets.Linux reference, 2026-08-21 to 2026-08-26,
     //while Html2Pdf still rasterized SVG through SkiaSharp.
   -->

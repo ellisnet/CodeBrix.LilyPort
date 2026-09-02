@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using CodeBrix.PdfDocCreate.Html2Pdf;
+using CodeBrix.PdfDocuments.Pdf;
 using CodeBrix.Texinfo2Html;
 using CodeBrix.Texinfo2Pdf;
 using Lily.Docs.Manuals;
@@ -247,7 +248,9 @@ public sealed class ManualRenderer
     /// trusted: <c>SvgPlacement</c> (Vector as shipped — the engravings are PDF vector
     /// content) and <c>SvgRasterScale</c> (2.0 as shipped), which since the vector route
     /// decides only the sharpness of a part PDF cannot express and the package has to
-    /// rasterize on its own — none, in these manuals.
+    /// rasterize on its own — none, in these manuals. <c>CffSubsetMode</c> is the third
+    /// recorded one and the only one of the three set AWAY from its default; it is inert
+    /// for these manuals as they stand, measured, and the assignment says why.
     /// </remarks>
     private static PdfRenderSettings ApplyPdfOptions(HtmlRenderOptions options)
     {
@@ -292,6 +295,28 @@ public sealed class ManualRenderer
         // vanished in prose and appeared as a box in an engraved lyric.
         options.KeepUncoveredCharacters = true;
 
+        // ── CFF SUBSETTING — SET EXPLICITLY, AND MEASURED INERT ──────────────────
+        //
+        // Governs only faces whose outlines live in a CFF table. The package default is
+        // None (embed such a face whole); Sparse keeps the glyphs the document uses;
+        // Compact — the third member, new in Html2Pdf 1.0.243.38, which the Texinfo pair
+        // reaches at 1.0.243.66 — also empties the subroutines and strings those glyphs
+        // do not need.
+        //
+        // ⚠ IT CHANGES NOTHING IN THE NINE MANUALS AS THEY STAND, AND THAT WAS MEASURED
+        // RATHER THAN ASSUMED: pdffonts over all nine PDFs finds every embedded face to be
+        // already-subset CID TrueType (Merriweather, Roboto, Roboto Mono, Noto Serif, Noto
+        // Music) and NOT ONE Type 1C / FontFile3 face anywhere. The engraved music is the
+        // reason — it arrives as PDF vector path operators (SvgPlacement above), not as
+        // embedded-font text from a CFF face — so there is nothing here for this setting to
+        // subset.
+        //
+        // It is set anyway, for the same two reasons SvgPlacement is set explicitly while
+        // already being the default: the day a CFF face DOES reach a manual it is subset
+        // rather than embedded whole, and a package that changed its default moves the
+        // CFF_SUBSET baseline row instead of silently changing what the PDFs contain.
+        options.CffSubsetMode = PdfCffSubsetMode.Compact;
+
         // ⚠ NOT AN OPTION — process-global font-registry state, and the one thing wave LD4
         // had to ADD rather than merely measure. The SVG text path's per-glyph fallback
         // chain contains only Noto Music unless a consumer says otherwise, so an engraved
@@ -305,7 +330,8 @@ public sealed class ManualRenderer
         // baseline that moved rather than as a constant in this file that still agrees
         // with itself.
         return new PdfRenderSettings(options.PageWidthPoints, options.PageHeightPoints,
-            options.SvgPlacement.ToString(), options.SvgRasterScale, options.KeepUncoveredCharacters);
+            options.SvgPlacement.ToString(), options.SvgRasterScale, options.KeepUncoveredCharacters,
+            options.CffSubsetMode.ToString());
     }
 }
 
@@ -550,13 +576,15 @@ public sealed class ManualHtmlRender
 public sealed class PdfRenderSettings
 {
     internal PdfRenderSettings(double pageWidthPoints, double pageHeightPoints,
-        string svgPlacement, double svgRasterScale, bool keepUncoveredCharacters)
+        string svgPlacement, double svgRasterScale, bool keepUncoveredCharacters,
+        string cffSubsetMode)
     {
         PageWidthPoints = pageWidthPoints;
         PageHeightPoints = pageHeightPoints;
         SvgPlacement = svgPlacement;
         SvgRasterScale = svgRasterScale;
         KeepUncoveredCharacters = keepUncoveredCharacters;
+        CffSubsetMode = cffSubsetMode;
     }
 
     /// <summary>The page width in points.</summary>
@@ -615,6 +643,28 @@ public sealed class PdfRenderSettings
     /// </para>
     /// </remarks>
     public bool KeepUncoveredCharacters { get; }
+
+    /// <summary>
+    /// How a font whose outlines live in a CFF table is embedded: "None" (whole face, the
+    /// package default), "Sparse" (only the glyphs used) or "Compact" (also without the
+    /// subroutines and strings those glyphs do not need — what these manuals set).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Read back off the live options after <c>ApplyPdfOptions</c> set it and frozen as
+    /// CFF_SUBSET. The other two recorded settings are the package's own defaults; this one
+    /// is the only one moved away from a default, so the row also says the pin still offers
+    /// the mode — a package that dropped or renamed it could not produce this value.
+    /// </para>
+    /// <para>
+    /// ⚠ INERT FOR THE NINE MANUALS AS THEY STAND, AND MEASURED: pdffonts over all nine PDFs
+    /// finds every embedded face to be already-subset CID TrueType and not one Type 1C /
+    /// FontFile3 face, because the engraved music is PDF vector path operators rather than
+    /// text set in a CFF face. It is set for the day one arrives, and so that a changed
+    /// package default moves this row instead of the PDFs.
+    /// </para>
+    /// </remarks>
+    public string CffSubsetMode { get; }
 }
 
 /// <summary>What a PDF render produced.</summary>
@@ -681,6 +731,7 @@ public sealed class ManualPdfRender
             { "SVG_PLACEMENT", Settings.SvgPlacement },
             { "SVG_RASTER_SCALE", Text(Settings.SvgRasterScale) },
             { "KEEP_UNCOVERED", Settings.KeepUncoveredCharacters ? "true" : "false" },
+            { "CFF_SUBSET", Settings.CffSubsetMode },
         };
     }
 

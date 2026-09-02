@@ -7829,6 +7829,20 @@ TEXT FONT SIZE, LAST DECIMAL: A BOUNDED DELTA IS ACCEPTED ON FOUR NAMED VALUES
   graded.  So the removal is left as its own small step, with its five --selftest
   cases (ix)-(xiii), rather than folded into the session that earned it.
 
+  ✅ THAT SMALL STEP IS DONE -- REMOVED 2026-09-01 (board L14), so the paragraph
+  above is history: no R10 post-pass code remains in compare-output.py.  Deleted
+  R10_FILES, R10_SIZE_BOUND, _r10_reconcile and its two private helpers, the
+  compare_one post-pass block and its `name' parameter, the "R10:" detail
+  accounting, the summary line, and --selftest cases (ix)-(xiii) -- 256 lines,
+  999 to 743.  Verdicts PROVEN IDENTICAL rather than assumed: the --tsv graded
+  before and after the deletion is byte-for-byte the same file over all 2,316 rows
+  (md5 9e413f5db1b4e9ca42590e06343a5a2b), 2,302 MATCH / 8 PLACEMENT-DIFFERS /
+  6 GLYPHS-DIFFER unchanged, reference-against-reference 2,316 of 2,316, ratchet
+  0 regressions / 0 improvements / 0 not-in-run.  --selftest went thirteen
+  numbered cases to eight, dropping exactly the five that fenced it; (i)-(viii)
+  and the canary are untouched.  Trap 7 is satisfied the only way it can be: the
+  instrument's own output did not move by one byte.
+
 --------------------------------------------------------------------------------
 A NEGATIVE ZERO COORDINATE IS ACCEPTED WHERE UPSTREAM REACHES AN EXACT ZERO
 (2026-08-16, ruled by Jeremy alongside R9)

@@ -113,12 +113,13 @@ honest failure: the corpus is 3.4 MB of FDL source that the tool reads, not carr
 ⚠ AND IT IS THE REASON Lily.Shell CARRIES THE Texinfo -> Html2Pdf CHAIN. That
 chain is refused for CodeBrix.LilyPort because the shipped package must not carry
 it (decision D52); Lily.Shell ships nothing. Since the 2026-08-26 bumps the chain
-is FULLY MANAGED -- Texinfo2Pdf 1.0.238.1201 -> Html2Pdf 1.0.238.1192 -> its SVG
-engine CodeBrix.Imaging.Drawing.NoSkia, no SkiaSharp and no native library at all
--- so the reference costs managed assemblies and font packages and nothing else.
-(The second bump of that day, 1.0.238.626 -> 1.0.238.1201, only follows Html2Pdf
-1.0.238.580 -> 1.0.238.1192, which added opt-in CFF font subsetting; these manuals
-register no CFF face and set nothing, so their output is untouched by it.)
+is FULLY MANAGED -- at the pin below, Texinfo2Pdf 1.0.243.66 -> Html2Pdf
+1.0.243.38 -> its SVG engine CodeBrix.Imaging.Drawing.NoSkia, no SkiaSharp and no
+native library at all -- so the reference costs managed assemblies and font
+packages and nothing else.
+(CFF font subsetting arrived along that road: opt-in at Html2Pdf 1.0.238.1192,
+its Compact mode at 1.0.243.38. These manuals now SET the mode explicitly and
+freeze it as CFF_SUBSET, and it is still inert for them -- see PACKAGE PINS.)
 (Through 2026-08-25 it brought SkiaSharp with it, and MEASURED 2026-08-19 the
 heads already carried 561 MB of the identical native assets through
 CodeBrix.Platform, so even then the marginal cost was 45 MB of managed code.)
@@ -625,7 +626,10 @@ BASELINES (expected-warnings/)
                            the package default this phase deliberately did not
                            change (SVG_RASTER_SCALE, since the vector route the
                            fallback scale only) and the one it deliberately
-                           did (KEEP_UNCOVERED, decision D56); and one DROP row
+                           did (KEEP_UNCOVERED, decision D56); how a CFF face
+                           would be embedded (CFF_SUBSET, Compact -- set
+                           explicitly and read back, and MEASURED inert because
+                           no manual carries a CFF face); and one DROP row
                            per DISTINCT DROPPED CODE POINT
     <manual>-snippets.tsv  ASKED, ENGRAVED, PICTURES, FAILED, DECLINED and
                            DOCUMENT_IMAGES -- what the engraver was asked to do
@@ -737,13 +741,54 @@ ENGRAVING SEAM above.
 PACKAGE PINS -- THE TWO MOVE TOGETHER
 --------------------------------------------------------------------------------
 
-    CodeBrix.Texinfo2Html.MitLicenseForever   1.0.238.1201
-    CodeBrix.Texinfo2Pdf.MitLicenseForever    1.0.238.1201
+    CodeBrix.Texinfo2Html.MitLicenseForever   1.0.243.66
+    CodeBrix.Texinfo2Pdf.MitLicenseForever    1.0.243.66
 
 Both are named in src/Lily.Docs/Lily.Docs.csproj even though the PDF package
 brings the HTML one transitively, so the pin is visible in one place. Bumping
 one without the other is the mistake the pin discipline exists to prevent. A
 package fix happens in ~/GitHome/CodeBrix.Texinfo, ships as a PAIR at one
 version, and lands here as a pin bump verified by re-running the gates.
+
+⚠ READ THE FIGURES ABOVE AS DATA, NOT AS PROSE: they stood at 1.0.238.1201 for
+one bump longer than the csproj did, because a bump edited the pin and not this
+section. Change both in the same edit.
+
+WHAT 1.0.240.201 -> 1.0.243.66 MOVED, AND WHAT IT DID NOT
+
+    exactly one dependency  CodeBrix.PdfDocCreate.Html2Pdf 1.0.240.106 ->
+                            1.0.243.38, and with it PdfDocCreate and PdfDocuments
+                            at that same version. The OTHER SEVEN packages the
+                            pair carries -- Imaging.Drawing.NoSkia, MarkupParse,
+                            StyleSheetParse and the four font packages -- are the
+                            same versions 1.0.240.201 already resolved, verified
+                            nuspec against nuspec.
+    still nothing native    project.assets.json re-read at the bump: ZERO
+                            SkiaSharp, ZERO runtime.* packages, no runtimeTargets
+                            and no native asset group anywhere in the graph.
+                            Decision D52 holds by construction.
+    one new capability      PdfCffSubsetMode gains a third member, Compact, which
+                            prunes a subset CFF face's unreached subroutines and
+                            strings (the package's own measurement: C059-Roman
+                            with nine glyphs kept goes 70,299 bytes at None,
+                            24,728 at Sparse, 4,685 at Compact). The property
+                            HtmlRenderOptions.CffSubsetMode itself has existed
+                            since Html2Pdf 1.0.240.106.
+
+⚠ THE MODE IS SET TO Compact AND IT IS INERT -- MEASURED, NOT ASSUMED. pdffonts
+over all nine rendered PDFs finds every embedded face to be an ALREADY-SUBSET CID
+TrueType face (Merriweather, Roboto, Roboto Mono, Noto Serif, Noto Music) and NOT
+ONE Type 1C / FontFile3 face anywhere. The reason is the vector route: the
+engraved music reaches the page as PDF path operators, so no CFF face is ever
+embedded for it. It is set explicitly for the same two reasons SvgPlacement is
+set explicitly while already being the default -- the day a CFF face DOES reach a
+manual it is subset rather than embedded whole, and a package that changed its
+default moves the CFF_SUBSET baseline row instead of silently changing the PDFs.
+
+⚠ Lily.Shell.Core PROJECT-REFERENCES Lily.Docs, so this pin reaches that solution
+too. Its own two font pins (Roboto 1.0.240.51, Roboto Mono 1.0.238.534) are the
+exact floors Html2Pdf 1.0.243.38 asks for, so the NU1605 downgrade fence there is
+unmoved by this bump. A future bump that raises either floor must move that
+csproj in the same edit.
 
 ================================================================================

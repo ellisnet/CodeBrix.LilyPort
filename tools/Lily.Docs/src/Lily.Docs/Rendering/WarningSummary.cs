@@ -160,8 +160,8 @@ public static class WarningSummary
     /// </summary>
     /// <param name="path">The file to write.</param>
     /// <param name="values">The scalar facts — page count, warning counts, the page size
-    /// actually used, and the two shipped defaults this phase deliberately did not
-    /// change.</param>
+    /// actually used, the two shipped defaults this phase deliberately did not change, and
+    /// the CFF subset mode, the one it deliberately did.</param>
     /// <param name="dropRows">The drop rows, already formatted by
     /// <see cref="FormatDropRow"/>.</param>
     /// <remarks>

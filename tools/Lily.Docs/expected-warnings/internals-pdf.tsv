@@ -28,6 +28,24 @@
 #                    MOVED: PAGES, both warning counts, every DROP row and the snippet
 #                    counts are identical to the raster route's. SVG_RASTER_SCALE stays
 #                    recorded but now governs only a part PDF cannot express (none here).
+# CFF_SUBSET         Compact -- Texinfo2Pdf 1.0.243.66 (Html2Pdf 1.0.243.38) added a THIRD
+#                    PdfCffSubsetMode beside None, the package default that embeds a CFF
+#                    face whole, and Sparse, which keeps only the glyphs the document uses:
+#                    Compact also empties the subroutines and strings those glyphs do not
+#                    need. Set explicitly in ManualRenderer.ApplyPdfOptions and READ BACK
+#                    off the live options, exactly as SVG_PLACEMENT is.
+#                    ⚠ INERT FOR THESE MANUALS, MEASURED RATHER THAN ASSUMED: pdffonts over
+#                    all nine PDFs finds every embedded face to be already-subset CID
+#                    TrueType -- Merriweather, Roboto, Roboto Mono, Noto Serif, Noto Music
+#                    -- and NOT ONE Type 1C / FontFile3 face anywhere, because the engraved
+#                    music arrives as PDF vector path operators rather than as text set in
+#                    a CFF face. The setting is made anyway for the day a CFF face DOES
+#                    reach a manual, and so that a package which changed its default moves
+#                    this row instead of silently changing the PDFs.
+#                    RE-FROZEN AT THAT BUMP AND NOTHING ELSE MOVED: PAGES, both warning
+#                    counts, the page size, every DROP row and the snippet counts are
+#                    identical to 1.0.240.201's.
+CFF_SUBSET	Compact
 KEEP_UNCOVERED	true
 PAGES	1266
 PAGE_HEIGHT_PT	842
