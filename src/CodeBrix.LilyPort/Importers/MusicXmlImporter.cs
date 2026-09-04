@@ -61,6 +61,7 @@ public static class MusicXmlImporter
         MusicXmlConverter converter = new MusicXmlConverter(state);
 
         string text = null;
+        bool stopped = false;
         try
         {
             converter.ApplyOptions();
@@ -77,6 +78,7 @@ public static class MusicXmlImporter
         {
             //Upstream ends the process here, because nothing catches the exception. No
             //file is written, so there is no text to hand back.
+            stopped = true;
             if (!aborted.AlreadyReported)
             {
                 diagnostics.Write("musicxml2ly: " + aborted.Message + "\n");
@@ -84,7 +86,14 @@ public static class MusicXmlImporter
             }
         }
 
+        //MUSICXML2LY'S OWN EXIT CODE. Everything the converter cannot interpret goes
+        //through ly.warning, which only prints (python/lilylib.py:82-87 — ly.error
+        //prints too); the script's ONE diagnostic-driven stop is
+        //scripts/musicxml2ly.py:5977-5978, `ly.error("Unable to find input file %s")'
+        //followed by sys.exit(1), for a document it cannot open at all. That is the
+        //shape the catch above carries — an unreadable document, or a container naming
+        //no score — so again: the run stood unless it was stopped.
         IReadOnlyList<string> messages = diagnostics.Close();
-        return new ImportResult(text, messages, diagnostics.Errors);
+        return new ImportResult(text, messages, diagnostics.Errors, !stopped && text != null);
     }
 }

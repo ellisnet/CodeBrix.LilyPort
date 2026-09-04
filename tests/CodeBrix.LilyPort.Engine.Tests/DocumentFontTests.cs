@@ -71,12 +71,14 @@ public class DocumentFontTests
         string path = WriteScratchFace("C059-Roman.otf", "doc-font-case");
         try
         {
-            // THE CONTROL, MEASURED FIRST: "C059" is not one of the three generic names,
-            // so before any registration R14 sends it down the unknown arm to TeX Gyre
-            // Schola. If this did not hold, the case below would prove nothing.
+            // THE CONTROL, MEASURED FIRST: with nothing registered, "C059" is the family
+            // the EMBEDDED C059 faces declare, so it answers the embedded file (R18) --
+            // a different file from the scratch copy written above, which is what makes
+            // the case below mean something.
             IReadOnlyList<TextFace> before = TextFontChain.For("C059", false, false);
             before.Count.Should().BeGreaterThan(0);
-            before[0].FileName.Should().Be("texgyreschola-regular.otf");
+            before[0].FileName.Should().Be("C059-Roman.otf");
+            before[0].FileName.Should().NotBe(Path.GetFileName(path));
 
             //Act
             TextFontChain.AddDocumentFont(path).Should().BeTrue();
@@ -87,8 +89,8 @@ public class DocumentFontTests
                 + "not the head of a fallback chain");
             after[0].FileName.Should().Be(Path.GetFileName(path));
 
-            // A family NOBODY registered still lands where R14 puts it — the registry is
-            // consulted, not substituted for the chain.
+            // A family NOBODY registered and NO VENDORED FACE PROVIDES still lands where
+            // R14 puts it — the registry is consulted, not substituted for the chain.
             TextFontChain.For("Nothing Like This", false, false)[0].FileName
                 .Should().Be("texgyreschola-regular.otf");
 
@@ -124,8 +126,12 @@ public class DocumentFontTests
             TextFontChain.ResetDocumentFonts();
 
             //Assert
+            // Back to the EMBEDDED C059 face -- the family the vendored files declare --
+            // and no longer the scratch copy, which is the leak this fences.
             TextFontChain.For("C059", false, false)[0].FileName
-                .Should().Be("texgyreschola-regular.otf");
+                .Should().Be("C059-Roman.otf");
+            TextFontChain.For("C059", false, false)[0].FileName
+                .Should().NotBe(Path.GetFileName(path));
         }
         finally
         {

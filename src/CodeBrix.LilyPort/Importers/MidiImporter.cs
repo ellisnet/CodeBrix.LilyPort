@@ -37,6 +37,7 @@ public static class MidiImporter
         MidiConverter converter = new MidiConverter(effective, diagnostics);
 
         string text = null;
+        bool stopped = false;
         try
         {
             text = converter.Convert(midiData);
@@ -45,12 +46,14 @@ public static class MidiImporter
         {
             //python/midi.py's own error, which midi2ly does not catch: the script ends
             //with a traceback and writes nothing.
+            stopped = true;
             diagnostics.Write(
                 "midi2ly: error: " + badFile.Message + "\n");
             diagnostics.CountError();
         }
         catch (ImportAbortedException aborted)
         {
+            stopped = true;
             if (!aborted.AlreadyReported)
             {
                 diagnostics.Write("midi2ly: error: " + aborted.Message + "\n");
@@ -58,7 +61,13 @@ public static class MidiImporter
             }
         }
 
+        //MIDI2LY'S OWN EXIT CODE, AND IT IS THE LOOSEST OF THE THREE. The script has no
+        //error() and no --strict: `ly.error' (scripts/midi2ly.py:821, "BUG: time skew")
+        //only prints, and its only sys.exit calls are command-line ones — 0 for
+        //--warranty, 2 when no file was named — neither of which a library has. So a
+        //file it can read ALWAYS converts and always exits zero, and the only way the
+        //script ends without writing is the traceback the two catches above stand for.
         IReadOnlyList<string> messages = diagnostics.Close();
-        return new ImportResult(text, messages, diagnostics.Errors);
+        return new ImportResult(text, messages, diagnostics.Errors, !stopped && text != null);
     }
 }

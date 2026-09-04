@@ -249,6 +249,118 @@ public class TextFontChainTests
     }
 
     [Fact]
+    public void each_family_a_vendored_face_declares_selects_that_face()
+    {
+        //Arrange
+        // R18 has the port report its OWN font world, and
+        // ly:font-config-display-fonts names the six families the 24 embedded faces
+        // declare in their own name tables. Every one of them used to fall into R14's
+        // unknown arm, so asking for a real embedded family was byte-for-byte the same
+        // request as asking for a font nobody has.
+
+        //Act
+        string c059 = First("C059");
+        string schola = First("TeX Gyre Schola");
+        string nimbusSans = First("Nimbus Sans");
+        string heros = First("TeX Gyre Heros");
+        string nimbusMono = First("Nimbus Mono PS");
+        string cursor = First("TeX Gyre Cursor");
+
+        //Assert
+        c059.Should().Be(Serif);
+        schola.Should().Be(Schola);
+        nimbusSans.Should().Be(Sans);
+        heros.Should().Be("texgyreheros-regular.otf");
+        nimbusMono.Should().Be(Mono);
+        cursor.Should().Be("texgyrecursor-regular.otf");
+
+        // THE CONTROL, and it is the measurement the FIXLIST entry was written from: a
+        // name nothing provides is still the unknown chain, so the six above are
+        // SELECTIONS and not six spellings of one answer.
+        First("Zzz Not A Font").Should().Be(Schola);
+        nimbusSans.Should().NotBe(First("Zzz Not A Font"));
+        new List<string> { c059, schola, nimbusSans, heros, nimbusMono, cursor }
+            .Distinct().Should().HaveCount(6);
+
+        // Case-insensitive, as fontconfig's family matching is.
+        First("nimbus sans").Should().Be(Sans);
+        First("NIMBUS MONO PS").Should().Be(Mono);
+    }
+
+    [Fact]
+    public void a_declared_family_answers_its_own_four_styles_and_nothing_behind_it()
+    {
+        //Arrange
+        // ONE LEVEL, on the document-font reasoning: the request named a FACE, so a
+        // second typeface behind it would be coverage nobody asked for.
+
+        //Act
+        List<string> nimbusSans = Chain("Nimbus Sans");
+        string bold = First("Nimbus Sans", bold: true);
+        string italic = First("Nimbus Sans", italic: true);
+        string boldItalic = First("Nimbus Sans", bold: true, italic: true);
+
+        //Assert
+        nimbusSans.Should().Equal(new List<string> { Sans });
+        bold.Should().Be("NimbusSans-Bold.otf");
+        italic.Should().Be("NimbusSans-Italic.otf");
+        boldItalic.Should().Be("NimbusSans-BoldItalic.otf");
+
+        // THE CONTROL: the generic that REACHES the same first face still carries its
+        // TeX Gyre level behind it, so the one-level answer is a property of naming the
+        // face and not of the sans family losing its fallback.
+        Chain("sans").Should().Equal(
+            new List<string> { Sans, "texgyreheros-regular.otf" });
+        new List<string> { nimbusSans[0], bold, italic, boldItalic }
+            .Distinct().Should().HaveCount(4);
+    }
+
+    [Fact]
+    public void a_generic_name_still_resolves_to_exactly_what_it_did()
+    {
+        //Arrange
+        // The whole selection above is added AHEAD of the generic table, so this is the
+        // fence that says it took nothing away from it: the seven names the Generics
+        // table carries, and the three family LISTS the corpus actually contains, all
+        // answer their full chains.
+
+        //Act + Assert
+        Chain("serif").Should().Equal(new List<string> { Serif, Schola });
+        Chain("sans").Should().Equal(new List<string> { Sans, "texgyreheros-regular.otf" });
+        Chain("sans-serif").Should().Equal(new List<string> { Sans, "texgyreheros-regular.otf" });
+        Chain("monospace").Should().Equal(new List<string> { Mono, "texgyrecursor-regular.otf" });
+        Chain("LilyPond Serif").Should().Equal(new List<string> { Serif, Schola });
+        Chain("LilyPond Sans Serif").Should().Equal(
+            new List<string> { Sans, "texgyreheros-regular.otf" });
+        Chain("LilyPond Monospace").Should().Equal(
+            new List<string> { Mono, "texgyrecursor-regular.otf" });
+        First("Linux Libertine O,serif").Should().Be(Serif);
+        First("Linux Biolinum O,sans-serif").Should().Be(Sans);
+        First("Linux Libertine Mono O,monospace").Should().Be(Mono);
+    }
+
+    [Fact]
+    public void a_generic_earlier_in_a_list_beats_a_declared_family_after_it()
+    {
+        //Arrange
+        // fontconfig walks a CSS family list IN ORDER and takes the first entry it can
+        // satisfy, so which of the two tables answers depends on position, not on which
+        // table is consulted first.
+
+        //Act
+        string genericFirst = First("serif,Nimbus Sans");
+        string declaredFirst = First("Nimbus Sans,serif");
+
+        //Assert
+        genericFirst.Should().Be(Serif);
+        declaredFirst.Should().Be(Sans);
+
+        // THE CONTROL: the two are different answers to the same two names, which is
+        // what says the walk is ordered rather than one table simply winning.
+        genericFirst.Should().NotBe(declaredFirst);
+    }
+
+    [Fact]
     public void an_absent_family_name_still_resolves_to_the_serif_chain()
     {
         //Arrange

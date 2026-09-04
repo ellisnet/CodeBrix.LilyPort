@@ -6,6 +6,7 @@
 // (at your option) any later version.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CodeBrix.LilyPort.Engine.Bootstrap;
@@ -184,6 +185,165 @@ public class BatchRunnerTests
         result.ErrorCount.Should().Be(0);
         result.BookCount.Should().Be(1);
         result.SvgPath.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void the_scheme_error_port_writes_into_the_run_s_message_writer()
+    {
+        //Arrange
+        // Ruling R17 says the Scheme error port and the diagnostic writer are the SAME
+        // object. LilyPondScheme.CreateInterpreter arranges that once, at creation; the
+        // runner then swaps Flower.Warn.Output for the run's writer, and until this fence
+        // it swapped only that one — so during a run the two were different objects and
+        // everything Scheme wrote to the error port went to the process console instead
+        // of the job's log. `ly:font-config-display-fonts' is the primitive that made it
+        // visible: it prints the port's whole font world to (current-error-port).
+        StringWriter messages = new StringWriter();
+
+        //Act
+        BatchRunner.RunText(
+            "\\version \"" + LilyVersion.CompatibleWithVersion + "\"\n"
+                + "#(ly:font-config-display-fonts)\n{ c'4 }\n",
+            "batch-error-port",
+            null,
+            ScratchDirectory(),
+            new BatchRunOptions { MessageWriter = messages });
+
+        //Assert
+        // WriteFontWorld's own two headings and one face from the listing: a run that
+        // left the error port pointing elsewhere captures the progress lines and none
+        // of this.
+        string log = messages.ToString();
+        log.Should().Contain("vendored faces (24):");
+        log.Should().Contain("document-supplied fonts (0):");
+        log.Should().Contain("C059-Roman.otf");
+    }
+
+    [Fact]
+    public void the_scheme_error_port_is_the_diagnostic_writer_again_after_a_run()
+    {
+        //Arrange
+        // The other half of the swap. R17's pairing has to hold OUTSIDE a run too, or
+        // the next run — and every consumer that reads the error port between runs,
+        // FontPrimitives' optional-port default among them — would be writing into a
+        // MessageWriter whose job is over.
+        StringWriter messages = new StringWriter();
+
+        //Act
+        BatchRunner.RunText(
+            "\\version \"" + LilyVersion.CompatibleWithVersion + "\"\n{ c'4 }\n",
+            "batch-error-port-restore",
+            null,
+            ScratchDirectory(),
+            new BatchRunOptions { MessageWriter = messages });
+
+        //Assert
+        LilyPondScheme.Current.ErrorWriter.Should().BeSameAs(Flower.Warn.Output);
+    }
+
+    [Fact]
+    public void include_settings_runs_the_named_file_before_the_input()
+    {
+        //Arrange
+        // ly/init.ly `\include's every -dinclude-settings file before \maininput. The
+        // port drives declarations-init.ly rather than init.ly, so the runner owes that
+        // block; until this fence the option was DECLARED (so it drew no "no such
+        // program option" warning) and never read, and LilyPond's whole
+        // layout-control/preview idiom — -dinclude-settings=debug-layout-options.ly plus
+        // the -d switches that file sets — engraved an ordinary score.
+        string directory = ScratchDirectory();
+        File.WriteAllText(
+            Path.Combine(directory, "probe-settings.ily"),
+            "#(ly:warning \"PROBE-SETTINGS-WAS-INCLUDED\")\n");
+        string source = Path.Combine(directory, "settings-relative.ly");
+        File.WriteAllText(
+            source, "\\version \"" + LilyVersion.CompatibleWithVersion + "\"\n{ c'4 }\n");
+        StringWriter messages = new StringWriter();
+
+        //Act
+        BatchRunResult result = BatchRunner.RunFile(
+            source,
+            directory,
+            null,
+            new BatchRunOptions
+            {
+                MessageWriter = messages,
+                Options = new List<string> { "include-settings=probe-settings.ily" },
+            });
+
+        //Assert
+        // A RELATIVE name resolves against the main input's own directory, which is
+        // where upstream's Includable_lexer::new_input looks first.
+        messages.ToString().Should().Contain("warning: PROBE-SETTINGS-WAS-INCLUDED");
+        result.ErrorCount.Should().Be(0);
+        result.SvgPath.Should().NotBeNull();
+
+        // THE CONTROL: the same document with no include-settings says nothing.
+        StringWriter without = new StringWriter();
+        BatchRunner.RunFile(
+            source, directory, null, new BatchRunOptions { MessageWriter = without });
+        without.ToString().Should().NotContain("PROBE-SETTINGS-WAS-INCLUDED");
+    }
+
+    [Fact]
+    public void include_settings_takes_an_absolute_path_as_well()
+    {
+        //Arrange
+        string directory = ScratchDirectory();
+        string settings = Path.Combine(directory, "probe-settings-absolute.ily");
+        File.WriteAllText(settings, "#(ly:warning \"PROBE-ABSOLUTE-SETTINGS\")\n");
+
+        // Written somewhere ELSE, so only the absolute path can find the settings file.
+        string source = Path.Combine(ScratchDirectory(), "settings-absolute.ly");
+        File.WriteAllText(
+            source, "\\version \"" + LilyVersion.CompatibleWithVersion + "\"\n{ c'4 }\n");
+        StringWriter messages = new StringWriter();
+
+        //Act
+        BatchRunResult result = BatchRunner.RunFile(
+            source,
+            directory,
+            null,
+            new BatchRunOptions
+            {
+                MessageWriter = messages,
+                Options = new List<string> { "include-settings=" + settings },
+            });
+
+        //Assert
+        messages.ToString().Should().Contain("warning: PROBE-ABSOLUTE-SETTINGS");
+        result.ErrorCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void include_settings_naming_a_file_that_is_not_there_reports_it()
+    {
+        //Arrange
+        // 2.27.2, MEASURED: `-dinclude-settings=nosuchfile.ily' answers
+        // "<included string>:1:10: error: cannot find file: `nosuchfile.ily'" and the
+        // run ends non-zero. The port reports a missing \include as a lexer diagnostic
+        // naming the same source, which is exactly what it answers for a missing
+        // \include written in the document itself — the two paths agree, as they do
+        // upstream.
+        string directory = ScratchDirectory();
+        string source = Path.Combine(directory, "settings-missing.ly");
+        File.WriteAllText(
+            source, "\\version \"" + LilyVersion.CompatibleWithVersion + "\"\n{ c'4 }\n");
+
+        //Act
+        BatchRunResult result = BatchRunner.RunFile(
+            source,
+            directory,
+            null,
+            new BatchRunOptions
+            {
+                Options = new List<string> { "include-settings=nosuchfile.ily" },
+            });
+
+        //Assert
+        string.Join(" || ", result.Diagnostics)
+            .Should().Contain("<included string>")
+            .And.Contain("cannot find file: `nosuchfile.ily'");
     }
 
     private static string RelativeSuitePath()

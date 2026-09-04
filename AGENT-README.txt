@@ -1003,8 +1003,11 @@ own test corpora. The option classes are named after the scripts' LONG options.
         string Text                    // LilyPond source, or NULL when nothing
                                        //   could be converted
         IReadOnlyList<string> Messages // upstream's stderr, one line each
-        int  Errors
-        bool Succeeded                 // Text != null && Errors == 0
+        int  Errors                    // a COUNT of what was reported, not a verdict
+        bool Succeeded                 // what the script's EXIT CODE means: true
+                                       //   whenever a document came out, false only
+                                       //   where the script itself would have stopped
+                                       //   without writing a file
 
 What comes back is ordinary LilyPond source -- hand it to BatchRunner.RunText.
 It declares `\version "2.24.0"', which is the release the upstream converters
@@ -1014,9 +1017,18 @@ beams, slurs or accidental spelling, and the document relies on the completion
 engravers to make bars.
 
 Failure is an ImportResult, never an exception: bad bytes give Text null,
-Errors 1 and a message ("midi2ly: error: expected b'MThd', got b''",
-"musicxml2ly: Central Directory corrupt."). Strict ABC mode fails the same way
-where the default carries on with a hole.
+Errors 1, Succeeded false and a message ("midi2ly: error: expected b'MThd', got
+b''", "musicxml2ly: Central Directory corrupt."). Strict ABC mode fails the same
+way where the default carries on with a hole.
+
+READ Succeeded, NOT Errors == 0. The converters report what they cannot
+understand and keep going, exactly as the scripts do -- abc2ly's error() writes
+its line and returns, midi2ly has no error() at all, musicxml2ly warns -- so a
+tune with one token nobody understood is converted, written, and the program
+exits zero. Succeeded is that exit code: it is false only where the script would
+have stopped without writing a file (abc2ly under Strict, an unreadable MIDI
+file, a MusicXML document that cannot be opened), and Errors is the count to
+show beside the document, not a reason to throw it away.
 
 FONTS
 =====
@@ -1865,7 +1877,8 @@ QUICK REFERENCE CARD
     IMPORT    AbcImporter.Import(abcText, new AbcImportOptions { Beams, Strict })
               MidiImporter.Import(bytes, new MidiImportOptions { Key, Skip, ... })
               MusicXmlImporter.Import(xml, opts) / .ImportCompressed(mxlBytes, opts)
-              -> ImportResult { Text (null on failure), Messages, Errors, Succeeded }
+              -> ImportResult { Text (null on failure), Messages, Errors,
+                                Succeeded = the script's exit code, not Errors == 0 }
 
     FONTS     embedded; none on disk. FontAssets.SearchPaths.Add(dir) to override
               files by name; documents add their own with

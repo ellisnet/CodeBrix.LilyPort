@@ -329,6 +329,11 @@ public static class TextFontChain
     private static readonly Dictionary<string, TextFace> DocumentFonts
         = new Dictionary<string, TextFace>(StringComparer.OrdinalIgnoreCase);
 
+    // VendoredFamilyLevels()' answer, built once and dropped by Reset() — the declared
+    // names are read off the faces as they LOAD, so a change to FontAssets.SearchPaths
+    // could put a different file, and a different declared family, behind a name.
+    private static Dictionary<string, string[]> DeclaredLevels;
+
     // Each family lists its fallback levels, and each level its four faces indexed by
     // (bold ? 1 : 0) + (italic ? 2 : 0). Spelled out rather than generated from a
     // template because the three collections do not agree on how to name a face: URW
@@ -436,8 +441,9 @@ public static class TextFontChain
     /// </summary>
     /// <param name="family">
     /// The family requested: a generic name (<c>serif</c>, <c>sans</c>,
-    /// <c>sans-serif</c>, <c>monospace</c>), a comma-separated list of names, or any
-    /// other family name — see <see cref="Normalize"/>.
+    /// <c>sans-serif</c>, <c>monospace</c>), the family name a VENDORED face declares
+    /// (<c>C059</c>, <c>Nimbus Sans</c>, …), a comma-separated list of names, or any
+    /// other family name — see <see cref="VendoredLevel"/> and <see cref="Normalize"/>.
     /// </param>
     /// <param name="bold">Whether bold was asked for.</param>
     /// <param name="italic">Whether italic was asked for.</param>
@@ -460,13 +466,43 @@ public static class TextFontChain
             return new[] { supplied };
         }
 
+        int style = (bold ? 1 : 0) + (italic ? 2 : 0);
+
+        // A VENDORED FACE ANSWERS TO THE FAMILY NAME IT DECLARES, and it must, because
+        // R18 has the port REPORT those names: ly:font-config-display-fonts lists the six
+        // families the 24 embedded faces call themselves, and a listing a document cannot
+        // then select from is a listing of nothing. Before this, every one of the six —
+        // C059, TeX Gyre Schola, Nimbus Sans, TeX Gyre Heros, Nimbus Mono PS, TeX Gyre
+        // Cursor — fell into R14's unknown arm, so asking for a real embedded family by
+        // name engraved byte-for-byte the same as asking for a font that does not exist.
+        //
+        // It goes HERE, after the document's own registrations and before Normalize, for
+        // the same reason the document arm does: none of these names is a generic, so
+        // Normalize would send every one of them to `unknown'. Nothing a generic name
+        // resolves to can change, because VendoredLevel gives way to a generic name and
+        // the two name sets are disjoint.
+        //
+        // ONE LEVEL, on the same reasoning as the document arm: the request named a
+        // FACE, and a second typeface behind it would be coverage nobody asked for.
+        string[] declaredLevel = VendoredLevel(family);
+        if (declaredLevel != null)
+        {
+            TextFace declared = Face(declaredLevel[style]);
+            if (declared != null)
+            {
+                return new[] { declared };
+            }
+
+            // The style's file is not there — the same "drops out of the chain" case the
+            // Families table warns about. Fall through, so the request is answered the
+            // way an unavailable family is rather than with nothing at all.
+        }
+
         string key = Normalize(family);
         if (!Families.TryGetValue(key, out string[][] levels))
         {
             levels = Families["unknown"];
         }
-
-        int style = (bold ? 1 : 0) + (italic ? 2 : 0);
 
         List<TextFace> chain = new List<TextFace>();
         foreach (string[] level in levels)
@@ -479,6 +515,94 @@ public static class TextFontChain
         }
 
         return chain;
+    }
+
+    /// <summary>
+    /// The four-style level to draw from for the family a VENDORED face declares, or
+    /// <see langword="null"/> when the request names no such family.
+    /// </summary>
+    /// <remarks>
+    /// The list is walked IN ORDER and a generic name stops the walk, because that is
+    /// what fontconfig does with a CSS family list: it takes the first entry it can
+    /// satisfy. So <c>"Linux Libertine O,serif"</c> still reaches the serif chain through
+    /// its second entry, and <c>"serif,Nimbus Sans"</c> still reaches it through its
+    /// first — giving way to <see cref="Normalize"/>, which walks the same list from the
+    /// start and finds the same generic.
+    /// </remarks>
+    /// <param name="family">The family or comma-separated family list requested.</param>
+    /// <returns>The level, or <see langword="null"/>.</returns>
+    private static string[] VendoredLevel(string family)
+    {
+        if (string.IsNullOrEmpty(family))
+        {
+            return null;
+        }
+
+        Dictionary<string, string[]> declared = VendoredFamilyLevels();
+        foreach (string entry in family.Split(','))
+        {
+            string name = entry.Trim();
+            if (name.Length == 0)
+            {
+                continue;
+            }
+
+            if (Generics.ContainsKey(name))
+            {
+                return null;
+            }
+
+            if (declared.TryGetValue(name, out string[] level))
+            {
+                return level;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The family name each vendored face DECLARES, mapped to the four-style level it
+    /// belongs to.
+    /// </summary>
+    /// <remarks>
+    /// Built from <see cref="Families"/> on first use rather than written out, so it can
+    /// never disagree with the table it indexes, and read off each face's own name table
+    /// rather than its file name, because those are the names R18 reports. Case-
+    /// insensitive, as fontconfig's family matching is. TeX Gyre Schola names two levels
+    /// (serif's second and <c>unknown</c>'s only) whose four files are the same, so
+    /// whichever registers first is the same answer.
+    /// </remarks>
+    /// <returns>The map.</returns>
+    private static Dictionary<string, string[]> VendoredFamilyLevels()
+    {
+        lock (Gate)
+        {
+            if (DeclaredLevels != null)
+            {
+                return DeclaredLevels;
+            }
+
+            Dictionary<string, string[]> levels
+                = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<string, string[][]> family in Families)
+            {
+                foreach (string[] level in family.Value)
+                {
+                    foreach (string fileName in level)
+                    {
+                        string name = Face(fileName)?.FamilyName;
+                        if (!string.IsNullOrEmpty(name) && !levels.ContainsKey(name))
+                        {
+                            levels[name] = level;
+                        }
+                    }
+                }
+            }
+
+            DeclaredLevels = levels;
+            return levels;
+        }
     }
 
     /// <summary>
@@ -606,6 +730,7 @@ public static class TextFontChain
         {
             Loaded.Clear();
             DocumentFonts.Clear();
+            DeclaredLevels = null;
         }
     }
 

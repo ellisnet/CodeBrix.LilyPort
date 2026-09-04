@@ -86,15 +86,114 @@ public class ImportersTests
         //Assert
         lenient.Text.Should().NotBeNull();
         lenient.Errors.Should().Be(1);
-        lenient.Succeeded.Should().BeFalse();
+        //TRUE, and the comment above says why: abc2ly reported and kept going, wrote
+        //the file and exited ZERO. Succeeded answers that exit code, so the one thing
+        //abc2ly did not understand does not read as a failed conversion.
+        lenient.Succeeded.Should().BeTrue();
         //Four, not three: the last line upstream writes carries the offending text
         //AND its own newline, so the stream ends with a blank line and the blank is a
         //message. The recorded corpus shows the same shape.
         lenient.Messages.Should().HaveCount(4);
         strict.Text.Should().BeNull();
         strict.Errors.Should().Be(1);
+        strict.Succeeded.Should().BeFalse();
         strict.Messages.Should().HaveCount(1);
     }
+
+    [Fact]
+    public void abc_succeeded_is_abc2ly_s_exit_code_and_not_its_error_count()
+    {
+        //Arrange
+        //The FIXLIST's own probe input: one token abc2ly cannot read, in a tune it
+        //otherwise converts completely.
+        string abc = "X:1\nT:A\nK:C\nC D ?? E|\n";
+
+        //Act
+        ImportResult lenient = AbcImporter.Import(abc, new AbcImportOptions());
+        ImportResult strict = AbcImporter.Import(abc, new AbcImportOptions { Strict = true });
+
+        //Assert
+        //scripts/abc2ly.py:98-101 -- error() writes and RETURNS; only --strict makes it
+        //sys.exit(1). So the exit code is zero here and the count is beside the point.
+        lenient.Succeeded.Should().BeTrue();
+        lenient.Errors.Should().Be(1);
+        lenient.Text.Should().NotBeNull();
+
+        //THE CONTROL: the same input under the switch that DOES exit. Upstream writes
+        //no file, so there is no text and the conversion did not stand.
+        strict.Succeeded.Should().BeFalse();
+        strict.Text.Should().BeNull();
+    }
+
+    [Fact]
+    public void midi_succeeded_is_midi2ly_s_exit_code_which_no_diagnostic_moves()
+    {
+        //Arrange + Act
+        //midi2ly has no error() and no --strict: `ly.error' (scripts/midi2ly.py:821,
+        //"BUG: time skew") only PRINTS -- python/lilylib.py:82-83 -- and the script's
+        //only sys.exit calls are command-line ones a library never reaches. So a file
+        //it can read always converts and always exits zero, and the only stop is the
+        //traceback python/midi.py raises on bytes that are not a MIDI file.
+        ImportResult converted = MidiImporter.Import(MinimalMidi());
+        ImportResult notMidi = MidiImporter.Import(
+            Encoding.ASCII.GetBytes("this is not a MIDI file at all"));
+
+        //Assert
+        converted.Succeeded.Should().BeTrue();
+        converted.Text.Should().NotBeNull();
+
+        //THE CONTROL: the one path where the script ends without writing.
+        notMidi.Succeeded.Should().BeFalse();
+        notMidi.Text.Should().BeNull();
+    }
+
+    [Fact]
+    public void musicxml_succeeded_is_musicxml2ly_s_exit_code_and_not_its_warning_count()
+    {
+        //Arrange
+        //A document that converts AND has something to say about it: an empty
+        //<metronome> is upstream's "Empty metronome element" warning
+        //(scripts/musicxml2ly.py:2907), which only prints.
+        string warns = MinimalMusicXml("<direction><direction-type><metronome/>"
+            + "</direction-type></direction>");
+
+        //Act
+        ImportResult converted = MusicXmlImporter.Import(warns);
+        ImportResult unreadable = MusicXmlImporter.Import("<not-xml");
+
+        //Assert
+        converted.Succeeded.Should().BeTrue();
+        converted.Text.Should().NotBeNull();
+        converted.Messages.Should().Contain(m => m.Contains("Empty metronome element"));
+
+        //THE CONTROL: musicxml2ly's ONE diagnostic-driven stop is a document it cannot
+        //open at all -- scripts/musicxml2ly.py:5977-5978, ly.error then sys.exit(1).
+        unreadable.Succeeded.Should().BeFalse();
+        unreadable.Text.Should().BeNull();
+    }
+
+    /// <summary>
+    /// The smallest MusicXML the converter reads: one part, one measure, one whole
+    /// note, with whatever else the caller wants inside the measure.
+    /// </summary>
+    /// <param name="extra">Markup to place before the note.</param>
+    /// <returns>The document.</returns>
+    private static string MinimalMusicXml(string extra)
+        => "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            + "<score-partwise version=\"4.0\">\n"
+            + "  <part-list><score-part id=\"P1\"><part-name>P</part-name>"
+            + "</score-part></part-list>\n"
+            + "  <part id=\"P1\">\n"
+            + "    <measure number=\"1\">\n"
+            + "      <attributes><key><fifths>0</fifths></key>\n"
+            + "        <time><beats>4</beats><beat-type>4</beat-type></time>\n"
+            + "        <clef><sign>G</sign><line>2</line></clef></attributes>\n"
+            + "      " + extra + "\n"
+            + "      <note><pitch><step>C</step><octave>4</octave></pitch>\n"
+            + "        <duration>4</duration><type>whole</type></note>\n"
+            + "    </measure>\n"
+            + "  </part>\n"
+            + "</score-partwise>\n";
 
     [Fact]
     public void abc_beams_option_changes_the_output()

@@ -41,6 +41,7 @@ public static class AbcImporter
         AbcConverter converter = new AbcConverter(effective, diagnostics);
 
         string text = null;
+        bool stopped = false;
         try
         {
             text = converter.Convert(abcText);
@@ -50,6 +51,7 @@ public static class AbcImporter
             //Upstream ends the process here — under --strict deliberately, and on a
             //python exception because nothing catches it. Either way no file is
             //written, so there is no text to hand back.
+            stopped = true;
             if (!aborted.AlreadyReported)
             {
                 diagnostics.Write("abc2ly: " + aborted.Message + "\n");
@@ -57,7 +59,14 @@ public static class AbcImporter
             }
         }
 
+        //ABC2LY'S OWN EXIT CODE, WHICH IS NOT A COUNT OF ITS COMPLAINTS.
+        //scripts/abc2ly.py:98-101: error() writes the message and RETURNS, so a tune
+        //holding one token the converter does not understand is still converted, still
+        //written, and the script still exits ZERO. Only --strict turns error() into
+        //sys.exit(1) — and that stop, like an uncaught python exception, arrives here as
+        //ImportAbortedException with no text to hand back. So: the run stood unless it
+        //was stopped.
         IReadOnlyList<string> messages = diagnostics.Close();
-        return new ImportResult(text, messages, diagnostics.Errors);
+        return new ImportResult(text, messages, diagnostics.Errors, !stopped && text != null);
     }
 }

@@ -6,6 +6,7 @@
 // (at your option) any later version.
 
 using System;
+using System.IO;
 using System.Text.RegularExpressions;
 using CodeBrix.LilyPort.Backends;
 using CodeBrix.LilyPort.Engine.Bootstrap;
@@ -208,6 +209,58 @@ public class TextInterfaceTests
 
         //Assert
         cleaned.Should().Be("a b c");
+    }
+
+    [Fact]
+    public void naming_a_vendored_family_engraves_in_that_family()
+    {
+        //Arrange
+        // The engrave-level half of the TextFontChain fence, in the shape the defect was
+        // MEASURED in: one score, engraved several times with nothing changed but
+        // `property-defaults.fonts.serif', with the font-family attribute NORMALISED OUT
+        // of the SVG so that what is left is the glyph outlines and their positions —
+        // which is where a different face shows up. Before the vendored-family arm
+        // landed, asking for "Nimbus Sans" produced a document byte-identical to asking
+        // for a font that does not exist.
+
+        //Act
+        string nimbusSans = EngravedWithSerifFamily("Nimbus Sans", "font-family-nimbus");
+        string notAFont = EngravedWithSerifFamily("Zzz Not A Font", "font-family-unknown");
+        string schola = EngravedWithSerifFamily("TeX Gyre Schola", "font-family-schola");
+
+        //Assert
+        nimbusSans.Should().NotBe(notAFont);
+
+        // THE CONTROL, and it is what says the difference above is FACE SELECTION rather
+        // than run-to-run noise: TeX Gyre Schola IS what an unavailable family resolves
+        // to (R14), so naming it must produce exactly the unknown document, to the byte.
+        schola.Should().Be(notAFont);
+    }
+
+    /// <summary>
+    /// Engraves one markup with the serif family set to a name, and answers the SVG with
+    /// the font-family attribute normalised out.
+    /// </summary>
+    /// <param name="family">The family to ask for.</param>
+    /// <param name="baseName">The output base name.</param>
+    /// <returns>The normalised SVG.</returns>
+    private static string EngravedWithSerifFamily(string family, string baseName)
+    {
+        string output = Path.Combine(
+            Path.GetTempPath(), "lilyport-textface-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(output);
+
+        BatchRunResult result = BatchRunner.RunText(
+            "\\version \"" + LilyVersion.CompatibleWithVersion + "\"\n"
+                + "\\paper { property-defaults.fonts.serif = \"" + family + "\" }\n"
+                + "\\markup \"Hamburgefonstiv 0123\"\n",
+            baseName,
+            null,
+            output);
+
+        result.SvgPath.Should().NotBeNull();
+        return Regex.Replace(
+            File.ReadAllText(result.SvgPath), "font-family=\"[^\"]*\"", "font-family");
     }
 
     [Fact]

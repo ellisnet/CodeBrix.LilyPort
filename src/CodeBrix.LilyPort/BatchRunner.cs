@@ -83,6 +83,35 @@ public static class BatchRunner
 ";
 
     /// <summary>
+    /// <c>ly/init.ly</c> lines 41–45, verbatim: every file <c>-dinclude-settings</c>
+    /// gathered, <c>\include</c>d BEFORE the input, in the order the switches were
+    /// given.
+    /// </summary>
+    /// <remarks>
+    /// This is the one part of <c>init.ly</c>'s lifecycle the runner had left out, and
+    /// leaving it out is what made <c>include-settings</c> a declared option nothing
+    /// ever read: the port drives <c>declarations-init.ly</c> rather than
+    /// <c>init.ly</c> (see <see cref="LilyParserSession.LoadInitLayer"/>), so the runner
+    /// owns everything <c>init.ly</c> does around <c>\maininput</c> — and this block is
+    /// part of that, not part of the declarations.
+    /// <para>
+    /// It is parsed as its own step rather than folded into <see cref="ProloguelLy"/>
+    /// so that the settings file's own diagnostics — "cannot find file" above all —
+    /// carry a name that says where the include came from, and so that its errors are
+    /// counted the way upstream counts them: a settings file that cannot be found is a
+    /// lexer error inside <c>init.ly</c>'s own parse, which is fatal, exactly as the
+    /// port's standing principle requires.
+    /// </para>
+    /// </remarks>
+    private const string IncludeSettingsLy = @"
+$(for-each
+   (lambda (file)
+     (ly:parser-include-string
+      (format #f ""\\include \""~a\"""" file)))
+   (ly:get-option 'include-settings))
+";
+
+    /// <summary>
     /// <c>ly/init.ly</c> lines 54–91, verbatim except as noted: the version check,
     /// the book construction from what the toplevel handlers collected, the handler
     /// dispatch (which finds the runner's <c>default-toplevel-book-handler</c> by
@@ -591,12 +620,35 @@ public static class BatchRunner
             LilyPondScheme.Options.Set("point-and-click", runOptions.PointAndClick);
         }
 
+        // THE SCHEME ERROR PORT GOES WITH THE DIAGNOSTIC WRITER, AND IT IS THE SAME
+        // OBJECT. LilyPondScheme.CreateInterpreter assigns
+        // `interpreter.ErrorWriter = Flower.Warn.Output' once, at creation, because
+        // ruling R17 requires the two to be one object: neither can otherwise tell
+        // whether the other left a line open. Swapping only Flower.Warn.Output for the
+        // run made them two objects for the duration of the run, and everything Scheme
+        // wrote to the error port — `ly:font-config-display-fonts' prints its whole
+        // font world there — bypassed the job's log and landed on the process console.
         TextWriter previousOutput = null;
+        TextWriter previousErrorWriter = null;
+        Interpreter errorPortInterpreter = null;
         bool outputSwapped = false;
         if (runOptions?.MessageWriter != null)
         {
+            Flower.LineTrackingWriter tracking
+                = new Flower.LineTrackingWriter(runOptions.MessageWriter);
             previousOutput = Flower.Warn.Output;
-            Flower.Warn.Output = new Flower.LineTrackingWriter(runOptions.MessageWriter);
+            Flower.Warn.Output = tracking;
+
+            // DefaultLayout() ran at the top of this method and that is what guarantees
+            // an ambient interpreter, so this is never null in a real run; the test is
+            // for the caller who reaches the runner before the layers are up.
+            errorPortInterpreter = LilyPondScheme.Current;
+            if (errorPortInterpreter != null)
+            {
+                previousErrorWriter = errorPortInterpreter.ErrorWriter;
+                errorPortInterpreter.ErrorWriter = tracking;
+            }
+
             outputSwapped = true;
         }
 
@@ -614,6 +666,14 @@ public static class BatchRunner
             {
                 (Flower.Warn.Output as Flower.LineTrackingWriter)?.EndOpenLine();
                 Flower.Warn.Output = previousOutput;
+
+                // Put back the object the interpreter was created with, which is the
+                // object Flower.Warn.Output has just been put back to — R17 holds
+                // outside a run as well as inside one.
+                if (errorPortInterpreter != null)
+                {
+                    errorPortInterpreter.ErrorWriter = previousErrorWriter;
+                }
             }
         }
     }
@@ -1316,6 +1376,14 @@ public static class BatchRunner
             ParseOutcome prologue = session.ParseText(ProloguelLy, "<batch-prologue>");
             diagnostics.AddRange(prologue.AllDiagnostics());
 
+            // BEFORE THE INPUT, which is where init.ly puts it: a settings file exists to
+            // change what the input is then read under (`-dinclude-settings' plus the
+            // `-d' switches that file sets is LilyPond's own layout-control idiom), so
+            // running it afterwards would be running it too late to matter.
+            ParseOutcome includeSettings
+                = session.ParseText(IncludeSettingsLy, "<batch-include-settings>");
+            diagnostics.AddRange(includeSettings.AllDiagnostics());
+
             // The name every diagnostic's location and every music object's `origin'
             // carries, so it is the INPUT's too — a warning about a file has to name the
             // file a reader can open.
@@ -1343,7 +1411,11 @@ public static class BatchRunner
             ParseOutcome epilogue = session.ParseText(EpilogueLy, "<batch-epilogue>");
             diagnostics.AddRange(epilogue.AllDiagnostics());
 
-            return parsed.ErrorCount + epilogue.ErrorCount;
+            // The settings file's errors count too. Upstream reads it from inside
+            // init.ly's own parse, so a settings file that cannot be found is a parse
+            // error of the run and lilypond ends non-zero; a run that swallowed it would
+            // be more lenient than 2.27.2.
+            return includeSettings.ErrorCount + parsed.ErrorCount + epilogue.ErrorCount;
         }
         finally
         {

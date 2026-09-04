@@ -26,11 +26,13 @@ namespace CodeBrix.LilyPort.Importers;
 /// </remarks>
 public sealed class ImportResult
 {
-    internal ImportResult(string text, IReadOnlyList<string> messages, int errors)
+    internal ImportResult(
+        string text, IReadOnlyList<string> messages, int errors, bool succeeded)
     {
         Text = text;
         Messages = messages;
         Errors = errors;
+        Succeeded = succeeded;
     }
 
     /// <summary>
@@ -52,8 +54,43 @@ public sealed class ImportResult
     public IReadOnlyList<string> Messages { get; }
 
     /// <summary>Gets how many errors the converter reported.</summary>
+    /// <remarks>
+    /// A COUNT, not a verdict. Every one of these converters reports things it did not
+    /// understand and carries on; see <see cref="Succeeded"/> for whether the conversion
+    /// itself stood.
+    /// </remarks>
     public int Errors { get; }
 
-    /// <summary>Gets whether the input converted.</summary>
-    public bool Succeeded => Text != null && Errors == 0;
+    /// <summary>
+    /// Gets whether the conversion SUCCEEDED, in the sense the script this importer
+    /// stands in for means by its exit code.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Upstream's converters are command-line programs, and a caller of one — Frescobaldi
+    /// among them — decides whether the import worked from the EXIT CODE, not from how
+    /// much the program had to say on the way. All three of them convert what they
+    /// understand, report what they do not, write the file and exit zero; each stops only
+    /// where its own source stops, and the three do not agree about where that is:
+    /// </para>
+    /// <list type="bullet">
+    /// <item><description><c>abc2ly</c> (<c>scripts/abc2ly.py:98-101</c>) — <c>error()</c>
+    /// writes its message and RETURNS; only <c>--strict</c> makes it
+    /// <c>sys.exit(1)</c>.</description></item>
+    /// <item><description><c>midi2ly</c> — has no <c>error()</c> at all and no strict
+    /// switch. Its only <c>sys.exit</c>s are command-line ones (<c>--warranty</c>, and no
+    /// file named); a file it can read is always converted and the script exits
+    /// zero.</description></item>
+    /// <item><description><c>musicxml2ly</c> (<c>scripts/musicxml2ly.py:5977-5978</c>) —
+    /// everything it cannot interpret is an <c>ly.warning</c>, which only prints; its one
+    /// diagnostic-driven exit is <c>sys.exit(1)</c> for an input it cannot
+    /// OPEN.</description></item>
+    /// </list>
+    /// <para>
+    /// So this is false exactly where the script would have ended without writing a file,
+    /// and true otherwise — including for a document the converter only partly understood,
+    /// which is the case upstream opens and the count in <see cref="Errors"/> describes.
+    /// </para>
+    /// </remarks>
+    public bool Succeeded { get; }
 }
