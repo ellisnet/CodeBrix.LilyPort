@@ -29,7 +29,7 @@
     <Product>CodeBrix.LilyPort</Product>
     <Title>CodeBrix.LilyPort</Title>
     <Authors>Jeremy Ellis</Authors>
-    <Description>A managed, cross-platform music engraving engine for .NET, ported from GNU LilyPond 2.27.2. The complete engine is ported — parser, Scheme layer, engravers, page layout, fonts, SVG and MIDI output — and is verified page-for-page against LilyPond's own 2,146-file regression suite. Licensed GPL-3.0-only (not -or-later) because it includes LilyPond's articulate.ly, which is GPL-3-only.</Description>
+    <Description>A managed, cross-platform music engraving engine for .NET: LilyPond .ly notation source in, SVG pages and Standard MIDI Files out, entirely in process — parser, Scheme layer, engravers, page layout and embedded music and text fonts, with no native libraries to install. Includes convert-ly and the ABC, MIDI and MusicXML importers. Licensed GPL-3.0-only (not -or-later); referencing this package makes the consuming application a GPL-3.0 work.</Description>
     <!--
       GPL-3.0-ONLY rather than "or later", and this is deliberate.
 

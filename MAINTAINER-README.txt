@@ -84,8 +84,14 @@ FDL 1.3 (COPYING.FDL), and is NOT packed.
 REPOSITORY LAYOUT
 =================
     CodeBrix.LilyPort.slnx        the solution: the five src projects, the five
-                                  test projects, and the two harness drivers
-                                  (BatchDriver, DocsDriver) under /Tools/
+                                  test projects, and SIX tool projects under
+                                  /Tools/ -- the two regression-harness drivers
+                                  (BatchDriver, DocsDriver) and the four
+                                  importer/parity probes (AbcProbe, MidiProbe,
+                                  MusicXmlProbe, MutopiaProbe). The probes are
+                                  in the solution so they build with it; each
+                                  is still runnable on its own with
+                                  `dotnet run --project <csproj>'
     src/                          the five assemblies listed above; each ported
                                   project carries a PORT-COVERAGE.txt (see
                                   PROVENANCE) and an InternalsVisibleTo.cs
@@ -199,10 +205,24 @@ BUILDING
 ========
     dotnet build CodeBrix.LilyPort.slnx
 
-There is no global.json at the repository root; the build uses whatever .NET
-10 SDK is installed. The one global.json in the repo is
-tools/Lily.Shell/global.json, which selects the Microsoft.Testing.Platform test
-runner for THAT solution only -- see TESTING.
+There are TWO global.json files in the repository, and they carry the same one
+setting:
+
+    ./global.json                 the repository root
+    tools/Lily.Shell/global.json  beside Lily.Shell.slnx
+
+Both contain exactly this and nothing else:
+
+    { "test": { "runner": "Microsoft.Testing.Platform" } }
+
+NEITHER PINS AN SDK VERSION, so the build still uses whatever .NET 10 SDK is
+installed. They exist solely to select the test runner. Because the setting
+lives in global.json rather than in a csproj, the root file applies to EVERY
+`dotnet test' run anywhere under the repository root -- the main solution,
+tools/Lily.Docs, and anything else that does not sit under a nearer
+global.json. tools/Lily.Shell has its own copy, so it makes the same choice for
+its own reasons rather than as an exception. Keep both files committed -- see
+TESTING.
 
 Every project targets net10.0 only -- no multi-targeting, ever, anywhere in the
 CodeBrix family. GenerateDocumentationFile is on in all five src projects, so
@@ -297,13 +317,41 @@ TESTING
 =======
     dotnet test CodeBrix.LilyPort.slnx
 
-The main solution is the VSTest dialect (Microsoft.NET.Test.Sdk +
-xunit.runner.visualstudio + xunit.v3), so plain `dotnet test <solution>' works
-as written and `--logger trx' is honoured. tools/Lily.Shell is the OTHER
-dialect (Microsoft.Testing.Platform, selected by its own global.json), where
-the command is `dotnet test --solution Lily.Shell.slnx'; tools/Lily.Docs is
-VSTest again. Both dialects live in this repository on purpose -- do not "fix"
-one into the other.
+THE TEST RUNNER IS Microsoft.Testing.Platform (MTP), SELECTED BY global.json AT
+THE REPOSITORY ROOT, FOR THE WHOLE TREE. That file arrived on 2026-08-31 and it
+is what decides the runner now: the main solution, tools/Lily.Docs and every
+other `dotnet test' under the root get MTP, and tools/Lily.Shell gets it from
+its own identical copy. Do not delete either file.
+
+What the projects themselves say has NOT changed, and that is worth reading
+carefully before touching anything here:
+
+  * The five test projects in the main solution are plain xunit.v3 projects --
+    Microsoft.NET.Test.Sdk, xunit.runner.visualstudio, xunit.v3,
+    SilverAssertions. NONE of them sets <UseMicrosoftTestingPlatformRunner>,
+    and none sets <OutputType>Exe</OutputType>.
+  * tools/Lily.Docs/tests/Lily.Docs.Tests carries a long comment choosing the
+    VSTest dialect deliberately, and asking that
+    <UseMicrosoftTestingPlatformRunner> not be added there without editing
+    tools/Lily.Docs/README.txt in the same change. The root global.json reaches
+    the same outcome from OUTSIDE that csproj, without that edit.
+  * tools/Lily.Shell's three test projects DO set both
+    <UseMicrosoftTestingPlatformRunner> and Exe, so they are MTP in the csproj
+    as well as in global.json.
+
+/!\ SO THE CSPROJ COMMENTS AND THE global.json NOW DISAGREE ABOUT Lily.Docs,
+and that disagreement is a decision waiting to be made, not a description of
+settled intent: either the root global.json is the intended repository-wide
+choice (and the Lily.Docs comment and README should be brought in line), or it
+should be narrowed. Until it is made, treat every documented `dotnet test'
+command in this repository, in EXTRAS-README.txt and in the tool READMEs as
+UNVERIFIED under the runner that is selected today, and re-measure before
+relying on one. In particular `--logger trx' is the VSTest bridge's switch, not
+MTP's, so any instruction here that produces or reads a TestResults/*.trx file
+predates the change.
+
+NOTHING WAS RUN IN THIS REPOSITORY TO WRITE THIS SECTION: it records what the
+files say, which is all a reader can rely on until someone measures.
 
 THE FIVE SUITES
 ---------------
@@ -324,6 +372,16 @@ failed with "Unbound variable: orig". The test now restores the binding. The
 rule: a test that mutates a (lily) binding from its .ly input MUST restore it
 before the file ends; a configuration-only failure means test order, look
 for the leak before suspecting the engine.
+
+/!\ THE COUNTS BELOW ARE A FROZEN 2026-08-27 MEASUREMENT AND ARE NOW A FLOOR,
+NOT THE CURRENT TOTAL. Six test-bearing files have landed since that run --
+SvgUnknownGlyphTests (Backends), SlurPureHeightTests and UnknownGlyphBoxTests
+(Engine), DeprecatedCrescParityTests, MusicFunctionArityParityTests and
+SearchPathSeparationEndToEndTests (facade) -- along with three collection
+definitions and edits to six existing files, so every line has grown. They were
+also recorded from TestResults/*.trx produced before the root global.json
+selected the MTP runner (see TESTING). Re-run the Release battery and re-freeze
+the whole table with a new date rather than patching individual numbers.
 
 Counts, from the Release run recorded in each project's TestResults/*.trx on
 2026-08-27 09:13 (all five green), with the wall times of a Debug
@@ -357,7 +415,7 @@ by assertions.
                      init layer (ly/*.ly loading through the real parser),
                      embedded Scheme, markup reachability and the Scheme-layer
                      closure.
-    Engine.Tests     102 classes over the engine proper: grobs, engravers,
+    Engine.Tests     104 classes over the engine proper: grobs, engravers,
                      iterators, spacing, skylines, fonts (OpenType, CFF,
                      kerning, the text-face chain, missing-glyph warnings),
                      program options, the Scheme load (LilyPondSchemeLoadTests,
@@ -400,10 +458,14 @@ silent pass would be the exact failure mode it exists to prevent. On a fresh
 clone, pack once before expecting a green facade suite.
 
 Test conventions: xUnit v3 plus SilverAssertions fluent assertions
-(x.Should().Be(y)), coverlet.collector, one <Class>Tests.cs per fenced area,
-snake_case test method names, //Arrange //Act //Assert comments, and
+(x.Should().Be(y)), one <Class>Tests.cs per fenced area, snake_case test method
+names, //Arrange //Act //Assert comments, and
 TestContext.Current.CancellationToken threaded through any call that accepts a
-CancellationToken.
+CancellationToken. //was previously: coverlet.collector was listed here as a
+standing convention; it is no longer referenced by any of the five test
+projects in the main solution. The only csproj in the repository that still
+names it is tools/Lily.Docs/tests/Lily.Docs.Tests, which has not been brought
+in line.
 
 THE REGRESSION HARNESS -- THE ONLY CORRECTNESS ORACLE
 -----------------------------------------------------
@@ -644,9 +706,11 @@ tools/Lily.Docs and tools/Lily.Shell have their own suites and their own
 solution files, deliberately outside CodeBrix.LilyPort.slnx (decision D52: the
 shipped package must not acquire the Texinfo -> Html2Pdf dependency chain).
 `dotnet test Lily.Docs.slnx -c Release' and
-`dotnet test --solution Lily.Shell.slnx -c Release' respectively; the Lily.Docs
-render gates take minutes (the notation manual alone is two and a half thousand
-engravings) and are NOT part of the port's battery. Lily.Docs.slnx LISTS the
+`dotnet test --solution Lily.Shell.slnx -c Release' respectively -- both
+commands as they were written before the root global.json changed which runner
+answers them, so read TESTING first. The Lily.Docs render gates take minutes
+(the notation manual alone is two and a half thousand engravings) and are NOT
+part of the port's battery. Lily.Docs.slnx LISTS the
 five engine projects on purpose: a project a solution does not name builds in
 its own default configuration, and `dotnet test -c Release' once silently ran
 against a Debug engine. Details in tools/Lily.Docs/README.txt,
@@ -1021,8 +1085,9 @@ CODING CONVENTIONS
   .Tests project and nothing else.
 * Source is organised into sub-folders that are also namespaces (Layout/,
   Objects/, Translation/, ...); entry types sit at the project root.
-* Tests: xUnit v3, SilverAssertions, coverlet.collector, snake_case names,
-  //Arrange //Act //Assert, TestContext.Current.CancellationToken.
+* Tests: xUnit v3, SilverAssertions, snake_case names, //Arrange //Act
+  //Assert, TestContext.Current.CancellationToken. No coverage collector: the
+  five test projects reference none.
 * Upstream's own defects are reproduced, not corrected, and recorded in
   PORT-COVERAGE.txt (the procedure-printer latch, the once-per-clause quirks,
   the aesthetic scorers translated faithfully rather than cleanly). A

@@ -126,9 +126,19 @@ LICENSES -- the texts travel with the fonts, in licenses/
   program (GPL-3 section 5) -- exactly the aggregation upstream LilyPond
   itself makes. MEASURED 2026-08-05: LilyPond's SVG backend embeds NO font
   data (text is emitted as <text font-family=...> elements), so the port's
-  parity output never embeds these fonts. The URW PS/PDF embedding
-  exception becomes relevant -- and grants exactly what is needed -- if a
-  future backend (Milestone 7 Skia) embeds text fonts into exported PDFs.
+  parity output never embeds these fonts.
+
+  //was previously: this said the URW PS/PDF embedding exception "becomes
+  relevant -- and grants exactly what is needed -- if a future backend
+  (Milestone 7 Skia) embeds text fonts into exported PDFs". RULING D61
+  (2026-08-27) closed Milestone 7 as SUPERSEDED, never to be built, and
+  amended D15 to make SVG the ONLY backend -- so that hypothetical is gone
+  and NOTHING IN THIS PACKAGE will ever embed a font. The exception is
+  still worth having recorded, because it is reached DOWNSTREAM instead: a
+  PDF is produced by consuming the port's SVG, in a different repository
+  under its own licence bar. What changed is WHERE the question can arise,
+  not whether these files permit it. THIRD-PARTY-NOTICES.txt section 10.1
+  carries the same amendment and is the authority.
 
   *** ASSETS FOREVER -- NEVER EDIT. *** Subsetting, converting, or editing
   any of these files creates a DERIVED font: the GUST rename request wakes

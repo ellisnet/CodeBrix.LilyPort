@@ -31,9 +31,17 @@ MAINTAINER AND EXTRAS
       CodeBrix.Platform engine shell), the font build, and the mirrored
       LilyPond documentation, Metafont and parser sources.
 
+  These two files are the index to the rest. EXTRAS-README.txt catalogues the
+  roughly twenty other authored README.txt files in the tree (tools/*,
+  book-mirror/, parser-mirror/, assets/fonts/ and Documentation/), each of
+  which is the authority on its own directory; MAINTAINER-README.txt is where
+  the four PORT-COVERAGE.txt divergence records are described and located.
+
 GENERAL
 -------
   README.md
       Human-facing overview shown on GitHub and nuget.org.
+  THIRD-PARTY-NOTICES.txt
+      What came from where, and under which licences.
   README-INDEX.txt
       This file.

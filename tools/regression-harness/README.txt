@@ -189,7 +189,14 @@ files are unchanged by any of this.
 
     TOLERANCE=0.01 ./compare-output.sh ...     # placement tolerance
 
-*** THE FIRST RUN AGAINST THE PORT. ***
+    WHERE THIS STANDS NOW: the port engraves the whole suite and the full
+    sweep is the routine command, not an aspiration. G1 has been green since
+    2026-08-18, with g1-skip-list.tsv as the committed record; see section 9.
+
+*** HISTORICAL NOTE -- THE FIRST RUN AGAINST THE PORT, KEPT BECAUSE IT SAYS
+    WHAT THE HARNESS IS FOR. Everything in this block describes the state on
+    the day the comparator was first pointed at the port, and none of it is
+    the current position. ***
 
     Input `{ c'4 }`, one file. Verdict: GLYPHS-DIFFER -- up the ladder from
     MISSING, which is the position first light was expected to reach.
@@ -199,9 +206,9 @@ files are unchanged by any of this.
     the namespace -- a real defect, now fixed and pinned by a test), and the
     graded verdict then exposed the backend mismatch described in section 6.
 
-    The full 2,146-file sweep is not worth running until the port can engrave
-    more than a single note; the harness is now the active oracle, which is
-    what mattered.
+    The full 2,146-file sweep was not worth running until the port could
+    engrave more than a single note; the harness was already the active
+    oracle, which is what mattered.
 
 ================================================================================
 6.  HOW THE COMPARISON WORKS, AND WHY IT IS NOT A BYTE DIFF
@@ -367,8 +374,8 @@ see "NAMED-GLYPH IDENTITY, AND THE GLYPH-IDENTITY INDEX" at the end of this file
 for the current contract. Everything else is still byte-exact.
 
 Because that machinery only runs once two pages agree on their glyph inventory,
-and no port output does yet, it is fenced by comparing the reference directory
-AGAINST ITSELF:
+it is fenced -- independently of whatever the port produced on any given day --
+by comparing the reference directory AGAINST ITSELF:
 
     python3 compare-output.py reference/svg reference/svg
 

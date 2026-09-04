@@ -10,12 +10,15 @@ tools/ is not in the package at all, and the test projects are not packable.
 
 Two things to know before reading any section:
 
-  * CodeBrix.LilyPort.slnx lists ONLY the five src/ projects, the five tests/
-    projects, and the two regression-harness drivers (BatchDriver and
-    DocsDriver, under the solution's /Tools/ folder). Every other project under
-    tools/ is built on its own -- `dotnet run --project <csproj>` or its own
-    .slnx -- and each section below says which. Tools without a csproj are
-    Python or shell scripts.
+  * CodeBrix.LilyPort.slnx lists the five src/ projects, the five tests/
+    projects, and SIX tool projects under the solution's /Tools/ folder: the
+    two regression-harness drivers (BatchDriver and DocsDriver) and the four
+    importer/parity probes (AbcProbe, MidiProbe, MusicXmlProbe and
+    MutopiaProbe). Being in the solution means they BUILD with it; every one of
+    them is still started on its own, with `dotnet run --project <csproj>`, and
+    each section below gives the command. The remaining tools are outside the
+    solution -- tools/Lily.Docs and tools/Lily.Shell have their own .slnx, and
+    the rest are Python or shell scripts with no csproj at all.
 
   * Several tools run an ORACLE: the official GNU LilyPond 2.27.2 binary, or a
     script from its installation. The oracle is never needed to build, test or
@@ -382,7 +385,8 @@ HOW TO RUN
     probe is added, or when CompatibleWithVersion changes.
 
 NOTES
-    * Not in CodeBrix.LilyPort.slnx; built on its own by the dotnet run above.
+    * In CodeBrix.LilyPort.slnx, under /Tools/, so it builds with the solution;
+      it is still started on its own by the dotnet run above.
     * Every corpus file is recorded twice, with and without --beams.
     * The oracle is run with -q, deliberately: abc2ly's --quiet suppresses
       exactly the driver's identification and progress lines and leaves
@@ -436,7 +440,8 @@ HOW TO RUN
     not.
 
 NOTES
-    * Not in CodeBrix.LilyPort.slnx; built on its own.
+    * In CodeBrix.LilyPort.slnx, under /Tools/, so it builds with the
+      solution; it is still started on its own by the dotnet run above.
     * The MIDI bytes are EMBEDDED in each fixture (base64, 29 KB across the
       corpus) so a replay does not depend on the state of a regenerated
       directory.
@@ -491,7 +496,8 @@ HOW TO RUN
     CompatibleWithVersion changes.
 
 NOTES
-    * Not in CodeBrix.LilyPort.slnx; built on its own.
+    * In CodeBrix.LilyPort.slnx, under /Tools/, so it builds with the
+      solution; it is still started on its own by the dotnet run above.
     * Status recorded in the README (2026-08-26): 206 MATCH of 206, no
       declared divergence, DeclaredDivergences empty. `--accept` exists but
       refuses every case until one is declared.
@@ -637,18 +643,23 @@ HOW TO RUN
     still runs.
 
 NOTES
-    * Not in CodeBrix.LilyPort.slnx and in no solution; built on its own.
+    * In CodeBrix.LilyPort.slnx, under /Tools/, so it builds with the solution;
+      it is still started on its own by the dotnet run above.
     * One entry point goes through: CONVERT (the port's DocumentConverter over
       every .ly/.ily of the piece, once per piece), ENGRAVE (BatchRunner from
       an emptied scratch directory; the RAW source is tried too if the
       converted one produced no page), PDF (the SVG pages through Html2Pdf
-      with vector placement and the engine's embedded text faces), GRADE THE
+      with vector placement and the engine's embedded text faces), COUNT THE
+      STAVES FROM THE SVG (Compare/SvgStaves.cs -- since 2026-08-28 the
+      oracle-side verdict also requires SVG-STAVES-EQUAL, page by page, and
+      the svg_staves* columns are the rung the verdict is cut on), GRADE THE
       PDF (page count, page size, text, ink -- both PDFs rasterised through
-      PDFium and compared as an 8-column ink-density grid, the number the
-      verdict is cut on), GRADE THE MIDI (compare-midi.py's vocabulary and
-      normalisations, plus note-level and channel-level verdicts because a
-      2.10-era reference differs from a 2.27 engine at event 0 of every
-      track).
+      PDFium and compared as an 8-column ink-density grid; the RASTER staff
+      count is still reported and no longer decides anything, see the README's
+      "A NOTE ON THE STAFF RUNG"), GRADE THE MIDI (compare-midi.py's
+      vocabulary and normalisations, plus note-level and channel-level
+      verdicts because a 2.10-era reference differs from a 2.27 engine at
+      event 0 of every track).
     * The engine starts once (~20 s) and every entry point runs in that
       session. results.tsv is appended and flushed per row, so a killed run
       loses nothing and --resume continues after the last row. A file the
@@ -691,7 +702,12 @@ WHAT IT IS
                                    src/CodeBrix.LilyPort.Engine; packages
                                    Texinfo2Html + Texinfo2Pdf, pinned at ONE
                                    version and moved together)
-      tests/Lily.Docs.Tests/       the render gates (xunit.v3, VSTest dialect)
+      tests/Lily.Docs.Tests/       the render gates (xunit.v3). Its csproj
+                                   comment chooses the VSTest dialect, but the
+                                   root global.json now selects
+                                   Microsoft.Testing.Platform for everything
+                                   under the repository root -- see TESTING in
+                                   MAINTAINER-README.txt
       assets/en/                   three GFDL macro files, byte-identical to
                                    Documentation/en/ and fenced as such
       assets/bib/                  five bibliographies translated ONCE by the
@@ -702,8 +718,10 @@ WHAT IT IS
                                    hash-fenced (decision D57)
       expected-warnings/           the frozen baselines: <manual>.tsv (warning
                                    category -> count), <manual>-pdf.tsv (pages,
-                                   PDF warnings, page size, SVG placement, one
-                                   DROP row per dropped code point),
+                                   PDF warnings, page size, SVG placement,
+                                   CFF_SUBSET -- how a CFF face would be
+                                   embedded, set explicitly and read back --
+                                   and one DROP row per dropped code point),
                                    <manual>-snippets.tsv (asked / engraved /
                                    pictures / failed / declined)
       svg-dialect/                 the SVG dialect the engine emits for
@@ -956,11 +974,19 @@ NOTES
       about 20 s warm, roughly 67 s the first time after a build (JIT). The
       window title is the progress bar. Commands that need the engine wait
       for it and say so; convert-ly and import do not need it.
-    * THIS SOLUTION IS THE Microsoft.Testing.Platform DIALECT of xunit.v3: on
-      the .NET 10 SDK a plain `dotnet test` is refused, `--solution X.slnx` /
-      `--project x.csproj` is the syntax, and `--logger trx` is ignored. The
-      main solution and tools/Lily.Docs are the OTHER dialect (VSTest). Both
-      live here on purpose; do not "fix" one into the other.
+    * THIS SOLUTION IS THE Microsoft.Testing.Platform DIALECT of xunit.v3 IN
+      ITS CSPROJS TOO: all three test projects set
+      <UseMicrosoftTestingPlatformRunner> and build as Exe, and a global.json
+      beside Lily.Shell.slnx selects the same runner. On the .NET 10 SDK a
+      plain `dotnet test` is refused, `--solution X.slnx` / `--project
+      x.csproj` is the syntax, and `--logger trx` is ignored. The main solution
+      and tools/Lily.Docs do NOT set that property in their csprojs -- but
+      since 2026-08-31 a global.json at the REPOSITORY ROOT selects the
+      Microsoft.Testing.Platform runner for the whole tree, so they get the
+      same runner from outside. Read TESTING in MAINTAINER-README.txt before
+      trusting any `dotnet test` command written in this file: the choice is
+      now global.json's, the csproj comments have not caught up, and no command
+      here has been re-measured since.
     * `docs` here renders; it does not freeze -- there is no --baseline, and a
       test asserts there is not. Generation is cached for the session because
       it works once per process (see tools/Lily.Docs). The eight corpus
@@ -970,9 +996,9 @@ NOTES
       refuses for the package. Since the 2026-08-26 bump that chain is fully
       managed (its SVG engine is CodeBrix.Imaging.Drawing.NoSkia); the
       SkiaSharp the desktop heads carry comes from CodeBrix.Platform's own
-      runtime, as in every Platform application. The README's "Texinfo ->
-      Html2Pdf -> SkiaSharp chain" paragraph predates that bump; the comment
-      in src/Lily.Shell.Core/Lily.Shell.Core.csproj is current.
+      runtime, as in every Platform application. tools/Lily.Shell/README.txt
+      and the comment in src/Lily.Shell.Core/Lily.Shell.Core.csproj both say
+      so and are current.
     * Neither convert-ly nor import rewrites a file in place; converted text
       is printed unless -o says where to put it, and warnings print first.
     * MIDI playback is out of scope for LilyPort entirely (decision D27).
@@ -1205,13 +1231,18 @@ NOTES
       suite catch the rest.
     * parser-mirror/src/CodeBrix.LilyPort.Parsing and parser-mirror/tests/
       CodeBrix.LilyPort.Parsing.Tests are a LEFTOVER SCAFFOLD from the day the
-      parsing project was first created (2026-08-03): a first-draft csproj, an
-      InternalsVisibleTo.cs, an empty Grammar/ folder and stale bin/obj
-      output, plus a bare test csproj. No solution or project references
-      them and nothing reads them. The live projects are
-      src/CodeBrix.LilyPort.Parsing and tests/CodeBrix.LilyPort.Parsing.Tests
-      at the repository root; treat the copies under parser-mirror/ as
-      clutter awaiting a maintainer's decision, not as content.
+      parsing project was first created (2026-08-03), and they STAY. Three
+      tracked files: a first-draft CodeBrix.LilyPort.Parsing.csproj, an
+      InternalsVisibleTo.cs and a bare CodeBrix.LilyPort.Parsing.Tests.csproj,
+      beside an empty Grammar/ folder and stale bin/obj output. No solution
+      names them, no project references them and nothing reads them.
+      /!\ THEY ARE NOT A SECOND COPY TO KEEP IN STEP: they have already
+      diverged from the live projects (the scaffold csproj lacks the
+      Actions\rule-manifest.tsv EmbeddedResource the real one carries, and its
+      test csproj still names coverlet.collector), and nothing depends on
+      them being right. The live projects are src/CodeBrix.LilyPort.Parsing
+      and tests/CodeBrix.LilyPort.Parsing.Tests at the repository root. Do not
+      build these, do not add them to a solution, and do not sync them.
     * parser-mirror/README.txt is listed among the Solution Items of
       CodeBrix.LilyPort.slnx.
 

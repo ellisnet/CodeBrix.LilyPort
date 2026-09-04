@@ -248,6 +248,14 @@ RUNNING A FILE
         named form keeps whatever extension the name carries -- `name.pdf'
         engraves to `name.pdf.svg' -- because that is what lilypond -o does.
 
+        A NAMED OUTPUT RENAMES WHAT IS WRITTEN, NOT WHAT WAS READ. The progress
+        line ("Processing `...'"), the `input-file-name' a document can look
+        up, the file named in every diagnostic's location and every music
+        object's `origin' all keep the INPUT's name; only
+        `ly:parser-output-name' -- and the files on disk -- answer the new one.
+        RunFile fills BatchRunOptions.InputName in for you from the path it was
+        handed, so a caller that names a file gets this without asking.
+
     static BatchRunResult RunText(string text, string baseName,
                                   string includeDirectory, string outputDirectory)
     static BatchRunResult RunText(string text, string baseName,
@@ -306,6 +314,7 @@ BatchRunOptions
     public sealed class BatchRunOptions
         object          PointAndClick   { get; set; }   // null = leave default (true)
         IList<string>   Options         { get; set; }   // -d options, in order
+        string          InputName       { get; set; }   // the INPUT's base name
         TextWriter      MessageWriter   { get; set; }   // this run's output
         CancellationToken CancellationToken { get; set; }
 
@@ -324,8 +333,22 @@ has upstream.
                     sets one true, "include-settings=/path/to/house.ily" gives
                     one a value (and accumulates -- pass it several times to
                     include several files). A value the reader cannot make sense
-                    of warns, in upstream's words, and changes nothing; an
-                    undeclared name warns "no such program option".
+                    of warns in upstream's own words -- byte for byte, including
+                    the way a read error inside the value has its own source
+                    name, line and column stripped and its "end of file" rewritten
+                    as "end of string" -- and changes nothing; an undeclared name
+                    warns "no such program option".
+    InputName       The base name, WITHOUT extension, of the file this run's
+                    text came from -- separate from the output base name, and
+                    null to let the output base name answer for both. For a run
+                    with no rename the two ARE the same name and this can be left
+                    alone; they come apart the moment a caller renames the
+                    output, and then this is the name the progress line,
+                    `input-file-name', every diagnostic location and every music
+                    object's `origin' use. RunFile fills it in from the path it
+                    was given; RunText has no file to take it from, and its
+                    callers pass the input's own base name as the output one, so
+                    leaving it unset is right for them.
     MessageWriter   Receives everything the engine prints for this run --
                     progress, warnings and errors with file:line:col -- as it
                     prints. The process-wide Warn.Output is put back when the run
@@ -375,9 +398,18 @@ these:
                                  variable)
     several books, same key      <base>.svg, <base>-1.svg, <base>-2.svg ...
                                  (keyed by base name AND suffix together)
-    first performance            <base>.midi
-    later performances           <base>-1.midi, <base>-2.midi ...
+    first performance of a book  <base>.midi
+    later performances of it     <base>-1.midi, <base>-2.midi ...
     a score with no \midi block  no MIDI file at all
+
+/!\ MIDI NAMES ARE THE BOOK'S, AND THE PERFORMANCE COUNTER RESTARTS FOR EVERY
+BOOK. The `<base>' above is the name computed for the BOOK being written, not
+the input file's, because upstream writes performances once per book from that
+book's own output name. So a file whose SECOND book performs writes
+`<base>-1.midi' for its first performance and `<base>-1-1.midi' for its second
+-- the book suffix and the performance suffix both present. A host that pairs
+MIDI files with movements by name alone gets this wrong on any multi-book
+document; read MidiPaths, which is in the order written.
 
 STARTUP, LIFETIME AND THREADING
 ===============================
@@ -783,10 +815,31 @@ THE PARSER: LilyParserSession
         Directories an \include searches after the vendored ly/ layer and after
         the INCLUDING FILE'S OWN DIRECTORY. The full order is: the vendored ly/
         files (found by name, and they cannot be shadowed), then the directory
-        of the file the \include was read from -- so a piece laid out in
+        of the file the \include was read from (or, for text handed over under
+        a bare name, MainInputDirectory below) -- so a piece laid out in
         subdirectories reaches its siblings by bare name and its neighbours
         through "../other/x.ily" -- then these directories in order. An absolute
         include name is used as it stands.
+        This is the port's `global_path': what a host's -I entries and
+        ly:parser-append-to-include-path go on, and THE ONLY ONE OF THE TWO
+        LISTS THAT SCHEME CAN SEE -- ly:find-file, ly:parse-file and
+        ly:parse-init search this and nothing else.
+    string MainInputDirectory { get; set; }
+        The directory the MAIN INPUT came from, which is what an \include read
+        from the main input resolves against when that input was handed over as
+        text under a bare name (the batch runner sets it, and restores it, on
+        every run).
+        /!\ IT IS DELIBERATELY NOT PART OF IncludePath, AND THE SEPARATION IS
+        UPSTREAM'S. Upstream keeps two lists: the lexer's own current directory,
+        which only \include consults, and the include path, which is what the
+        Scheme file-finding procedures search. The main input's directory is on
+        the first and NOT on the second: with an asset sitting beside the input
+        and the process's working directory elsewhere,
+        `#(ly:find-file "asset.txt")' answers #f. Putting the input's directory
+        on IncludePath instead -- which the batch runner once did -- makes the
+        engine find files upstream cannot, so a document that works here would
+        fail against the real program. If you WANT a directory visible to both,
+        add it to IncludePath yourself.
     object LookupIdentifier(string name)
     void SetIdentifier(object key, object value)
     string OutputBaseName { get; set; }
@@ -1590,6 +1643,16 @@ COMMON PITFALLS TO AVOID
   current directory, and a failure is a fatal error.
 * THE `-o name.pdf' TRAP. A named output keeps its extension: `name.pdf'
   engraves to `name.pdf.svg', exactly as lilypond does. Give base names.
+* EXPECTING A NAMED OUTPUT TO RENAME THE INPUT. RunFile with an outputBaseName
+  renames only what is WRITTEN. Progress ("Processing `...'"), `input-file-name',
+  every diagnostic's file:line:col and every music object's `origin' still name
+  the file that was read -- which is what a reader needs, since that is the file
+  they can open. A host that matches diagnostics against the output name finds
+  nothing.
+* PAIRING MIDI FILES WITH MOVEMENTS BY NAME. The performance counter restarts
+  for every BOOK and the book's own suffix is already in the name, so a file
+  with two books writes `<base>-1.midi' and `<base>-1-1.midi'. Read MidiPaths,
+  in order, rather than composing names.
 * MULTI-PAGE NAMING. Page files carry the PAGE NUMBER, starting at the book's
   first-page-number, not an index from 1: a book that begins on page 2 writes
   `-2', `-3' and no `-1'. Read SvgPaths rather than guessing names.
@@ -1753,7 +1816,10 @@ QUICK REFERENCE CARD
               -> BatchRunResult { SvgPath, SvgPaths, MidiPaths, ErrorCount,
                                   Diagnostics, BookCount, SystemCount,
                                   DeclaredVersion }
-              files: <base>.svg | <base>-<page>.svg ; <base>.midi | <base>-1.midi
+              files: <base>.svg | <base>-<page>.svg ; <base>.midi |
+                     <base>-1.midi -- MIDI names are the BOOK's and the
+                     counter restarts per book (a second book that performs
+                     twice writes <base>-1.midi and <base>-1-1.midi)
 
     OPTIONS   new BatchRunOptions { PointAndClick = false,
                   Options = { "no-point-and-click", "include-settings=/p/x.ily" },
