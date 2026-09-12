@@ -86,7 +86,7 @@
     and then fails at runtime unable to load the interpreter assembly.
   -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.LilyScheme.LgplLicenseForever" Version="1.0.243.1143" />
+    <PackageReference Include="CodeBrix.LilyScheme.LgplLicenseForever" Version="1.0.255.992" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -96,17 +96,13 @@
   <Target Name="IncludeSubAssembliesInPackage">
     <ItemGroup>
       <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Flower.dll" />
-      <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Flower.xml"
-                            Condition="Exists('$(OutputPath)CodeBrix.LilyPort.Flower.xml')" />
+      <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Flower.xml" Condition="Exists('$(OutputPath)CodeBrix.LilyPort.Flower.xml')" />
       <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Engine.dll" />
-      <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Engine.xml"
-                            Condition="Exists('$(OutputPath)CodeBrix.LilyPort.Engine.xml')" />
+      <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Engine.xml" Condition="Exists('$(OutputPath)CodeBrix.LilyPort.Engine.xml')" />
       <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Backends.dll" />
-      <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Backends.xml"
-                            Condition="Exists('$(OutputPath)CodeBrix.LilyPort.Backends.xml')" />
+      <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Backends.xml" Condition="Exists('$(OutputPath)CodeBrix.LilyPort.Backends.xml')" />
       <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Parsing.dll" />
-      <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Parsing.xml"
-                            Condition="Exists('$(OutputPath)CodeBrix.LilyPort.Parsing.xml')" />
+      <BuildOutputInPackage Include="$(OutputPath)CodeBrix.LilyPort.Parsing.xml" Condition="Exists('$(OutputPath)CodeBrix.LilyPort.Parsing.xml')" />
     </ItemGroup>
   </Target>
 

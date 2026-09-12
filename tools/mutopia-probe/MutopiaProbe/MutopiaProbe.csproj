@@ -29,8 +29,8 @@
          re-run and diffed when it moves: both sides of the port-vs-oracle grade go through
          THIS writer, so that axis is common-mode and should hold, but the port-vs-Mutopia
          text and ink rungs read the fallback chain and can shift. -->
-    <PackageReference Include="CodeBrix.PdfDocCreate.Html2Pdf.MitLicenseForever" Version="1.0.240.106" />
-    <PackageReference Include="CodeBrix.PdfRasterizer.MitLicenseForever" Version="1.0.240.106" />
+    <PackageReference Include="CodeBrix.PdfDocCreate.Html2Pdf.MitLicenseForever" Version="1.0.254.196" />
+    <PackageReference Include="CodeBrix.PdfRasterizer.MitLicenseForever" Version="1.0.254.196" />
   </ItemGroup>
 
 </Project>
