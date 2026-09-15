@@ -27,12 +27,15 @@ namespace CodeBrix.LilyPort.Engine.Bootstrap;
 /// <para>
 /// <c>ly:book-process</c> and <c>ly:book-process-to-systems</c> differ in ONE step
 /// upstream: the first calls <c>Paper_book::output</c> and the second
-/// <c>classic_output</c>. Neither of those is ported (see the PORT-COVERAGE entry for
-/// <c>paper-book.cc</c>), because both dispatch into <c>lily framework-&lt;backend&gt;</c>
-/// modules over program options this port does not carry. What both DO here is run
-/// <c>Book::process</c> and force the pages, which is the part every caller needs and the
-/// part D20 moved the batch runner onto — the runner then takes the pages off the paper
-/// book itself rather than having them written to a channel.
+/// <c>classic_output</c>. Neither of those is ported WHOLE (see the PORT-COVERAGE entry
+/// for <c>paper-book.cc</c>), because both dispatch into
+/// <c>lily framework-&lt;backend&gt;</c> modules over program options this port does not
+/// carry. What both DO here is run <c>Book::process</c> and force the half their upstream
+/// counterpart forces — the PAGES for the first, the SYSTEMS for the second — which is
+/// the part every caller needs and the part D20 moved the batch runner onto; the caller
+/// then takes the stencils off the paper book itself rather than having them written to a
+/// channel, and <see cref="BookProcessObserver"/> is how it is told a book came this way
+/// at all.
 /// </para>
 /// <para>
 /// The two engravers this group adds, <c>Footnote_engraver</c> and
@@ -138,13 +141,31 @@ public static class PageBreakingCallbacks
     }
 
     /// <summary>
-    /// Runs <c>Book::process</c> and FORCES the pages.
+    /// Runs <c>Book::process</c> and FORCES the output half the caller asked for — the
+    /// PAGES for <c>ly:book-process</c>, the SYSTEMS for
+    /// <c>ly:book-process-to-systems</c>.
     /// <para>
     /// Forcing them is the whole effect: upstream's next step is
-    /// <c>Paper_book::output</c>, which asks for <c>pages ()</c> and hands the stencils to
-    /// a backend module. The port's caller collects the pages off the paper book instead,
-    /// so this must leave them computed rather than merely computable — a lazily-empty
-    /// paper book would look exactly like a book with nothing in it.
+    /// <c>Paper_book::output</c> (or <c>classic_output</c>), which asks for
+    /// <c>pages ()</c> (or <c>systems ()</c>) and hands the stencils to a backend module.
+    /// The port's caller collects them off the paper book instead, so this must leave
+    /// them computed rather than merely computable — a lazily-empty paper book would look
+    /// exactly like a book with nothing in it.
+    /// </para>
+    /// <para>
+    /// ⚠ THE TWO PATHS ARE NOT INTERCHANGEABLE, AND FORCING THE PAGES ON BOTH WAS A
+    /// MEASURED DIVERGENCE. <c>Paper_book::classic_output_aux</c> calls <c>systems ()</c>
+    /// and NOTHING ELSE; it never runs a page breaker. Forcing the pages here made a
+    /// document that installed <c>print-book-with-defaults-as-systems</c> — which is what
+    /// <c>ly/lilypond-book-preamble.ly</c> does — log "Finding the ideal number of pages"
+    /// and "Fitting music on 1 page" where the 2.27.2 oracle logs "Calculating line
+    /// breaks", one graded diagnostics difference on top of the missing output.
+    /// </para>
+    /// <para>
+    /// <see cref="BookProcessObserver"/> is told about the result, because these two
+    /// entry points are exactly where upstream WRITES the files and the port's writer
+    /// lives in the caller. A book that reaches here rather than the caller's own
+    /// toplevel handler is a book the DOCUMENT routed here on purpose.
     /// </para>
     /// </summary>
     private static object ProcessBook(object[] a, string procedureName)
@@ -156,22 +177,30 @@ public static class PageBreakingCallbacks
         OutputDef layout = a[2] as OutputDef
             ?? throw SchemeErrors.WrongType(procedureName, "output definition", a[2]);
 
+        bool toSystems = procedureName == "ly:book-process-to-systems";
+
         PaperBook paperBook = book.Process(paper, layout);
         if (paperBook == null)
         {
             return Unspecified.Instance;
         }
 
-        // Paper_book::output's own opening step, and only for `ly:book-process':
-        // `ly:book-process-to-systems' goes to classic_output, which forces the SYSTEMS
-        // and never touches the page-numbering variables. Walking the bookparts is what
-        // carries first-page-number across them and marks the last one.
-        if (procedureName == "ly:book-process")
+        if (toSystems)
         {
+            // Paper_book::classic_output_aux, whose whole body — once the performances
+            // are written — is the comment "Generate all stencils to trigger font loads"
+            // over a bare `systems ()'.
+            paperBook.Systems();
+        }
+        else
+        {
+            // Paper_book::output's own opening step: walking the bookparts is what
+            // carries first-page-number across them and marks the last one.
             paperBook.Output();
+            paperBook.Pages();
         }
 
-        paperBook.Pages();
+        BookProcessObserver.Current?.Invoke(book, paperBook, toSystems);
 
         // The paper book is ANSWERED rather than discarded, which is the port's one
         // deliberate difference from upstream's SCM_UNSPECIFIED. Upstream can throw it

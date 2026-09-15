@@ -1134,6 +1134,28 @@ SessionLeakEndToEndTests class and the per-file scratch directory exist
 because of them. Treat any new process-global state as a leak until proven
 otherwise.
 
+THE DOCUMENT'S TOPLEVEL BOOK HANDLER WINS
+-----------------------------------------
+ly/init.ly lets a document install its own toplevel book handler, and
+BatchRunner honours it. ly/lilypond-book-preamble.ly -- the include every
+lilypond-book document opens with -- points `default-toplevel-book-handler' at
+print-book-with-defaults-as-systems and `toplevel-book-handler' at
+print-book-with-defaults, so the implicit toplevel book is written ONE FILE PER
+SYSTEM and an explicit \book block ONE FILE PER PAGE. Both are written through
+the same writer, because framework-svg.scm's output-stencils is the same
+procedure on both paths: a single stencil takes the bare base name and several
+take `-<n>' from first-page-number.
+
+The runner's two collector primitives are DEFAULTS, not an override. A book a
+document routed to its own handler arrives instead through
+Engine.Bootstrap.BookProcessObserver, which the two `ly:book-process' entry
+points -- the places upstream writes files from -- publish to. Until 2026-09-14
+they did not, and such a book was engraved and DROPPED: success, zero errors, no
+file, no warning. The safety net added with the fix says so out loud when a book
+reaches a handler and is never heard of again; it is a warning and not an error
+because the oracle is silent there, and the port is never stricter than 2.27.2.
+Full account, with the oracle measurements, in the Engine's PORT-COVERAGE.txt.
+
 OTHER THINGS A MAINTAINER MUST KNOW
 -----------------------------------
 * The regression sweep, the docs run, Lily.Docs renders and the tools are NOT

@@ -236,6 +236,31 @@ public class OutputDef
     public void SetVariable(string name, object value) => SetVariable(Symbol.Intern(name), value);
 
     /// <summary>
+    /// Removes a variable this definition set — Guile's <c>module-remove!</c> over the
+    /// definition's own scope, leaving the parent chain alone.
+    /// </summary>
+    /// <remarks>
+    /// Upstream has no such call and does not need one: every <c>Output_def</c> dies with
+    /// the process that made it, one per input file. A BATCH runner has to be able to put
+    /// a shared <c>$defaultpaper</c> back to the state a fresh process would hand it,
+    /// and re-setting the variables it started with is not enough — a variable the FILE
+    /// ADDED has nothing to be put back to. <c>\bookOutputName</c> adds exactly such a
+    /// variable (<c>output-filename</c>, on <c>$defaultpaper</c>, through
+    /// <c>paper-variable</c>'s setter), so one file's chosen output name renamed every
+    /// file engraved after it.
+    /// </remarks>
+    /// <param name="symbol">The variable name.</param>
+    public void RemoveVariable(Symbol symbol)
+    {
+        if (symbol == null)
+        {
+            throw new ArgumentNullException(nameof(symbol));
+        }
+
+        _scope.Remove(symbol);
+    }
+
+    /// <summary>
     /// Reads a variable as a dimension.
     /// </summary>
     /// <param name="symbol">The variable name.</param>

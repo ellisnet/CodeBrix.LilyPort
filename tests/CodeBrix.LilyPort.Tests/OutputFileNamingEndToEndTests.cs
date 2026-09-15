@@ -313,4 +313,74 @@ public class OutputFileNamingEndToEndTests
         secondLog.ToString().Should().Contain("probe input-file-name is secondfile.ly");
         shared.InputName.Should().BeNull();
     }
+
+    [Fact]
+    public void book_output_name_renames_the_files_the_book_prints()
+    {
+        //Arrange
+        //get-outfile-name's THIRD input, and the port did not read it at all:
+        //get-current-filename takes `output-filename' off the book's paper, then off
+        //$defaultpaper, then off the toplevel identifier, and only then falls back on the
+        //name the input was read under. MEASURED on 2.27.2: a file whose first statement
+        //is \bookOutputName "renamed" writes renamed.svg, and the port wrote
+        //<input>.svg — so a document that renames its own output was silently ignored.
+        string source =
+            Version
+            + "\\bookOutputName \"naming-renamed\"\n"
+            + "\\book { \\score { { c'1 } } }\n";
+
+        //Act
+        List<string> names = WrittenNames(source, "naming-bookoutputname");
+
+        //Assert
+        names.Should().Equal(new List<string> { "naming-renamed.svg" });
+    }
+
+    [Fact]
+    public void the_counter_is_keyed_by_the_printed_name_after_a_rename()
+    {
+        //Arrange
+        //The half that makes the fact above mean something: the counter-alist key is the
+        //PRINTED name concatenated with the suffix, not the input's base name, so two
+        //books renamed to the same thing take the counter instead of overwriting each
+        //other. A namer that used the new name for the file but the old one for the key
+        //would write both books to the same file and pass the fact above.
+        string source =
+            Version
+            + "\\bookOutputName \"naming-renamed-twice\"\n"
+            + "\\book { \\score { { c'1 } } }\n"
+            + "\\book { \\score { { d'1 } } }\n";
+
+        //Act
+        List<string> names = WrittenNames(source, "naming-bookoutputname-twice");
+
+        //Assert
+        names.Should().Equal(new List<string>
+        {
+            "naming-renamed-twice.svg",
+            "naming-renamed-twice-1.svg",
+        });
+    }
+
+    [Fact]
+    public void a_book_output_name_does_not_rename_the_next_file_in_the_session()
+    {
+        //Arrange
+        //THE FOURTEENTH PER-FILE LEAK. \bookOutputName is `(set! (paper-variable #f
+        //'output-filename) ...)', and with no \book open paper-variable resolves to the
+        //$defaultpaper OBJECT — so the variable is ADDED to a definition the whole batch
+        //shares. RestoreDefaults re-set every variable it had SNAPSHOTTED and left the
+        //added one standing, so one file's chosen name renamed every file engraved after
+        //it in the same process. Upstream never meets this: one process per file.
+        WrittenNames(
+            Version + "\\bookOutputName \"naming-leaked\"\n\\book { \\score { { c'1 } } }\n",
+            "naming-leak-first");
+
+        //Act
+        List<string> names = WrittenNames(
+            Version + "\\book { \\score { { d'1 } } }\n", "naming-leak-second");
+
+        //Assert
+        names.Should().Equal(new List<string> { "naming-leak-second.svg" });
+    }
 }

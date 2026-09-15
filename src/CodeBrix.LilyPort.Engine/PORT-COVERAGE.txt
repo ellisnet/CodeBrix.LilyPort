@@ -5322,21 +5322,45 @@ this entry.
 
 DELIBERATE DIVERGENCES (page breaking)
 
-  paper-book.cc -- THE OUTPUT HALF IS NOT PORTED. Paper_book::output,
-    classic_output, output_stencil, output_stencils and dump_header_fields
-    dispatch into `lily framework-<backend>' modules and act on the
-    -dclip-systems / -dpreview / -dcrop / -daux-files program options. That is
-    the CLI surface D14 replaced with Lily.Shell and the PS/Cairo backends D19
-    replaced. PAGE ASSEMBLY -- Pages(), which is what every caller in this port
-    actually needs -- is ported in full.
+  paper-book.cc -- THE FILE-WRITING HALF IS NOT PORTED. output_stencil,
+    output_stencils and dump_header_fields dispatch into
+    `lily framework-<backend>' modules and act on the -dclip-systems /
+    -dpreview / -dcrop / -daux-files program options. That is the CLI surface
+    D14 replaced with Lily.Shell and the PS/Cairo backends D19 replaced. PAGE
+    AND SYSTEM ASSEMBLY -- Pages() and Systems(), which is what every caller in
+    this port actually needs -- is ported in full, and so is what
+    Paper_book::output and Paper_book::classic_output do BEFORE they reach a
+    backend module: output() walks the bookparts (Output()) and forces the
+    pages, classic_output forces the SYSTEMS and nothing else.
 
   ly:book-process / ly:book-process-to-systems ANSWER THE PAPER BOOK where
     upstream answers SCM_UNSPECIFIED. Upstream can discard it because output()
     has already written the files; here the caller (the batch runner, Lily.Shell)
-    needs the pages back. Scheme callers that ignore the result -- every one in
-    ly/init.ly -- are unaffected. Both bindings FORCE the pages before
+    needs the stencils back. Scheme callers that ignore the result -- every one
+    in ly/init.ly -- are unaffected. Both bindings FORCE their own half before
     returning, because a lazily-empty paper book is indistinguishable from a
     book with nothing in it.
+
+  THE TWO HALVES ARE NOT INTERCHANGEABLE, AND FORCING THE PAGES ON BOTH WAS A
+    MEASURED DIVERGENCE (FIXED 2026-09-14). ly:book-process-to-systems used to
+    call Output() and Pages() like its page-path twin. Upstream's
+    classic_output_aux calls systems() and NOTHING else -- it never runs a page
+    breaker -- so a document that installed print-book-with-defaults-as-systems
+    logged "Finding the ideal number of pages" and "Fitting music on 1 page"
+    where the 2.27.2 oracle logs "Calculating line breaks". Measured on the
+    FIXLIST's six-line reproduction; the port now logs what the oracle logs.
+
+  BookProcessObserver IS NEW IN THE FAMILY AND HAS NO UPSTREAM COUNTERPART.
+    Upstream WRITES the files from inside these two entry points; this port
+    writes them in the caller, so a book that reaches ly:book-process without
+    having passed the caller's own toplevel handler would be computed and
+    dropped. That is exactly what happened to every document including
+    ly/lilypond-book-preamble.ly, which installs its own toplevel handlers --
+    the run reported "Completed successfully", counted zero errors, and wrote no
+    file anywhere. The observer is the one line that tells the caller the book
+    came this way, and which of the two halves it asked for. It is
+    process-global and is installed for the span of ONE run, under the runner's
+    own lock, and put back in a finally.
 
   page-turn-page-breaking.cc -- print_break_node is not ported. It exists only
     behind -ddebug-page-breaking-scoring, which this port does not carry.
@@ -11623,3 +11647,120 @@ TWO THINGS THIS RELEASE CLOSED, BOTH MEASURED AGAINST THE PINNED 2.27.2 FIRST:
     "due to read error" line, and no graded caller passes an unreadable -d value
     -- BatchDriver takes no -d at all.  The reachable callers are Lily.Shell's
     `set' command and any host that forwards a -d.
+
+================================================================================
+THE DOCUMENT'S OWN TOPLEVEL BOOK HANDLER (2026-09-14)
+================================================================================
+
+ly/init.ly lets a DOCUMENT install its own toplevel book handler, and the port
+must honour that because upstream does.  ly/lilypond-book-preamble.ly -- which
+every lilypond-book document opens by including -- installs two:
+
+    default-toplevel-book-handler  ->  print-book-with-defaults-as-systems
+    toplevel-book-handler          ->  (lambda rest (set! output-empty-score-list #f)
+                                        (apply print-book-with-defaults rest))
+
+so the IMPLICIT toplevel book takes the SYSTEMS path (one file per system) and
+an EXPLICIT \book block takes the PAGE path.  The preamble's own first comment
+says exactly that, and the 2.27.2 oracle was measured on both before any of this
+was written.
+
+THE DEFECT.  Both of the document's handlers reach ly:book-process /
+ly:book-process-to-systems, which upstream WRITES THE FILES from and which this
+port answers a paper book from, because output is written by the caller
+(BatchRunner).  The runner's own collector was therefore bypassed and the books
+were computed and DROPPED: "Completed successfully", ErrorCount 0, no warning of
+any kind, and NO OUTPUT FILE ANYWHERE -- for a six-line document the oracle
+engraves without comment.  Measured 2026-09-13 in Fresco.Brix (FIXLIST
+[2026-09-13 23:05]); four of the six font templates that application ships open
+with the include, and Lily.Docs had been carrying its own workaround for the
+same defect since 2026-08-19 (EngineSnippetRenderer's EngravingPrologue, which
+re-points the two print-book-with-defaults* procedures at the collector).
+
+THE FIX, IN ONE SENTENCE: the two ly:book-process entry points now force the
+half their upstream counterpart forces and TELL THE CALLER, through
+BookProcessObserver, that a book came this way and which half it asked for; the
+runner writes that book's stencils through the SAME writer the page path uses,
+because framework-svg.scm's output-stencils is the same procedure on both paths.
+
+WHAT WAS MEASURED, AND WHAT THE ORACLE DOES (lilypond -dbackend=svg, 2.27.2):
+
+  preamble + two bars                 -> <base>.svg           ONE system, NO suffix
+  preamble + Goldberg sample (2 sys)  -> <base>-1.svg, -2.svg numbered from 1
+  preamble + explicit \book (3 sys)   -> <base>.svg           the PAGE path
+  preamble + \score with \midi only   -> <base>.midi          no page at all
+  preamble alone (empty book)         -> nothing, silently
+  ordinary document                   -> <base>.svg           unchanged
+
+  The suffix rule is output-stencils': the counter starts at
+  (1- first-page-number) and the suffix is EMPTY when there is exactly one
+  stencil -- which is the rule the page writer already had, so one writer serves
+  both.  -dpoint-and-click changes nothing: the preamble sets no-point-and-click
+  itself.
+
+THE LOG IS PART OF IT.  classic_output_aux calls systems() and nothing else, so
+the oracle logs "Calculating line breaks..." where the page path logs "Finding
+the ideal number of pages...".  The port forced the pages on both paths and
+logged the page lines for both; it now logs what the oracle logs.
+
+THE SAFETY NET (BatchRunner.ReportUnwrittenBooks).  A handler that neither
+writes the book nor hands it back leaves the runner nothing at all, and the run
+would report plain success in silence -- the shape this whole entry is about.
+The runner now asks, one statement before init.ly's epilogue dispatches
+(BookHandlerProbeLy), which procedure the epilogue is about to use and whether
+there is going to be a book; if the book never arrives, it says so, naming the
+book and the handler.  It is a WARNING and not an error because the ORACLE IS
+SILENT for such a handler, and the port is never stricter than 2.27.2 -- only
+louder.  It is narrow on purpose: a book with no scores and a book that only
+performs both ARRIVE and are accounted for, and the oracle writes no page for
+either.
+
+  /!\ ONE SHAPE IS NOT COVERED AND IS RECORDED RATHER THAN GUESSED AT: an
+  EXPLICIT \book handed at PARSE time to a document-installed handler that
+  swallows it.  The runner cannot count parse-time dispatches without wrapping
+  the handler, which would be a different design decision.  No such handler
+  exists in upstream's own ly/ layer; lilypond-book-preamble.ly's reaches
+  print-book-with-defaults and therefore arrives.
+
+  /!\ THE PROCESSING ORDER OF A MIXED FILE DIFFERS FROM THE ORACLE'S, AND ONLY
+  THE LOG SHOWS IT.  A file holding BOTH an explicit \book the runner collects
+  and a toplevel book the document's handler takes processes the second one
+  first, because the runner collects books during the parse and processes them
+  after it while the document's handler processes its book DURING the parse.
+  The FILES and their NAMES are the oracle's either way (measured: twobooks.svg
+  then twobooks-1.svg, one shared counter); it is the two log blocks that come
+  out in the other order.  No corpus row is affected -- no graded input installs
+  a toplevel book handler.
+
+CORPUS EXPOSURE: NONE.  `grep -l lilypond-book-preamble tests/regression/*.ly'
+finds ONE file, version-seen.ly, which only MENTIONS the preamble in a comment
+(it exists to prove that an include's \version does not satisfy the main file's)
+and is NOOUT on both sides before and after.  The full battery reproduced every
+figure EXACTLY.
+
+================================================================================
+THE FOURTEENTH PER-FILE LEAK: \bookOutputName (2026-09-14)
+================================================================================
+
+`\bookOutputName "x"' is (set! (paper-variable #f 'output-filename) "x"), and
+with no \book open paper-variable resolves to the $defaultpaper OBJECT -- so the
+variable is ADDED to a definition the whole batch shares.  RestoreDefaults
+re-set every variable it had SNAPSHOTTED and left an ADDED one standing, and
+because it is the object rather than the identifier that was changed, the
+identifier re-pointing beside it could not undo it either.  One file's chosen
+output name therefore renamed every file engraved after it in the same process.
+\bookOutputSuffix is the same move one variable over.
+
+FIXED by LilyPondInit.Restore, which now REMOVES every variable the snapshot does
+not name, through the new OutputDef.RemoveVariable (Guile's module-remove! over
+the definition's own scope, parent chain untouched).  Upstream needs none of
+this: one process per file.
+
+/!\ THE LEAK WAS DORMANT UNTIL THE SAME DAY'S NAMING FIX MADE IT OBSERVABLE, and
+that is trap 28's shape again: BatchRunner's get-outfile-name did not read
+output-filename at all, so nothing in the port had ever looked at the leaked
+variable.  MEASURED against 2.27.2: a file whose first statement is
+\bookOutputName "renamed" writes renamed.svg from the oracle and wrote
+<input>.svg here.  The counter-alist key is built from the PRINTED name too, so
+two books renamed to the same thing take the counter instead of overwriting each
+other.  No corpus row is affected: no graded input uses either function.

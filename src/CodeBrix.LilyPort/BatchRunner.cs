@@ -160,6 +160,44 @@ $(for-each
 ";
 
     /// <summary>
+    /// THE RUNNER'S OWN, and not part of <c>init.ly</c>: one read-only question asked in
+    /// the ONE line before <see cref="EpilogueLy"/> runs, so that the runner knows what
+    /// the epilogue is about to do.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// It asks exactly what the epilogue's own <c>let</c> and <c>cond</c> ask, in the same
+    /// module and one statement earlier: WHICH procedure <c>init.ly</c>'s
+    /// <c>defined?</c> test will hand the toplevel book to, and WHETHER there is going to
+    /// be a toplevel book at all. Both have to be read HERE — the epilogue empties
+    /// <c>toplevel-scores</c> and <c>toplevel-bookparts</c> as it builds the book, so
+    /// afterwards the answer is always "no book".
+    /// </para>
+    /// <para>
+    /// This is the safety net's only input, and the safety net is what makes the class of
+    /// defect it guards against impossible to have again: a document may install its own
+    /// toplevel book handler, and one that neither writes nor hands the book back leaves
+    /// a run reporting success with nothing on disk and nothing in the log.
+    /// </para>
+    /// <para>
+    /// It is parsed as its own step, beside <c>&lt;batch-version-seen&gt;</c>, rather than
+    /// folded into the epilogue, so that the epilogue stays the verbatim extract it says
+    /// it is.
+    /// </para>
+    /// </remarks>
+    private const string BookHandlerProbeLy = @"
+#(lilyport-batch-book-handler
+   (if (defined? 'default-toplevel-book-handler)
+       default-toplevel-book-handler
+       toplevel-book-handler)
+   (if (or (pair? toplevel-bookparts)
+           (pair? toplevel-scores)
+           output-empty-score-list)
+       #t
+       #f))
+";
+
+    /// <summary>
     /// Installs the two parse entry points that were waiting on this class:
     /// <c>ly:parse-file</c> (the full session lifecycle over a named file, books
     /// flowing to whatever toplevel book handler is bound) and <c>ly:parse-init</c>
@@ -173,6 +211,14 @@ $(for-each
         {
             throw new ArgumentNullException(nameof(interpreter));
         }
+
+        // THE PROBE'S DEFAULT ANSWER-TAKER, so that BookHandlerProbeLy is never an
+        // unbound name: every path through RunLifecycle parses it, including the one
+        // `ly:parse-file' reaches, and only a full run (RunConfigured) has anywhere to put
+        // the answer. A no-op here is the honest default — a nested parse has no safety
+        // net of its own and never claimed one.
+        interpreter.DefinePrimitive(
+            "lilyport-batch-book-handler", 2, 2, a => Unspecified.Instance);
 
         interpreter.DefinePrimitive("ly:parse-file", 1, 1, a =>
         {
@@ -691,9 +737,14 @@ $(for-each
         Interpreter interpreter = LilyPondScheme.Current;
 
         List<string> diagnostics = new List<string>();
-        List<Book> books = new List<Book>();
 
-        // The name each collected book prints under, captured AS IT IS COLLECTED.
+        // EVERY BOOK THE FILE HANDED TO A TOPLEVEL BOOK HANDLER, in the order it handed
+        // them over, whichever handler took it: the runner's own collector (an ordinary
+        // document) or the document's, through ly:book-process / ly:book-process-to-systems
+        // (a document that installed one, which is what lilypond-book-preamble.ly does).
+        // ONE list, because the two must share ONE name counter — see PendingBook.
+        //
+        // The name each book prints under is captured AS IT IS HANDED OVER.
         // ⚠ Upstream calls get-outfile-name from print-book-with, at the moment the
         // toplevel handler takes the book — DURING the parse — and the timing is
         // load-bearing, because `output-suffix' is an ordinary toplevel variable that a
@@ -701,7 +752,7 @@ $(for-each
         // whatever value the file happened to END on:
         // book-change-global-staffsize-abs-fonts sets "standard-size", prints its first
         // book, then sets #f and prints its second, so both would be named from #f.
-        List<string> bookNames = new List<string>();
+        List<PendingBook> pending = new List<PendingBook>();
 
         // get-outfile-name's `counter-alist', keyed as upstream keys it: the base name
         // concatenated with the suffix. The counter is per KEY, NOT a running book index.
@@ -715,13 +766,14 @@ $(for-each
         // bound, init.ly's epilogue hands each finished book HERE instead of to
         // ly:book-process. Rebound per run so a stale capture list can never leak
         // between runs.
-        interpreter.DefinePrimitive("default-toplevel-book-handler", 1, 1, a =>
+        Primitive defaultBookCollector = interpreter.DefinePrimitive(
+            "default-toplevel-book-handler", 1, 1, a =>
         {
             if (a[0] is Book book)
             {
-                books.Add(book);
-                bookNames.Add(
-                    GetOutfileName(collectingSession, book, baseName, outfileCounters));
+                pending.Add(new PendingBook(
+                    GetOutfileName(collectingSession, book, baseName, outfileCounters),
+                    book));
             }
             else
             {
@@ -752,9 +804,9 @@ $(for-each
         {
             if (a[0] is Book book)
             {
-                books.Add(book);
-                bookNames.Add(
-                    GetOutfileName(collectingSession, book, baseName, outfileCounters));
+                pending.Add(new PendingBook(
+                    GetOutfileName(collectingSession, book, baseName, outfileCounters),
+                    book));
             }
             else
             {
@@ -762,6 +814,55 @@ $(for-each
                     + (a[0]?.GetType().Name ?? "null"));
             }
 
+            return Unspecified.Instance;
+        });
+
+        // THE SECOND INTERCEPTION POINT, AND THE ONE THE DOCUMENT CHOOSES.
+        //
+        // Both collectors above are DEFAULTS. `ly/init.ly' lets a document install its own
+        // toplevel book handler and the port must honour that, because upstream does:
+        // `ly/lilypond-book-preamble.ly' — every lilypond-book document opens by including
+        // it, and four of Fresco.Brix's six shipped font templates do — points
+        // `default-toplevel-book-handler' at `print-book-with-defaults-as-systems' and
+        // `toplevel-book-handler' at a lambda calling `print-book-with-defaults'. The
+        // document's handlers then WIN, exactly as init.ly intends, and the two collectors
+        // above never run.
+        //
+        // ⚠ THAT IS THE WHOLE DEFECT THIS HOOK CLOSES. Upstream's two `ly:book-process'
+        // entry points WRITE the output files (`Paper_book::output' and `classic_output');
+        // the port's compute the book and hand the paper book back, because output is
+        // written HERE, by the caller. So every book a document routed to its own handler
+        // was engraved and then dropped: "Completed successfully", zero errors, no file
+        // anywhere. A six-line file with the preamble include and two bars of music
+        // produced nothing, where the oracle writes its SVG.
+        //
+        // Observing the two primitives — rather than rebinding them — keeps ONE
+        // implementation of the processing itself, and keeps the runner out of the
+        // question of which module `print-book-with' resolves `ly:book-process' through.
+        // The book is named HERE, from the runner's own counter, so that a file mixing an
+        // explicit \book (collected above) with a document-handled toplevel book numbers
+        // them as upstream's single `counter-alist' does instead of giving both the base
+        // name and letting the second overwrite the first.
+        BookProcessObserver.ProcessedBook previousObserver = BookProcessObserver.Current;
+        BookProcessObserver.Current = (book, paperBook, toSystems) =>
+            pending.Add(new PendingBook(
+                GetOutfileName(collectingSession, book, baseName, outfileCounters),
+                book,
+                paperBook,
+                toSystems));
+
+        // THE SAFETY NET'S THREE FACTS, filled in by BookHandlerProbeLy one statement
+        // before init.ly's epilogue dispatches — see that constant. They are read back
+        // after the parse to decide whether a book went to a handler and was never heard
+        // of again.
+        object chosenBookHandler = null;
+        bool epilogueBuildsBook = false;
+        int pendingBeforeEpilogue = 0;
+        interpreter.DefinePrimitive("lilyport-batch-book-handler", 2, 2, a =>
+        {
+            chosenBookHandler = a[0];
+            epilogueBuildsBook = SchemeUtilities.IsSchemeTrue(a[1]);
+            pendingBeforeEpilogue = pending.Count;
             return Unspecified.Instance;
         });
 
@@ -798,8 +899,21 @@ $(for-each
                 + " \\midi, \\paper or \\with block");
         }
 
-        int errorCount = RunLifecycle(
-            session, text, baseName, inputName, includeDirectory, diagnostics);
+        int errorCount;
+        try
+        {
+            errorCount = RunLifecycle(
+                session, text, baseName, inputName, includeDirectory, diagnostics);
+        }
+        finally
+        {
+            // The observer's whole life is the PARSE: every book reaches a toplevel
+            // handler while the file is being read, and the loop below processes what the
+            // runner's own collector took without going near ly:book-process. Put back
+            // rather than cleared, so a run nested inside another leaves the outer run's
+            // observer exactly as it found it.
+            BookProcessObserver.Current = previousObserver;
+        }
 
         // What the lexer recorded off the MAIN input's \version statement, for the
         // host: an editor decides whether to offer convert-ly from exactly this
@@ -873,13 +987,13 @@ $(for-each
 
         session.AsCurrentParser(() =>
         {
-        for (int bookIndex = 0; bookIndex < books.Count; bookIndex++)
+        for (int bookIndex = 0; bookIndex < pending.Count; bookIndex++)
         {
             // A book is one uninterruptible engine call, so between books is the
             // finest grain cancellation can honestly have here.
             cancellationToken.ThrowIfCancellationRequested();
 
-            Book book = books[bookIndex];
+            Book book = pending[bookIndex].Book;
 
             // THE REAL ly:book-process PATH. D20's score-level
             // short-circuit is RETIRED: this used to walk the book's scores and hand each
@@ -892,7 +1006,15 @@ $(for-each
             // CONSTRUCTOR does it -- doing it twice would scale the paper squared.
             try
             {
-                PaperBook paperBook = book.Process(parsedPaper, parsedLayout);
+                // A BOOK THE DOCUMENT'S OWN HANDLER ALREADY PROCESSED IS NOT PROCESSED
+                // AGAIN. It came through ly:book-process or ly:book-process-to-systems
+                // DURING the parse, which is where upstream reaches book processing from
+                // too, and it arrives here with its half already forced: the pages for
+                // the page path, the systems for the systems path. Re-running
+                // Book::process would engrave the whole book a second time and answer a
+                // different paper book from the one the document's handler was handed.
+                PaperBook paperBook = pending[bookIndex].Processed
+                    ?? book.Process(parsedPaper, parsedLayout);
                 if (paperBook == null)
                 {
                     diagnostics.Add("book produced no paper book");
@@ -903,8 +1025,13 @@ $(for-each
                 // are forced: it walks the bookparts telling each where its page numbers
                 // start and whether it is the last, and page.scm reads both off the paper
                 // while it is BUILDING each page. Asking for Pages() first bakes in the
-                // unset values.
-                paperBook.Output();
+                // unset values. A book the document's handler processed has had the step
+                // its own path calls for already — Paper_book::output for the page path
+                // and nothing at all for classic_output, which never numbers pages.
+                if (pending[bookIndex].Processed == null)
+                {
+                    paperBook.Output();
+                }
 
                 // PER BOOK, not once per file. framework-svg.scm's output-framework
                 // calls (set-unit-length (ly:output-def-lookup layout 'output-scale))
@@ -917,14 +1044,14 @@ $(for-each
                 // as a glyph-inventory difference rather than as a layout error.
                 double unitLength = paperBook.Paper.GetDimension("output-scale");
 
-                List<Stencil> bookPages = new List<Stencil>();
-                foreach (object entry in Pair.ToList(paperBook.Pages()))
-                {
-                    if (entry is Prob page && page.GetProperty("stencil") is Stencil pageStencil)
-                    {
-                        bookPages.Add(pageStencil);
-                    }
-                }
+                // ONE STENCIL PER FILE-TO-BE, and WHICH stencils is the whole difference
+                // between upstream's two output halves: Paper_book::output writes the
+                // PAGES and Paper_book::classic_output writes the SYSTEMS. Both then go
+                // through the SAME framework-svg.scm `output-stencils', which is why one
+                // writer serves both here.
+                List<Stencil> bookPages = pending[bookIndex].ToSystems
+                    ? SystemStencils(paperBook, diagnostics)
+                    : PageStencils(paperBook);
 
                 // THE PERFORMANCES BELONG TO THE BOOK THAT PRODUCED THEM, and that is what
                 // names their files: upstream reaches write-performances-midis from
@@ -948,13 +1075,15 @@ $(for-each
                 // breaker may start the book on page 2 to avoid a bad turn -- and
                 // output-stencils then names the FILES from it.
                 bookOutputs.Add(new BookOutput(
-                    bookIndex < bookNames.Count ? bookNames[bookIndex] : baseName,
+                    pending[bookIndex].Name ?? baseName,
                     bookPages,
                     SchemeConvert.ToInt(paperBook.Paper.CVariable("first-page-number"), 1),
                     unitLength,
                     bookPerformances));
 
-                lines += CountLines(paperBook);
+                lines += pending[bookIndex].ToSystems
+                    ? Pair.ToList(paperBook.Systems()).Count
+                    : CountLines(paperBook);
             }
             catch (Exception exception) when (!(exception is OutOfMemoryException))
             {
@@ -1021,6 +1150,30 @@ $(for-each
             svgPath = svgPaths.Count > 0 ? svgPaths[0] : null;
         }
 
+        // THE SAFETY NET. A book went to a toplevel book handler and nothing came back:
+        // the run would otherwise say "Completed successfully", count zero errors, and
+        // leave no file and no explanation anywhere — which is exactly how the
+        // lilypond-book-preamble defect cost two agents an afternoon.
+        //
+        // It is a WARNING and not an error on purpose: upstream honours whatever handler
+        // the document installed and says nothing when that handler chooses to write
+        // nothing, so failing here would make the port STRICTER than 2.27.2, which it is
+        // never allowed to be. What the port owes is the sentence, not the exit code.
+        //
+        // The two conditions are deliberately narrow, so that a legitimately silent run
+        // stays silent: a book with no scores (upstream writes nothing for it either),
+        // and a book that produces only MIDI (its file IS written), both reach the runner
+        // and are accounted for.
+        ReportUnwrittenBooks(
+            pending,
+            bookOutputs,
+            svgPaths.Count + midiPaths.Count,
+            chosenBookHandler,
+            defaultBookCollector,
+            bookCollector,
+            epilogueBuildsBook && pending.Count == pendingBeforeEpilogue,
+            baseName);
+
         // Where upstream calls it: lily.scm runs (ly:check-expected-warnings) between
         // (lilypond-file handler x) and (session-terminate). A file that registered an
         // expectation with ly:expect-warning and never triggered it says so HERE, and the
@@ -1046,7 +1199,7 @@ $(for-each
 
         return new BatchRunResult(
             svgPath,
-            books.Count,
+            pending.Count,
             lines,
             skipped,
             errorCount,
@@ -1108,6 +1261,154 @@ $(for-each
         => string.IsNullOrEmpty(includeDirectory)
             ? inputName + ".ly"
             : Path.Combine(includeDirectory, inputName + ".ly");
+
+    /// <summary>
+    /// The stencils <c>Paper_book::output</c> writes: one per PAGE, off each page prob's
+    /// <c>stencil</c> property.
+    /// </summary>
+    /// <param name="paperBook">The processed paper book.</param>
+    /// <returns>The page stencils, in page order.</returns>
+    private static List<Stencil> PageStencils(PaperBook paperBook)
+    {
+        List<Stencil> stencils = new List<Stencil>();
+        foreach (object entry in Pair.ToList(paperBook.Pages()))
+        {
+            if (entry is Prob page && page.GetProperty("stencil") is Stencil pageStencil)
+            {
+                stencils.Add(pageStencil);
+            }
+        }
+
+        return stencils;
+    }
+
+    /// <summary>
+    /// The stencils <c>Paper_book::classic_output</c> writes: one per SYSTEM, from
+    /// <c>scm/backend-library.scm</c>'s <c>generate-system-stencils</c>.
+    /// </summary>
+    /// <remarks>
+    /// The Scheme procedure is called rather than reimplemented because what it does is
+    /// not merely a map: it unions the LEFT EXTENT of every system so that each file's
+    /// music starts at the same x, which is the whole reason lilypond-book's pictures line
+    /// up when they are dropped into a document one after another. It is a plain
+    /// <c>define</c> in <c>(lily)</c>, not a <c>define-public</c>, so it is reached the way
+    /// the runner reaches <c>markup-&gt;string</c>.
+    /// </remarks>
+    /// <param name="paperBook">The processed paper book.</param>
+    /// <param name="diagnostics">Receives a line when the Scheme layer cannot be reached.</param>
+    /// <returns>The system stencils, in system order.</returns>
+    private static List<Stencil> SystemStencils(PaperBook paperBook, List<string> diagnostics)
+    {
+        List<Stencil> stencils = new List<Stencil>();
+        object generate
+            = LilyPondScheme.LookupProcedure(Symbol.Intern("generate-system-stencils"));
+        if (generate == null)
+        {
+            diagnostics.Add("generate-system-stencils is not bound;"
+                + " no per-system output was written");
+            return stencils;
+        }
+
+        foreach (object entry in Pair.ToList(
+            SchemeUtilities.CallCallback(generate, paperBook)))
+        {
+            if (entry is Stencil systemStencil)
+            {
+                stencils.Add(systemStencil);
+            }
+        }
+
+        return stencils;
+    }
+
+    /// <summary>
+    /// The safety net: says out loud that a book reached a toplevel book handler and that
+    /// nothing was written for it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// TWO SHAPES, and both were reachable. The first is a book the runner never saw at
+    /// all, because the document installed a handler that neither wrote it nor handed it
+    /// to <c>ly:book-process</c>; the runner knows a book was built from the probe it asks
+    /// one statement before <c>init.ly</c>'s epilogue dispatches. The second is a book the
+    /// runner DID see, that drew stencils, and whose files are nevertheless not on disk —
+    /// which is a writer fault rather than a handler fault, and is worth a sentence for
+    /// the same reason.
+    /// </para>
+    /// <para>
+    /// ⚠ NEITHER FIRES FOR A BOOK THAT LEGITIMATELY PRODUCES NOTHING. A book with no
+    /// scores draws no stencils and the oracle writes no file for it either; a book whose
+    /// scores only carry <c>\midi</c> writes its MIDI and is counted as written. Both were
+    /// measured against 2.27.2 before this was written.
+    /// </para>
+    /// </remarks>
+    /// <param name="pending">Every book handed to a toplevel handler.</param>
+    /// <param name="bookOutputs">What the runner managed to turn into output.</param>
+    /// <param name="filesWritten">How many files the run actually wrote.</param>
+    /// <param name="chosenHandler">The handler <c>init.ly</c>'s epilogue was going to use.</param>
+    /// <param name="defaultCollector">The runner's own default-toplevel-book-handler.</param>
+    /// <param name="collector">The runner's own toplevel-book-handler.</param>
+    /// <param name="epilogueBookVanished">
+    /// Whether the epilogue built a toplevel book that never reached the runner.
+    /// </param>
+    /// <param name="baseName">The input's base name, for the sentence.</param>
+    private static void ReportUnwrittenBooks(
+        List<PendingBook> pending,
+        List<BookOutput> bookOutputs,
+        int filesWritten,
+        object chosenHandler,
+        object defaultCollector,
+        object collector,
+        bool epilogueBookVanished,
+        string baseName)
+    {
+        if (epilogueBookVanished)
+        {
+            bool ours = ReferenceEquals(chosenHandler, defaultCollector)
+                || ReferenceEquals(chosenHandler, collector);
+            Flower.Warn.Warning("the toplevel book of `" + baseName + "' went to "
+                + HandlerName(chosenHandler, ours)
+                + " and was neither written nor handed back; nothing was written for it");
+        }
+
+        if (filesWritten > 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < bookOutputs.Count; i++)
+        {
+            if (bookOutputs[i].Pages.Count > 0)
+            {
+                Flower.Warn.Warning("book `" + bookOutputs[i].Name + "' drew "
+                    + bookOutputs[i].Pages.Count
+                    + " stencil(s) and none of them was written");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Names a toplevel book handler for a warning: the runner's own by the role it
+    /// plays, the document's by whatever the interpreter calls it.
+    /// </summary>
+    /// <param name="handler">The handler object.</param>
+    /// <param name="ours">Whether it is one of the runner's own collectors.</param>
+    /// <returns>The phrase to put in the sentence.</returns>
+    private static string HandlerName(object handler, bool ours)
+    {
+        if (ours)
+        {
+            return "the runner's own book collector";
+        }
+
+        if (handler is Primitive primitive && !string.IsNullOrEmpty(primitive.Name))
+        {
+            return "`" + primitive.Name + "'";
+        }
+
+        return "a toplevel book handler the document installed ("
+            + (handler == null ? "unbound" : handler.ToString()) + ")";
+    }
 
     /// <summary>
     /// Writes one page per stencil, into the CURRENT working directory and under BARE
@@ -1408,6 +1709,14 @@ $(for-each
                 diagnostics.AddRange(versionSeen.AllDiagnostics());
             }
 
+            // ONE STATEMENT BEFORE THE EPILOGUE, because that is the last moment at which
+            // the answer exists: see BookHandlerProbeLy. Its error count is deliberately
+            // not added to the run's, exactly as <batch-version-seen>'s is not — a
+            // question the runner asks on its own behalf is not one of the file's errors.
+            ParseOutcome bookHandler
+                = session.ParseText(BookHandlerProbeLy, "<batch-book-handler>");
+            diagnostics.AddRange(bookHandler.AllDiagnostics());
+
             ParseOutcome epilogue = session.ParseText(EpilogueLy, "<batch-epilogue>");
             diagnostics.AddRange(epilogue.AllDiagnostics());
 
@@ -1493,8 +1802,9 @@ $(for-each
     /// <c>scm/lily-library.scm</c>'s <c>get-outfile-name</c>: the file name one BOOK's
     /// output prints under.
     /// <para>
-    /// The base name, then <c>-&lt;output-suffix&gt;</c> when a suffix is set, then
-    /// <c>-&lt;n&gt;</c> for the n-th book already printed under the SAME key. ⚠ The
+    /// The book's own printed name — <c>\bookOutputName</c>'s, when it set one, and the
+    /// input's base name otherwise — then <c>-&lt;output-suffix&gt;</c> when a suffix is
+    /// set, then <c>-&lt;n&gt;</c> for the n-th book already printed under the SAME key. ⚠ The
     /// counter is keyed by base name AND suffix together, so it is NOT a running book
     /// index: <c>book-change-global-staffsize-abs-fonts</c> prints two books, one under
     /// the suffix "standard-size" and one under none, and upstream numbers NEITHER
@@ -1538,10 +1848,42 @@ $(for-each
             ? SchemeUtilities.StringText(suffix)
             : null;
 
+        // get-current-filename, the same three-step chain one variable over: the book's
+        // own paper, then $defaultpaper (`paper-variable'), then the toplevel
+        // `output-filename' identifier, and only then the name the input was read under.
+        //
+        // ⚠ MEASURED AGAINST 2.27.2, AND THE PORT DID NOT HAVE IT AT ALL: a file whose
+        // first statement is `\bookOutputName "renamed"' writes renamed.svg from the
+        // oracle and wrote <input>.svg here, so a document that renames its own output
+        // was silently ignored — and a file that renames SEVERAL books put them all under
+        // the input's name, where the last one written wins. The counter key is built from
+        // this name too, exactly as upstream builds it, which is what keeps two books
+        // renamed to the same thing numbered instead of overwriting each other.
+        object fileName = book.Paper != null
+            ? book.Paper.CVariable("output-filename")
+            : null;
+        if (!SchemeUtilities.IsString(fileName) && session != null)
+        {
+            OutputDef defaultPaper = session.LookupIdentifier(DefaultPaperName) as OutputDef;
+            if (defaultPaper != null)
+            {
+                fileName = defaultPaper.CVariable("output-filename");
+            }
+        }
+
+        if (!SchemeUtilities.IsString(fileName) && session != null)
+        {
+            fileName = session.LookupIdentifier("output-filename");
+        }
+
+        string printedName = SchemeUtilities.IsString(fileName)
+            ? SchemeUtilities.StringText(fileName)
+            : baseName;
+
         // The KEY is the base name and the suffix concatenated, exactly as upstream builds
         // it, and the RESULT joins them with a dash. The two are deliberately different.
-        string key = baseName + suffixText;
-        string result = suffixText != null ? baseName + "-" + suffixText : baseName;
+        string key = printedName + suffixText;
+        string result = suffixText != null ? printedName + "-" + suffixText : printedName;
 
         counters.TryGetValue(key, out int count);
         if (count > 0)
@@ -1551,6 +1893,65 @@ $(for-each
 
         counters[key] = count + 1;
         return result;
+    }
+
+    /// <summary>
+    /// One book on its way to being written, and which of upstream's two output halves it
+    /// is on.
+    /// </summary>
+    /// <remarks>
+    /// A book reaches the runner by one of two routes, and the difference is the
+    /// document's to make. An ordinary document leaves <c>init.ly</c>'s toplevel handlers
+    /// alone, so the runner's own collector takes the book and
+    /// <see cref="Processed"/> is <see langword="null"/>: the runner processes it after
+    /// the parse, on the page path. A document that installs its own handler — which
+    /// <c>lilypond-book-preamble.ly</c> does, and which upstream honours — sends the book
+    /// through <c>ly:book-process</c> or <c>ly:book-process-to-systems</c> DURING the
+    /// parse, and it arrives already processed, with <see cref="ToSystems"/> saying which
+    /// of the two it went through.
+    /// </remarks>
+    private sealed class PendingBook
+    {
+        /// <summary>Initializes a book the runner's own collector took.</summary>
+        /// <param name="name">The name <c>get-outfile-name</c> gave the book.</param>
+        /// <param name="book">The book itself.</param>
+        public PendingBook(string name, Book book)
+            : this(name, book, null, false)
+        {
+        }
+
+        /// <summary>Initializes a book, processed or not.</summary>
+        /// <param name="name">The name <c>get-outfile-name</c> gave the book.</param>
+        /// <param name="book">The book itself.</param>
+        /// <param name="processed">
+        /// The paper book the document's own handler already produced, or
+        /// <see langword="null"/> when the runner still owes the processing.
+        /// </param>
+        /// <param name="toSystems">
+        /// Whether the document's handler asked for one file per SYSTEM.
+        /// </param>
+        public PendingBook(string name, Book book, PaperBook processed, bool toSystems)
+        {
+            Name = name;
+            Book = book;
+            Processed = processed;
+            ToSystems = toSystems;
+        }
+
+        /// <summary>Gets the name the book's files print under.</summary>
+        public string Name { get; }
+
+        /// <summary>Gets the book.</summary>
+        public Book Book { get; }
+
+        /// <summary>
+        /// Gets the paper book the document's own handler already produced, or
+        /// <see langword="null"/>.
+        /// </summary>
+        public PaperBook Processed { get; }
+
+        /// <summary>Gets whether the book prints one file per system rather than per page.</summary>
+        public bool ToSystems { get; }
     }
 
     /// <summary>One book's rendered pages, under the name and page numbering it prints at.</summary>

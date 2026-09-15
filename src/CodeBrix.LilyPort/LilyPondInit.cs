@@ -343,6 +343,34 @@ public static class LilyPondInit
         {
             definition.SetVariable(entry.Key, entry.Value);
         }
+
+        // THE FOURTEENTH LEAK, and it is the same shape as the thirteen before it: a
+        // variable the FILE ADDED to a shared default definition has nothing in the
+        // snapshot to be put back to, so re-setting the snapshot leaves it standing.
+        //
+        // `\bookOutputName "x"' is `(set! (paper-variable #f 'output-filename) "x")', and
+        // with no \book open `paper-variable' resolves to $defaultpaper — the OBJECT, not
+        // the identifier, so the identifier re-pointing below cannot undo it either. One
+        // file naming its own output therefore renamed every file engraved after it in
+        // the same process; `\bookOutputSuffix' is the same move one variable over.
+        // Upstream needs none of this: one process per file.
+        List<Symbol> added = null;
+        foreach (KeyValuePair<Symbol, object> entry in definition.Variables())
+        {
+            if (!snapshot.ContainsKey(entry.Key))
+            {
+                added ??= new List<Symbol>();
+                added.Add(entry.Key);
+            }
+        }
+
+        if (added != null)
+        {
+            foreach (Symbol name in added)
+            {
+                definition.RemoveVariable(name);
+            }
+        }
     }
 
     private static Dictionary<Symbol, object> Snapshot(OutputDef definition)
