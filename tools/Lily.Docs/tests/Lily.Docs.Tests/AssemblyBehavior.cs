@@ -5,7 +5,8 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-using Xunit;
+using Xunit.Sdk;   // ParallelMode
+using Xunit.v3;    // ParallelizationAttribute
 
 // ⚠ THE SUITE RUNS SERIALLY, AND IT HAS TO.
 //
@@ -30,4 +31,4 @@ using Xunit;
 // Disabling parallelization assembly-wide is the honest fix rather than putting every test
 // in one named collection: the constraint belongs to the ENGINE, so every future test class
 // inherits it without having to know the rule exists.
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
+[assembly: Parallelization(Mode = ParallelMode.None)]

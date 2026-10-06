@@ -284,7 +284,7 @@ CodeBrix.PdfDocCreate.Html2Pdf -> CodeBrix.Imaging.Drawing.NoSkia for the SVG ->
 PDF vector content, no SkiaSharp and no native library at all -- so the reference
 costs managed assemblies plus two font packages, with Roboto/Roboto Mono at the
 versions pinned here. The SkiaSharp the desktop heads DO carry (MEASURED
-2026-08-19: 561 MB of SkiaSharp 4.151.0 native assets) comes from
+2026-08-19: 561 MB of SkiaSharp native assets) comes from
 CodeBrix.Platform's runtime, as in every Platform application, and has nothing
 to do with this chain.
 

@@ -10,6 +10,6 @@
        CodeBrix.Terminal, TextLayout, the core framework, SkiaSharp, and the
        Roboto Mono font as its own dependencies. -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Platform.TerminalView.ApacheLicenseForever" Version="1.0.231.233" />
+    <PackageReference Include="CodeBrix.Platform.TerminalView.ApacheLicenseForever" Version="1.0.279.30" />
   </ItemGroup>
 </Project>

@@ -15,6 +15,7 @@
     <File Path="global.json" />
   </Folder>
   <Folder Name="/Libraries/">
+    <Project Path="../Lily.Docs/src/Lily.Docs/Lily.Docs.csproj" />
     <Project Path="src/libs/Lily.Shell.Kernel/Lily.Shell.Kernel.csproj" />
     <Project Path="src/libs/Lily.Shell.TerminalView/Lily.Shell.TerminalView.csproj" />
   </Folder>

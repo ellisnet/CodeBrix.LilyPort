@@ -19,8 +19,8 @@
     place and so neither can drift.
   -->
   <ItemGroup>
-    <PackageReference Include="CodeBrix.Texinfo2Html.MitLicenseForever" Version="1.0.243.66" />
-    <PackageReference Include="CodeBrix.Texinfo2Pdf.MitLicenseForever" Version="1.0.243.66" />
+    <PackageReference Include="CodeBrix.Texinfo2Html.MitLicenseForever" Version="1.0.275.152" />
+    <PackageReference Include="CodeBrix.Texinfo2Pdf.MitLicenseForever" Version="1.0.275.152" />
   </ItemGroup>
 
   <!--
@@ -67,8 +67,7 @@
     byte-identical to ../../../Documentation/en/, which VendoredAssetTests fences.
   -->
   <ItemGroup>
-    <None Include="..\..\assets\en\*.itexi" Link="assets\en\%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\assets\en\*.itexi" Link="assets\en\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!--
@@ -87,10 +86,8 @@
     copy it — the MANIFEST.sha256 gates are what fence the CONTENT.
   -->
   <ItemGroup>
-    <None Include="..\..\assets\bib\*" Link="assets\bib\%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\assets\staged\*" Link="assets\staged\%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\assets\bib\*" Link="assets\bib\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\assets\staged\*" Link="assets\staged\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
